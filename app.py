@@ -30,12 +30,42 @@ FLAT_COSTS = {
 }
 
 # --- Cost Estimator Functions ---
-def compute_commodities(cars, curb_weight):
+def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=None):
     """Compute all commodity weights, prices, and sale values."""
     w = lambda lbs: cars * lbs
-    list_commodities = [
-        {"key": "AL_ENGINE", "label": "AL Engine", "weight": w(275), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
-        {"key": "FE_ENGINE", "label": "FE Engine", "weight": w(275), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
+    
+    # Determine engine type based on aluminum_engine parameter
+    if aluminum_engine is True:
+        # All aluminum engines
+        engine_commodities = [
+            {"key": "AL_ENGINE", "label": "AL Engine", "weight": w(275), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
+            {"key": "FE_ENGINE", "label": "FE Engine", "weight": 0, "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
+        ]
+    elif aluminum_engine is False:
+        # All iron engines
+        engine_commodities = [
+            {"key": "AL_ENGINE", "label": "AL Engine", "weight": 0, "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
+            {"key": "FE_ENGINE", "label": "FE Engine", "weight": w(275), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
+        ]
+    else:
+        # Unknown engine type - use default split (50/50)
+        engine_commodities = [
+            {"key": "AL_ENGINE", "label": "AL Engine", "weight": w(137.5), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
+            {"key": "FE_ENGINE", "label": "FE Engine", "weight": w(137.5), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
+        ]
+    
+    # Determine rims type based on aluminum_rims parameter
+    if aluminum_rims is True:
+        # All aluminum rims
+        rims_weight = w(4)
+    elif aluminum_rims is False:
+        # Steel rims - no aluminum rims value
+        rims_weight = 0
+    else:
+        # Unknown rims type - use default
+        rims_weight = w(2)
+    
+    list_commodities = engine_commodities + [
         {"key": "HARNESS", "label": "Harness", "weight": w(23), "unit_price": PRICE_PER_LB["HARNESS"], "sale_value": 0},
         {"key": "FE_RAD", "label": "FE Rad", "weight": w(18), "unit_price": PRICE_PER_LB["FE_RAD"], "sale_value": 0},
         {"key": "BREAKAGE", "label": "Breakage", "weight": w(15), "unit_price": PRICE_PER_LB["BREAKAGE"], "sale_value": 0},
@@ -44,7 +74,7 @@ def compute_commodities(cars, curb_weight):
         {"key": "AC_COMP", "label": "AC Comp", "weight": w(7), "unit_price": PRICE_PER_LB["AC_COMP"], "sale_value": 0},
         {"key": "FUSE_BOX", "label": "Fuse Box", "weight": w(6), "unit_price": PRICE_PER_LB["FUSE_BOX"], "sale_value": 0},
         {"key": "BATTERY", "label": "Battery", "weight": w(5), "unit_price": PRICE_PER_LB["BATTERY"], "sale_value": 0},
-        {"key": "AL_RIMS", "label": "AL Rims", "weight": w(4), "unit_price": PRICE_PER_LB["AL_RIMS"], "sale_value": 0},
+        {"key": "AL_RIMS", "label": "AL Rims", "weight": rims_weight, "unit_price": PRICE_PER_LB["AL_RIMS"], "sale_value": 0},
         {"key": "CATS", "label": "Cats", "weight": w(3), "unit_price": PRICE_PER_LB["CATS"], "sale_value": 0},
         {"key": "ECM", "label": "ECM", "weight": w(2), "unit_price": PRICE_PER_LB["ECM"], "sale_value": 0},
     ]
@@ -106,7 +136,7 @@ def get_last_ten_entries():
     try:
         conn = sqlite3.connect(DB_FILE)
         # Order by id DESC to get the most recent entries
-        query = "SELECT year, make, model, curb_weight_lbs FROM vehicles ORDER BY id DESC LIMIT 10"
+        query = "SELECT year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles ORDER BY id DESC LIMIT 10"
         df = pd.read_sql_query(query, conn)
         conn.close()
         return df
@@ -127,9 +157,9 @@ st.set_page_config(
 # Custom CSS for light theme with ruby and teal accents
 st.markdown("""
 <style>
-    /* Global background and text colors */
+    /* Global background and text colors - Light Mode */
     .main {
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%);
         color: #1e293b;
     }
     
@@ -168,7 +198,7 @@ st.markdown("""
     
     /* Enhanced card styling for main sections */
     .main-section-card {
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border-radius: 12px;
         border: 1px solid rgba(220, 38, 38, 0.2);
@@ -209,7 +239,7 @@ st.markdown("""
     
     /* Form styling */
     .stForm {
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         padding: 1.5rem;
         border-radius: 8px;
@@ -218,8 +248,8 @@ st.markdown("""
     }
     
     /* Enhanced input field styling */
-    .stTextInput > div > div > input, .stNumberInput > div > div > input {
-        background: rgba(255, 255, 255, 0.9) !important;
+    .stTextInput > div > div > input {
+        background: rgba(255, 255, 255, 0.95) !important;
         border: 1px solid rgba(220, 38, 38, 0.3) !important;
         border-radius: 6px;
         padding: 0.75rem;
@@ -227,52 +257,91 @@ st.markdown("""
         color: #1e293b !important;
     }
     
-    .stTextInput > div > div > input:focus, .stNumberInput > div > div > input:focus {
+    .stNumberInput > div > div > input {
+        background: rgba(127, 29, 29, 0.9) !important;
+        border: 1px solid rgba(220, 38, 38, 0.5) !important;
+        border-radius: 6px;
+        padding: 0.75rem;
+        transition: all 0.2s ease;
+        color: #ffffff !important;
+    }
+    
+    /* Style number input buttons (plus/minus) */
+    .stNumberInput > div > div > div > button {
+        background: rgba(127, 29, 29, 0.9) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(220, 38, 38, 0.5) !important;
+    }
+    
+    .stNumberInput > div > div > div > button:hover {
+        background: rgba(127, 29, 29, 1) !important;
+    }
+    
+    .stTextInput > div > div > input:focus {
         border-color: #dc2626 !important;
         box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
         outline: none;
         background: rgba(255, 255, 255, 1) !important;
     }
     
+    .stNumberInput > div > div > input:focus {
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3) !important;
+        outline: none;
+        background: rgba(127, 29, 29, 1) !important;
+    }
+    
     .stTextInput > div > div > input::placeholder {
         color: rgba(71, 85, 105, 0.6) !important;
     }
     
-    /* Button styling */
-    .stButton > button {
-        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-    }
+                   /* Button styling */
+      .stButton > button {
+          background: rgba(20, 184, 166, 0.9) !important;
+          color: #ffffff !important;
+          border: 2px solid rgba(20, 184, 166, 0.8) !important;
+          border-radius: 8px;
+          padding: 0.75rem 1.5rem;
+          font-weight: 700;
+          font-size: 1rem;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4);
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+      
+      .stButton > button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(20, 184, 166, 0.5);
+          background: rgba(20, 184, 166, 1) !important;
+          color: #ffffff !important;
+          border-color: rgba(20, 184, 166, 1) !important;
+      }
+      
+      .stButton > button:active {
+          background: rgba(15, 118, 110, 1) !important;
+          transform: translateY(0);
+          box-shadow: 0 2px 8px rgba(15, 118, 110, 0.5);
+          border-color: rgba(15, 118, 110, 1) !important;
+      }
     
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
-        color: #ffffff !important;
-    }
-    
-    /* Dataframe styling */
+    /* Dataframe styling - Light Mode */
     .dataframe {
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        background: rgba(255, 255, 255, 0.9) !important;
+        background: rgba(255, 255, 255, 0.95) !important;
         backdrop-filter: blur(10px);
     }
     
     .dataframe th {
-        background: rgba(220, 38, 38, 0.1) !important;
-        color: #1e293b !important;
+        background: rgba(127, 29, 29, 0.9) !important;
+        color: #ffffff !important;
         font-weight: 600;
+        border-color: rgba(220, 38, 38, 0.5) !important;
     }
     
     .dataframe td {
-        background: rgba(255, 255, 255, 0.8) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
         color: #1e293b !important;
         border-color: rgba(220, 38, 38, 0.1) !important;
     }
@@ -392,7 +461,7 @@ st.markdown("""
     
     /* Streamlit metric containers */
     .stMetric {
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border-radius: 8px;
         padding: 1rem;
@@ -432,6 +501,225 @@ st.markdown("""
     .teal-bg {
         background-color: rgba(20, 184, 166, 0.1) !important;
     }
+    
+    /* Override Streamlit's default dark theme elements */
+    .stApp {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%);
+    }
+    
+    /* Ensure all Streamlit elements have proper light mode styling */
+    .stSelectbox > div > div > div {
+        background: rgba(127, 29, 29, 0.9) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(220, 38, 38, 0.5) !important;
+        border-radius: 6px;
+    }
+    
+    .stSelectbox > div > div > div > div {
+        color: #ffffff !important;
+    }
+    
+    /* Style dropdown options */
+    .stSelectbox > div > div > div[data-baseweb="select"] {
+        background: rgba(127, 29, 29, 0.9) !important;
+    }
+    
+    /* Style the dropdown arrow */
+    .stSelectbox > div > div > div > div[data-baseweb="select-arrow"] {
+        color: #ffffff !important;
+    }
+    
+         /* Override any remaining dark gray elements */
+     .stNumberInput, .stSelectbox, .stButton {
+         color: #ffffff !important;
+     }
+     
+     /* Force ruby color on all interactive elements */
+     .stNumberInput > div, .stSelectbox > div, .stButton > div {
+         background: rgba(127, 29, 29, 0.9) !important;
+     }
+     
+           /* Additional comprehensive overrides for all dark gray elements */
+      .stNumberInput > div > div > div > button,
+      .stNumberInput > div > div > div > div,
+      .stSelectbox > div > div > div > div,
+      .stSelectbox > div > div > div > div > div {
+          background: rgba(127, 29, 29, 0.9) !important;
+          color: #ffffff !important;
+          border-color: rgba(220, 38, 38, 0.5) !important;
+      }
+      
+      /* Buttons should use teal styling, not ruby */
+      .stButton > div > button,
+      .stButton > div > div {
+          background: rgba(20, 184, 166, 0.9) !important;
+          color: #ffffff !important;
+          border-color: rgba(20, 184, 166, 0.8) !important;
+      }
+     
+           /* Override all possible Streamlit dark elements */
+      [data-testid="stNumberInput"] > div > div > div > button,
+      [data-testid="stSelectbox"] > div > div > div {
+          background: rgba(127, 29, 29, 0.9) !important;
+          color: #ffffff !important;
+      }
+      
+      /* Buttons should use teal styling */
+      [data-testid="stButton"] > div > button {
+          background: rgba(20, 184, 166, 0.9) !important;
+          color: #ffffff !important;
+      }
+     
+     /* Force ruby color on table headers */
+     .dataframe thead th,
+     .dataframe th,
+     table th {
+         background: rgba(127, 29, 29, 0.9) !important;
+         color: #ffffff !important;
+         border-color: rgba(220, 38, 38, 0.5) !important;
+     }
+     
+           /* Override any remaining dark backgrounds - but be more specific */
+      .stNumberInput > div > div > div > button,
+      .stNumberInput > div > div > div > div[data-baseweb="select"],
+      .stSelectbox > div > div > div > div[data-baseweb="select"] {
+          background: rgba(127, 29, 29, 0.9) !important;
+          color: #ffffff !important;
+      }
+      
+      /* Buttons should use teal styling */
+      .stButton > div > button {
+          background: rgba(20, 184, 166, 0.9) !important;
+          color: #ffffff !important;
+      }
+     
+     /* Keep labels and text elements with proper styling */
+     .stNumberInput > div > label,
+     .stSelectbox > div > label,
+     .stButton > div > label,
+     .stTextInput > div > label {
+         background: transparent !important;
+         color: #475569 !important;
+         font-weight: 500;
+     }
+     
+     /* Exception for text inputs - keep them white */
+     .stTextInput > div > div > input {
+         background: rgba(255, 255, 255, 0.95) !important;
+         color: #1e293b !important;
+     }
+    
+    /* Style info messages */
+    .stAlert {
+        background: rgba(255, 255, 255, 0.95) !important;
+        color: #1e293b !important;
+        border: 1px solid rgba(220, 38, 38, 0.2) !important;
+    }
+    
+         /* Style spinner */
+     .stSpinner > div {
+         color: #dc2626 !important;
+     }
+     
+     /* FORCE BUTTON STYLING - Override everything else */
+     button[data-testid="baseButton-primary"],
+     button[data-testid="baseButton-secondary"],
+     .stButton > button,
+     .stButton > div > button,
+     .stButton > div > div > button,
+     [data-testid="stButton"] > div > button,
+     [data-testid="stButton"] > div > div > button,
+     /* Additional ultra-specific selectors */
+     .stButton button,
+     .stButton div button,
+     .stButton div div button,
+     .stButton div div div button,
+     .stButton div div div div button,
+     /* Streamlit form button selectors */
+     .stForm button,
+     .stForm div button,
+     .stForm div div button,
+     .stForm div div div button,
+     /* Any button within Streamlit containers */
+     .block-container button,
+     .main button,
+     /* Universal button override for Streamlit */
+     button[class*="stButton"],
+     button[class*="baseButton"] {
+         background: rgba(20, 184, 166, 0.9) !important;
+         color: #ffffff !important;
+         border: 2px solid rgba(20, 184, 166, 0.8) !important;
+         border-radius: 8px !important;
+         padding: 0.75rem 1.5rem !important;
+         font-weight: 700 !important;
+         font-size: 1rem !important;
+         transition: all 0.2s ease !important;
+         box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4) !important;
+         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+     }
+     
+     /* Force button hover states */
+     button[data-testid="baseButton-primary"]:hover,
+     button[data-testid="baseButton-secondary"]:hover,
+     .stButton > button:hover,
+     .stButton > div > button:hover,
+     .stButton > div > div > button:hover,
+     [data-testid="stButton"] > div > button:hover,
+     [data-testid="stButton"] > div > div > button:hover,
+     /* Additional ultra-specific hover selectors */
+     .stButton button:hover,
+     .stButton div button:hover,
+     .stButton div div button:hover,
+     .stButton div div div button:hover,
+     .stButton div div div div button:hover,
+     /* Streamlit form button hover selectors */
+     .stForm button:hover,
+     .stForm div button:hover,
+     .stForm div div button:hover,
+     .stForm div div div button:hover,
+     /* Any button within Streamlit containers */
+     .block-container button:hover,
+     .main button:hover,
+     /* Universal button hover override for Streamlit */
+     button[class*="stButton"]:hover,
+     button[class*="baseButton"]:hover {
+         transform: translateY(-2px) !important;
+         box-shadow: 0 6px 20px rgba(20, 184, 166, 0.5) !important;
+         background: rgba(20, 184, 166, 1) !important;
+         color: #ffffff !important;
+         border-color: rgba(20, 184, 166, 1) !important;
+     }
+     
+     /* Force button active states */
+     button[data-testid="baseButton-primary"]:active,
+     button[data-testid="baseButton-secondary"]:active,
+     .stButton > button:active,
+     .stButton > div > button:active,
+     .stButton > div > div > button:active,
+     [data-testid="stButton"] > div > button:active,
+     [data-testid="stButton"] > div > div > button:active,
+     /* Additional ultra-specific active selectors */
+     .stButton button:active,
+     .stButton div button:active,
+     .stButton div div button:active,
+     .stButton div div div button:active,
+     .stButton div div div div button:active,
+     /* Streamlit form button active selectors */
+     .stForm button:active,
+     .stForm div button:active,
+     .stForm div div button:active,
+     .stForm div div div button:active,
+     /* Any button within Streamlit containers */
+     .block-container button:active,
+     .main button:active,
+     /* Universal button active override for Streamlit */
+     button[class*="stButton"]:active,
+     button[class*="baseButton"]:active {
+         background: rgba(15, 118, 110, 1) !important;
+         transform: translateY(0) !important;
+         box-shadow: 0 2px 8px rgba(15, 118, 110, 0.5) !important;
+         border-color: rgba(15, 118, 110, 1) !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
@@ -459,7 +747,7 @@ with left_col:
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            year_input = st.number_input("Year", min_value=1900, max_value=2050, step=1, value=2023)
+            year_input = st.text_input("Year", placeholder="e.g., 2023", value="2023")
         with col2:
             make_input = st.text_input("Make", placeholder="e.g., Ford")
         with col3:
@@ -476,16 +764,69 @@ with left_col:
             </div>
             """, unsafe_allow_html=True)
         else:
-            with st.spinner(f"Searching for {year_input} {make_input} {model_input}..."):
-                weight = process_vehicle(year_input, make_input.strip(), model_input.strip())
-                if weight:
-                    st.markdown(f"""
-                    <div class="success-message">
-                        <strong>Weight Found:</strong> <span class="metric-value">{weight} lbs</span>
+            # Convert year to integer and validate
+            try:
+                year_int = int(year_input.strip())
+                if year_int < 1900 or year_int > 2050:
+                    st.markdown("""
+                    <div class="warning-message">
+                        <strong>Invalid Year:</strong> Please enter a year between 1900 and 2050.
                     </div>
                     """, unsafe_allow_html=True)
-                    # Store the weight in session state for the cost estimator
-                    st.session_state['last_curb_weight'] = weight
+                else:
+                    with st.spinner(f"Searching for {year_int} {make_input} {model_input}..."):
+                        vehicle_data = process_vehicle(year_int, make_input.strip(), model_input.strip())
+            except ValueError:
+                st.markdown("""
+                <div class="warning-message">
+                    <strong>Invalid Year:</strong> Please enter a valid year (e.g., 2023).
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if vehicle_data and vehicle_data['curb_weight_lbs']:
+                    # Display weight
+                    st.markdown(f"""
+                    <div class="success-message">
+                        <strong>Weight Found:</strong> <span class="metric-value">{vehicle_data['curb_weight_lbs']} lbs</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Display aluminum engine info
+                    if vehicle_data['aluminum_engine'] is not None:
+                        engine_status = "Aluminum" if vehicle_data['aluminum_engine'] else "Iron"
+                        engine_color = "#22c55e" if vehicle_data['aluminum_engine'] else "#f59e0b"
+                        st.markdown(f"""
+                        <div style="background: rgba(34, 197, 94, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid {engine_color};">
+                            <strong>Engine Block:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown("""
+                        <div style="background: rgba(156, 163, 175, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid #9ca3af;">
+                            <strong>Engine Block:</strong> <span style="color: #6b7280;">Unknown</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Display aluminum rims info
+                    if vehicle_data['aluminum_rims'] is not None:
+                        rims_status = "Aluminum" if vehicle_data['aluminum_rims'] else "Steel"
+                        rims_color = "#22c55e" if vehicle_data['aluminum_rims'] else "#f59e0b"
+                        st.markdown(f"""
+                        <div style="background: rgba(34, 197, 94, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid {rims_color};">
+                            <strong>Wheels/Rims:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown("""
+                        <div style="background: rgba(156, 163, 175, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid #9ca3af;">
+                            <strong>Wheels/Rims:</strong> <span style="color: #6b7280;">Unknown</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Store the data in session state for the cost estimator
+                    st.session_state['last_curb_weight'] = vehicle_data['curb_weight_lbs']
+                    st.session_state['last_aluminum_engine'] = vehicle_data['aluminum_engine']
+                    st.session_state['last_aluminum_rims'] = vehicle_data['aluminum_rims']
                 else:
                     st.markdown("""
                     <div class="error-message">
@@ -500,12 +841,30 @@ with left_col:
     try:
         recent_entries_df = get_last_ten_entries()
         if not recent_entries_df.empty:
+            # Format the aluminum columns for better display
+            def format_aluminum(value):
+                if value is None:
+                    return "Unknown"
+                elif value:
+                    return "Aluminum"
+                else:
+                    return "Iron/Steel"
+            
+            # Create a copy for display with formatted columns
+            display_df = recent_entries_df.copy()
+            display_df['Engine'] = display_df['aluminum_engine'].apply(format_aluminum)
+            display_df['Wheels'] = display_df['aluminum_rims'].apply(format_aluminum)
+            
+            # Select and rename columns for display
+            display_df = display_df[['year', 'make', 'model', 'curb_weight_lbs', 'Engine', 'Wheels']]
+            display_df.columns = ['Year', 'Make', 'Model', 'Weight (lbs)', 'Engine', 'Wheels']
+            
             # Style the dataframe
-            styled_df = recent_entries_df.style.set_properties(**{
-                'background-color': 'rgba(255, 255, 255, 0.05)',
-                'color': '#ffffff',
-                'border-color': 'rgba(255, 255, 255, 0.1)'
-            }).format({'curb_weight_lbs': '{:,.0f} lbs'})
+            styled_df = display_df.style.set_properties(**{
+                'background-color': 'rgba(255, 255, 255, 0.95)',
+                'color': '#1e293b',
+                'border-color': 'rgba(220, 38, 38, 0.1)'
+            }).format({'Weight (lbs)': '{:,.0f}'})
             
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
         else:
@@ -530,18 +889,95 @@ with right_col:
         
         col1, col2 = st.columns(2)
         with col1:
-            cars_input = st.number_input("Number of Cars", min_value=1, value=1, step=1)
+            cars_input = st.text_input("Number of Cars", placeholder="e.g., 1", value="1")
         with col2:
             # Use last curb weight if available, otherwise default to 3600
             default_weight = st.session_state.get('last_curb_weight', 3600)
-            curb_weight_input = st.number_input("Combined Curb Weight (lb)", min_value=1, value=default_weight, step=1)
+            curb_weight_input = st.text_input("Combined Curb Weight (lb)", placeholder="e.g., 3600", value=str(default_weight))
+        
+        # Engine and Rims Type Selection
+        st.markdown('<h4 style="margin-top: 1rem; color: #475569;">Vehicle Specifications</h4>', unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            # Determine default engine type from session state
+            default_engine = "Unknown"
+            if 'last_aluminum_engine' in st.session_state and st.session_state['last_aluminum_engine'] is not None:
+                default_engine = "Aluminum" if st.session_state['last_aluminum_engine'] else "Iron"
+            
+            engine_type = st.selectbox(
+                "Engine Block Type",
+                options=["Unknown", "Aluminum", "Iron"],
+                index=["Unknown", "Aluminum", "Iron"].index(default_engine),
+                help="Select the engine block material. This affects the commodity calculations."
+            )
+        with col2:
+            # Determine default rims type from session state
+            default_rims = "Unknown"
+            if 'last_aluminum_rims' in st.session_state and st.session_state['last_aluminum_rims'] is not None:
+                default_rims = "Aluminum" if st.session_state['last_aluminum_rims'] else "Steel"
+            
+            rims_type = st.selectbox(
+                "Wheels/Rims Type",
+                options=["Unknown", "Aluminum", "Steel"],
+                index=["Unknown", "Aluminum", "Steel"].index(default_rims),
+                help="Select the wheel/rim material. This affects the aluminum rims commodity calculation."
+            )
         
         calculate_button = st.form_submit_button(label="Calculate Costs", use_container_width=True)
     
     # Calculate and display results
     if calculate_button:
-        commodities = compute_commodities(cars_input, curb_weight_input)
-        totals = calculate_totals(commodities, cars_input, curb_weight_input)
+        # Validate and convert input values
+        try:
+            cars_int = int(cars_input.strip())
+            if cars_int < 1:
+                st.markdown("""
+                <div class="warning-message">
+                    <strong>Invalid Number of Cars:</strong> Please enter a number greater than 0.
+                </div>
+                """, unsafe_allow_html=True)
+                st.stop()
+        except ValueError:
+            st.markdown("""
+            <div class="warning-message">
+                <strong>Invalid Number of Cars:</strong> Please enter a valid number (e.g., 1).
+            </div>
+            """, unsafe_allow_html=True)
+            st.stop()
+        
+        try:
+            curb_weight_int = int(curb_weight_input.strip())
+            if curb_weight_int < 1:
+                st.markdown("""
+                <div class="warning-message">
+                    <strong>Invalid Curb Weight:</strong> Please enter a weight greater than 0.
+                </div>
+                """, unsafe_allow_html=True)
+                st.stop()
+        except ValueError:
+            st.markdown("""
+            <div class="warning-message">
+                <strong>Invalid Curb Weight:</strong> Please enter a valid weight (e.g., 3600).
+            </div>
+            """, unsafe_allow_html=True)
+            st.stop()
+        
+        # Convert selectbox values to boolean/None for the function
+        aluminum_engine = None
+        if engine_type == "Aluminum":
+            aluminum_engine = True
+        elif engine_type == "Iron":
+            aluminum_engine = False
+        
+        aluminum_rims = None
+        if rims_type == "Aluminum":
+            aluminum_rims = True
+        elif rims_type == "Steel":
+            aluminum_rims = False
+        
+        commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+        totals = calculate_totals(commodities, cars_int, curb_weight_int)
         
         # Display summary metrics
         st.markdown('<h3 class="subsection-header">Summary Metrics</h3>', unsafe_allow_html=True)
@@ -563,18 +999,18 @@ with right_col:
         for commodity in commodities:
             commodity_data.append({
                 "Commodity": commodity["label"],
-                "Weight (lb)": f"{commodity['weight']:.1f}",
-                "$/lb": f"{commodity['unit_price']:.2f}",
-                "Sale Value": format_currency(commodity["sale_value"])
+                "Weight (lb)": commodity['weight'],
+                "$/lb": commodity['unit_price'],
+                "Sale Value": commodity["sale_value"]
             })
         
         commodity_df = pd.DataFrame(commodity_data)
         
         # Style the commodity dataframe
         styled_commodity_df = commodity_df.style.set_properties(**{
-            'background-color': 'rgba(255, 255, 255, 0.05)',
-            'color': '#ffffff',
-            'border-color': 'rgba(255, 255, 255, 0.1)'
+            'background-color': 'rgba(255, 255, 255, 0.95)',
+            'color': '#1e293b',
+            'border-color': 'rgba(220, 38, 38, 0.1)'
         }).format({
             'Weight (lb)': '{:,.1f}',
             '$/lb': '{:.2f}'
@@ -598,9 +1034,9 @@ with right_col:
         
         # Style the summary dataframe
         styled_summary_df = summary_df.style.set_properties(**{
-            'background-color': 'rgba(255, 255, 255, 0.05)',
-            'color': '#ffffff',
-            'border-color': 'rgba(255, 255, 255, 0.1)'
+            'background-color': 'rgba(255, 255, 255, 0.95)',
+            'color': '#1e293b',
+            'border-color': 'rgba(220, 38, 38, 0.1)'
         })
         
         st.dataframe(styled_summary_df, use_container_width=True, hide_index=True)
