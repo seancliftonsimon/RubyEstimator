@@ -124,13 +124,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for improved dark theme with better contrast
+# Custom CSS for light theme with ruby and teal accents
 st.markdown("""
 <style>
     /* Global background and text colors */
     .main {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-        color: #ffffff;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+        color: #1e293b;
     }
     
     /* Main title styling */
@@ -139,120 +139,120 @@ st.markdown("""
         font-weight: 700;
         text-align: center;
         margin-bottom: 1.5rem;
-        background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
     /* Section headers */
     .section-header {
         font-size: 1.5rem;
         font-weight: 600;
-        color: #ffffff;
+        color: #1e293b;
         margin-bottom: 1rem;
         padding-bottom: 0.5rem;
-        border-bottom: 2px solid #ff6b6b;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        border-bottom: 2px solid #dc2626;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
     
     /* Subsection headers */
     .subsection-header {
         font-size: 1.2rem;
         font-weight: 500;
-        color: #e2e8f0;
+        color: #475569;
         margin-bottom: 0.75rem;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
     
     /* Enhanced card styling for main sections */
     .main-section-card {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(10px);
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(220, 38, 38, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         padding: 1.5rem;
         margin-bottom: 1.5rem;
     }
     
     /* Success message styling */
     .success-message {
-        background: rgba(72, 187, 120, 0.2);
+        background: rgba(34, 197, 94, 0.1);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #48bb78;
+        border-left: 4px solid #22c55e;
         margin: 1rem 0;
-        color: #ffffff;
+        color: #166534;
     }
     
     /* Warning message styling */
     .warning-message {
-        background: rgba(237, 137, 54, 0.2);
+        background: rgba(245, 158, 11, 0.1);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #ed8936;
+        border-left: 4px solid #f59e0b;
         margin: 1rem 0;
-        color: #ffffff;
+        color: #92400e;
     }
     
     /* Error message styling */
     .error-message {
-        background: rgba(245, 101, 101, 0.2);
+        background: rgba(239, 68, 68, 0.1);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #f56565;
+        border-left: 4px solid #ef4444;
         margin: 1rem 0;
-        color: #ffffff;
+        color: #991b1b;
     }
     
     /* Form styling */
     .stForm {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
         padding: 1.5rem;
         border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(220, 38, 38, 0.2);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     }
     
     /* Enhanced input field styling */
     .stTextInput > div > div > input, .stNumberInput > div > div > input {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid rgba(220, 38, 38, 0.3) !important;
         border-radius: 6px;
         padding: 0.75rem;
         transition: all 0.2s ease;
-        color: #ffffff !important;
+        color: #1e293b !important;
     }
     
     .stTextInput > div > div > input:focus, .stNumberInput > div > div > input:focus {
-        border-color: #ff6b6b !important;
-        box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2) !important;
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
         outline: none;
-        background: rgba(255, 255, 255, 0.15) !important;
+        background: rgba(255, 255, 255, 1) !important;
     }
     
     .stTextInput > div > div > input::placeholder {
-        color: rgba(255, 255, 255, 0.6) !important;
+        color: rgba(71, 85, 105, 0.6) !important;
     }
     
     /* Button styling */
     .stButton > button {
-        background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%) !important;
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
         color: #ffffff !important;
         border: none !important;
         border-radius: 8px;
         padding: 0.75rem 1.5rem;
         font-weight: 600;
         transition: all 0.2s ease;
-        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
     }
     
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
         color: #ffffff !important;
     }
     
@@ -260,45 +260,45 @@ st.markdown("""
     .dataframe {
         border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        background: rgba(255, 255, 255, 0.05) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.9) !important;
         backdrop-filter: blur(10px);
     }
     
     .dataframe th {
-        background: rgba(255, 107, 107, 0.2) !important;
-        color: #ffffff !important;
+        background: rgba(220, 38, 38, 0.1) !important;
+        color: #1e293b !important;
         font-weight: 600;
     }
     
     .dataframe td {
-        background: rgba(255, 255, 255, 0.05) !important;
-        color: #ffffff !important;
-        border-color: rgba(255, 255, 255, 0.1) !important;
+        background: rgba(255, 255, 255, 0.8) !important;
+        color: #1e293b !important;
+        border-color: rgba(220, 38, 38, 0.1) !important;
     }
     
     /* Metric styling */
     .metric-value {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #ffffff;
+        color: #1e293b;
     }
     
     .metric-label {
         font-size: 0.875rem;
-        color: #e2e8f0;
+        color: #475569;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
     
     /* Ensure proper contrast for all text elements */
     .stMarkdown, .stText, .stNumberInput, .stSelectbox, .stTextInput {
-        color: #ffffff !important;
+        color: #1e293b !important;
     }
     
     /* Ensure form labels are visible */
     .stForm label, .stForm p {
-        color: #e2e8f0 !important;
+        color: #475569 !important;
         font-weight: 500;
     }
     
@@ -307,59 +307,59 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-         /* Info icon styling */
-     .info-icon-container {
-         display: inline-block;
-         margin-left: 1rem;
-         vertical-align: middle;
-     }
-     
-     .info-icon {
-         display: inline-block;
-         width: 40px;
-         height: 40px;
-         background: rgba(255, 107, 107, 0.2);
-         border: 1px solid rgba(255, 107, 107, 0.4);
-         border-radius: 50%;
-         text-align: center;
-         line-height: 36px;
-         font-size: 18px;
-         color: #ff6b6b;
-         cursor: help;
-         transition: all 0.2s ease;
-         position: relative;
-     }
-    
-    .info-icon:hover {
-        background: rgba(255, 107, 107, 0.3);
-        border-color: rgba(255, 107, 107, 0.6);
-        transform: scale(1.1);
-        box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+    /* Info icon styling */
+    .info-icon-container {
+        display: inline-block;
+        margin-left: 1rem;
+        vertical-align: middle;
     }
     
-         /* Custom tooltip styling */
-     .info-icon:hover::after {
-         content: attr(title);
-         position: absolute;
-         bottom: 125%;
-         left: 50%;
-         transform: translateX(-50%);
-         background: rgba(0, 0, 0, 0.9);
-         color: #ffffff;
-         padding: 0.75rem 1rem;
-         border-radius: 8px;
-         font-size: 0.875rem;
-         font-weight: 400;
-         line-height: 1.4;
-         white-space: normal;
-         z-index: 1000;
-         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-         border: 1px solid rgba(255, 255, 255, 0.1);
-         min-width: 400px;
-         max-width: 500px;
-         text-align: left;
-         word-wrap: break-word;
-     }
+    .info-icon {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        background: rgba(20, 184, 166, 0.1);
+        border: 1px solid rgba(20, 184, 166, 0.4);
+        border-radius: 50%;
+        text-align: center;
+        line-height: 36px;
+        font-size: 18px;
+        color: #14b8a6;
+        cursor: help;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    
+    .info-icon:hover {
+        background: rgba(20, 184, 166, 0.2);
+        border-color: rgba(20, 184, 166, 0.6);
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+    }
+    
+    /* Custom tooltip styling */
+    .info-icon:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(30, 41, 59, 0.95);
+        color: #ffffff;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 400;
+        line-height: 1.4;
+        white-space: normal;
+        z-index: 1000;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        min-width: 400px;
+        max-width: 500px;
+        text-align: left;
+        word-wrap: break-word;
+    }
     
     .info-icon:hover::before {
         content: '';
@@ -368,18 +368,18 @@ st.markdown("""
         left: 50%;
         transform: translateX(-50%);
         border: 5px solid transparent;
-        border-top-color: rgba(0, 0, 0, 0.9);
+        border-top-color: rgba(30, 41, 59, 0.95);
         z-index: 1000;
     }
     
     /* Info box styling (keeping for backward compatibility) */
     .info-box {
-        background: rgba(49, 130, 206, 0.2);
+        background: rgba(20, 184, 166, 0.1);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #3182ce;
+        border-left: 4px solid #14b8a6;
         margin: 1rem 0;
-        color: #ffffff;
+        color: #0f766e;
     }
     
     /* Remove extra spacing */
@@ -392,12 +392,12 @@ st.markdown("""
     
     /* Streamlit metric containers */
     .stMetric {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
         border-radius: 8px;
         padding: 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(220, 38, 38, 0.2);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     }
     
     /* Remove default Streamlit spacing */
@@ -411,19 +411,33 @@ st.markdown("""
     
     /* Ensure all text has proper contrast */
     p, h1, h2, h3, h4, h5, h6, span, div {
-        color: #ffffff !important;
+        color: #1e293b !important;
     }
     
     /* Style the main container */
     .main .block-container {
         background: transparent;
     }
+    
+    /* Additional teal accents for variety */
+    .teal-accent {
+        color: #14b8a6;
+        font-weight: 600;
+    }
+    
+    .teal-border {
+        border-color: #14b8a6 !important;
+    }
+    
+    .teal-bg {
+        background-color: rgba(20, 184, 166, 0.1) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Main title with ruby gradient effect
 st.markdown('<h1 class="main-title">🚗 RubyEstimator</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #e2e8f0; font-size: 1.1rem; margin-bottom: 2rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);">Vehicle Weight Estimator & Cost Calculator</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center; color: #475569; font-size: 1.1rem; margin-bottom: 2rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">Vehicle Weight Estimator & Cost Calculator</p>', unsafe_allow_html=True)
 
 # Create two columns for the main layout
 left_col, right_col = st.columns([1, 1])
@@ -594,18 +608,18 @@ with right_col:
         # Net profit highlight
         if totals["net"] > 0:
             st.markdown(f"""
-            <div style="background: #f0fff4; padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 1rem; border: 1px solid #c6f6d5;">
-                <h3 style="margin: 0; color: #22543d;">Net Profit</h3>
-                <p style="font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #22543d;">
+            <div style="background: rgba(34, 197, 94, 0.1); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 1rem; border: 1px solid #22c55e;">
+                <h3 style="margin: 0; color: #166534;">Net Profit</h3>
+                <p style="font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #166534;">
                     {format_currency(totals["net"])}
                 </p>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            <div style="background: #fed7d7; padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 1rem; border: 1px solid #feb2b2;">
-                <h3 style="margin: 0; color: #742a2a;">Net Loss</h3>
-                <p style="font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #742a2a;">
+            <div style="background: rgba(239, 68, 68, 0.1); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 1rem; border: 1px solid #ef4444;">
+                <h3 style="margin: 0; color: #991b1b;">Net Loss</h3>
+                <p style="font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #991b1b;">
                     {format_currency(totals["net"])}
                 </p>
             </div>
@@ -614,8 +628,8 @@ with right_col:
 # --- Footer ---
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #e2e8f0; padding: 1rem 0;">
-    <p style="margin: 0; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);">
+<div style="text-align: center; color: #475569; padding: 1rem 0;">
+    <p style="margin: 0; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">
         Built with Streamlit | RubyEstimator v1.0
     </p>
 </div>
