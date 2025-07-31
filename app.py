@@ -730,30 +730,30 @@ st.markdown('<p style="text-align: center; color: #475569; font-size: 1.1rem; ma
 # Create two columns for the main layout
 left_col, right_col = st.columns([1, 1])
 
-# --- Left Column: Vehicle Search ---
+# --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
     st.markdown("""
     <h2 class="section-header">
-        Vehicle Weight Search
+        Vehicle Search & Estimator
         <div class="info-icon-container">
-            <span class="info-icon" title="Enter vehicle details to find curb weight. The tool checks the local database first, then uses the Gemini API for new searches and saves results for future use.">ⓘ</span>
+            <span class="info-icon" title="Search for vehicle details to get curb weight and specifications, then calculate costs automatically.">ⓘ</span>
         </div>
     </h2>
     """, unsafe_allow_html=True)
 
     # --- Main Form ---
     with st.form(key="vehicle_form"):
-        st.markdown('<h3 class="subsection-header">Vehicle Information</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 class="subsection-header">Step 1: Vehicle Information</h3>', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            year_input = st.text_input("Year", placeholder="e.g., 2023", value="2023")
+            year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013")
         with col2:
-            make_input = st.text_input("Make", placeholder="e.g., Ford")
+            make_input = st.text_input("Make", placeholder="e.g., Toyota", value="Toyota")
         with col3:
-            model_input = st.text_input("Model", placeholder="e.g., F-150")
+            model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry")
 
-        submit_button = st.form_submit_button(label="Get Curb Weight", use_container_width=True)
+        submit_button = st.form_submit_button(label="Search Vehicle & Calculate", use_container_width=True)
 
     # --- Processing and Output ---
     if submit_button:
@@ -776,290 +776,434 @@ with left_col:
                 else:
                     with st.spinner(f"Searching for {year_int} {make_input} {model_input}..."):
                         vehicle_data = process_vehicle(year_int, make_input.strip(), model_input.strip())
+                    
+                    if vehicle_data and vehicle_data['curb_weight_lbs']:
+                        # Display vehicle info in a compact format
+                        st.markdown(f"""
+                        <div class="success-message">
+                            <strong>Vehicle Found:</strong> {year_int} {make_input} {model_input}<br>
+                            <strong>Weight:</strong> <span class="metric-value">{vehicle_data['curb_weight_lbs']} lbs</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Display specifications in a compact row
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if vehicle_data['aluminum_engine'] is not None:
+                                engine_status = "Aluminum" if vehicle_data['aluminum_engine'] else "Iron"
+                                engine_color = "#22c55e" if vehicle_data['aluminum_engine'] else "#f59e0b"
+                                st.markdown(f"""
+                                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color};">
+                                    <strong>Engine:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            else:
+                                st.markdown("""
+                                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
+                                    <strong>Engine:</strong> <span style="color: #6b7280;">Unknown</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        
+                        with col2:
+                            if vehicle_data['aluminum_rims'] is not None:
+                                rims_status = "Aluminum" if vehicle_data['aluminum_rims'] else "Steel"
+                                rims_color = "#22c55e" if vehicle_data['aluminum_rims'] else "#f59e0b"
+                                st.markdown(f"""
+                                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color};">
+                                    <strong>Wheels:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            else:
+                                st.markdown("""
+                                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
+                                    <strong>Wheels:</strong> <span style="color: #6b7280;">Unknown</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        
+                        # Store the data in session state for the cost estimator
+                        st.session_state['last_curb_weight'] = vehicle_data['curb_weight_lbs']
+                        st.session_state['last_aluminum_engine'] = vehicle_data['aluminum_engine']
+                        st.session_state['last_aluminum_rims'] = vehicle_data['aluminum_rims']
+                        st.session_state['last_vehicle_info'] = f"{year_int} {make_input} {model_input}"
+                        
+                        # Auto-populate and calculate the cost estimator
+                        st.session_state['auto_calculate'] = True
+                    else:
+                        st.markdown("""
+                        <div class="error-message">
+                            <strong>Weight Not Found:</strong> Could not determine the curb weight. 
+                            The result has been stored as 'Inconclusive' to prevent repeated searches.
+                        </div>
+                        """, unsafe_allow_html=True)
             except ValueError:
                 st.markdown("""
                 <div class="warning-message">
                     <strong>Invalid Year:</strong> Please enter a valid year (e.g., 2023).
                 </div>
                 """, unsafe_allow_html=True)
+
+    # --- Display Recent Entries (Minimized) ---
+    with st.expander("📋 Recently Searched Vehicles (Last 5)", expanded=False):
+        try:
+            recent_entries_df = get_last_ten_entries()
+            if not recent_entries_df.empty:
+                # Take only the last 5 entries
+                recent_entries_df = recent_entries_df.head(5)
                 
-                if vehicle_data and vehicle_data['curb_weight_lbs']:
-                    # Display weight
-                    st.markdown(f"""
-                    <div class="success-message">
-                        <strong>Weight Found:</strong> <span class="metric-value">{vehicle_data['curb_weight_lbs']} lbs</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Display aluminum engine info
-                    if vehicle_data['aluminum_engine'] is not None:
-                        engine_status = "Aluminum" if vehicle_data['aluminum_engine'] else "Iron"
-                        engine_color = "#22c55e" if vehicle_data['aluminum_engine'] else "#f59e0b"
-                        st.markdown(f"""
-                        <div style="background: rgba(34, 197, 94, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid {engine_color};">
-                            <strong>Engine Block:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
-                        </div>
-                        """, unsafe_allow_html=True)
+                # Format the aluminum columns for better display
+                def format_aluminum(value):
+                    if value is None:
+                        return "?"
+                    elif value:
+                        return "Al"
                     else:
-                        st.markdown("""
-                        <div style="background: rgba(156, 163, 175, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid #9ca3af;">
-                            <strong>Engine Block:</strong> <span style="color: #6b7280;">Unknown</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Display aluminum rims info
-                    if vehicle_data['aluminum_rims'] is not None:
-                        rims_status = "Aluminum" if vehicle_data['aluminum_rims'] else "Steel"
-                        rims_color = "#22c55e" if vehicle_data['aluminum_rims'] else "#f59e0b"
-                        st.markdown(f"""
-                        <div style="background: rgba(34, 197, 94, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid {rims_color};">
-                            <strong>Wheels/Rims:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown("""
-                        <div style="background: rgba(156, 163, 175, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid #9ca3af;">
-                            <strong>Wheels/Rims:</strong> <span style="color: #6b7280;">Unknown</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Store the data in session state for the cost estimator
-                    st.session_state['last_curb_weight'] = vehicle_data['curb_weight_lbs']
-                    st.session_state['last_aluminum_engine'] = vehicle_data['aluminum_engine']
-                    st.session_state['last_aluminum_rims'] = vehicle_data['aluminum_rims']
-                else:
-                    st.markdown("""
-                    <div class="error-message">
-                        <strong>Weight Not Found:</strong> Could not determine the curb weight. 
-                        The result has been stored as 'Inconclusive' to prevent repeated searches.
-                    </div>
-                    """, unsafe_allow_html=True)
+                        return "Fe/St"
+                
+                # Create a copy for display with formatted columns
+                display_df = recent_entries_df.copy()
+                display_df['E'] = display_df['aluminum_engine'].apply(format_aluminum)
+                display_df['W'] = display_df['aluminum_rims'].apply(format_aluminum)
+                
+                # Select and rename columns for display (more compact)
+                display_df = display_df[['year', 'make', 'model', 'curb_weight_lbs', 'E', 'W']]
+                display_df.columns = ['Year', 'Make', 'Model', 'Weight', 'E', 'W']
+                
+                # Style the dataframe
+                styled_df = display_df.style.set_properties(**{
+                    'background-color': 'rgba(255, 255, 255, 0.95)',
+                    'color': '#1e293b',
+                    'border-color': 'rgba(220, 38, 38, 0.1)',
+                    'font-size': '0.8rem'
+                }).format({'Weight': '{:,.0f}'})
+                
+                st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                st.caption("E = Engine (Al=Aluminum, Fe=Iron), W = Wheels (Al=Aluminum, St=Steel)")
+            else:
+                st.info("No vehicles searched yet.")
+        except Exception as e:
+            st.error(f"Error fetching recent entries: {e}")
 
-    # --- Display Last 10 Entries ---
-    st.markdown('<h3 class="subsection-header">Recently Searched Vehicles</h3>', unsafe_allow_html=True)
-    
-    try:
-        recent_entries_df = get_last_ten_entries()
-        if not recent_entries_df.empty:
-            # Format the aluminum columns for better display
-            def format_aluminum(value):
-                if value is None:
-                    return "Unknown"
-                elif value:
-                    return "Aluminum"
-                else:
-                    return "Iron/Steel"
-            
-            # Create a copy for display with formatted columns
-            display_df = recent_entries_df.copy()
-            display_df['Engine'] = display_df['aluminum_engine'].apply(format_aluminum)
-            display_df['Wheels'] = display_df['aluminum_rims'].apply(format_aluminum)
-            
-            # Select and rename columns for display
-            display_df = display_df[['year', 'make', 'model', 'curb_weight_lbs', 'Engine', 'Wheels']]
-            display_df.columns = ['Year', 'Make', 'Model', 'Weight (lbs)', 'Engine', 'Wheels']
-            
-            # Style the dataframe
-            styled_df = display_df.style.set_properties(**{
-                'background-color': 'rgba(255, 255, 255, 0.95)',
-                'color': '#1e293b',
-                'border-color': 'rgba(220, 38, 38, 0.1)'
-            }).format({'Weight (lbs)': '{:,.0f}'})
-            
-            st.dataframe(styled_df, use_container_width=True, hide_index=True)
-        else:
-            st.info("The database is currently empty. Search for a vehicle to populate it.")
-    except Exception as e:
-        st.error(f"An error occurred while fetching recent entries: {e}")
-
-# --- Right Column: Cost Estimator ---
+# --- Right Column: Cost Estimator Results ---
 with right_col:
     st.markdown("""
     <h2 class="section-header">
-        Cost Estimator
+        Cost Estimate Results
         <div class="info-icon-container">
-            <span class="info-icon" title="Calculate commodity weights, sale values, costs, and net profit based on the number of cars and combined curb weight.">ⓘ</span>
+            <span class="info-icon" title="Automatically calculated commodity weights, sale values, costs, and net profit based on the searched vehicle.">ⓘ</span>
         </div>
     </h2>
     """, unsafe_allow_html=True)
     
-    # Cost estimator form
-    with st.form(key="cost_estimator_form"):
-        st.markdown('<h3 class="subsection-header">Calculation Parameters</h3>', unsafe_allow_html=True)
+    # Auto-calculate if vehicle was just searched
+    if st.session_state.get('auto_calculate', False):
+        # Clear the auto_calculate flag
+        st.session_state['auto_calculate'] = False
         
-        col1, col2 = st.columns(2)
-        with col1:
-            cars_input = st.text_input("Number of Cars", placeholder="e.g., 1", value="1")
-        with col2:
-            # Use last curb weight if available, otherwise default to 3600
-            default_weight = st.session_state.get('last_curb_weight', 3600)
-            curb_weight_input = st.text_input("Combined Curb Weight (lb)", placeholder="e.g., 3600", value=str(default_weight))
-        
-        # Engine and Rims Type Selection
-        st.markdown('<h4 style="margin-top: 1rem; color: #475569;">Vehicle Specifications</h4>', unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            # Determine default engine type from session state
-            default_engine = "Unknown"
-            if 'last_aluminum_engine' in st.session_state and st.session_state['last_aluminum_engine'] is not None:
-                default_engine = "Aluminum" if st.session_state['last_aluminum_engine'] else "Iron"
+        # Store calculation results in session state for display
+        try:
+            cars_int = 1  # Default to 1 car
+            curb_weight_int = st.session_state.get('last_curb_weight', 3600)
             
-            engine_type = st.selectbox(
-                "Engine Block Type",
-                options=["Unknown", "Aluminum", "Iron"],
-                index=["Unknown", "Aluminum", "Iron"].index(default_engine),
-                help="Select the engine block material. This affects the commodity calculations."
-            )
-        with col2:
-            # Determine default rims type from session state
-            default_rims = "Unknown"
-            if 'last_aluminum_rims' in st.session_state and st.session_state['last_aluminum_rims'] is not None:
-                default_rims = "Aluminum" if st.session_state['last_aluminum_rims'] else "Steel"
+            # Convert selectbox values to boolean/None for the function
+            aluminum_engine = None
+            if st.session_state.get('last_aluminum_engine') is True:
+                aluminum_engine = True
+            elif st.session_state.get('last_aluminum_engine') is False:
+                aluminum_engine = False
             
-            rims_type = st.selectbox(
-                "Wheels/Rims Type",
-                options=["Unknown", "Aluminum", "Steel"],
-                index=["Unknown", "Aluminum", "Steel"].index(default_rims),
-                help="Select the wheel/rim material. This affects the aluminum rims commodity calculation."
-            )
-        
-        calculate_button = st.form_submit_button(label="Calculate Costs", use_container_width=True)
+            aluminum_rims = None
+            if st.session_state.get('last_aluminum_rims') is True:
+                aluminum_rims = True
+            elif st.session_state.get('last_aluminum_rims') is False:
+                aluminum_rims = False
+            
+            # Perform the calculation
+            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+            totals = calculate_totals(commodities, cars_int, curb_weight_int)
+            
+            # Store results in session state
+            st.session_state['calculation_results'] = {
+                'commodities': commodities,
+                'totals': totals,
+                'cars': cars_int,
+                'curb_weight': curb_weight_int
+            }
+            
+        except Exception as e:
+            st.error(f"Error during auto-calculation: {e}")
     
-    # Calculate and display results
-    if calculate_button:
-        # Validate and convert input values
-        try:
-            cars_int = int(cars_input.strip())
-            if cars_int < 1:
-                st.markdown("""
-                <div class="warning-message">
-                    <strong>Invalid Number of Cars:</strong> Please enter a number greater than 0.
-                </div>
-                """, unsafe_allow_html=True)
-                st.stop()
-        except ValueError:
-            st.markdown("""
-            <div class="warning-message">
-                <strong>Invalid Number of Cars:</strong> Please enter a valid number (e.g., 1).
-            </div>
-            """, unsafe_allow_html=True)
-            st.stop()
+    # Show a message when no vehicle has been searched yet
+    if st.session_state.get('last_curb_weight') is None:
+        st.markdown("""
+        <div style="background: rgba(156, 163, 175, 0.1); padding: 2rem; border-radius: 8px; text-align: center; border: 1px solid #9ca3af;">
+            <h3 style="color: #6b7280; margin-bottom: 1rem;">No Vehicle Selected</h3>
+            <p style="color: #6b7280;">Search for a vehicle on the left to see cost estimates here.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        # Display the current vehicle info
+        vehicle_name = st.session_state.get('last_vehicle_info', 'Unknown Vehicle')
+        vehicle_info = f"""
+        <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid #14b8a6; margin-bottom: 1rem;">
+            <h4 style="margin: 0; color: #0f766e;">Current Vehicle</h4>
+            <p style="margin: 0.5rem 0; color: #0f766e;">
+                <strong>{vehicle_name}</strong>
+            </p>
+            <p style="margin: 0.5rem 0; color: #0f766e;">
+                Weight: <strong>{st.session_state['last_curb_weight']} lbs</strong>
+            </p>
+        """
         
-        try:
-            curb_weight_int = int(curb_weight_input.strip())
-            if curb_weight_int < 1:
-                st.markdown("""
-                <div class="warning-message">
-                    <strong>Invalid Curb Weight:</strong> Please enter a weight greater than 0.
-                </div>
-                """, unsafe_allow_html=True)
-                st.stop()
-        except ValueError:
-            st.markdown("""
-            <div class="warning-message">
-                <strong>Invalid Curb Weight:</strong> Please enter a valid weight (e.g., 3600).
-            </div>
-            """, unsafe_allow_html=True)
-            st.stop()
+        # Add engine and rims info if available
+        if 'last_aluminum_engine' in st.session_state and st.session_state['last_aluminum_engine'] is not None:
+            engine_status = "Aluminum" if st.session_state['last_aluminum_engine'] else "Iron"
+            vehicle_info += f'<p style="margin: 0.25rem 0; color: #0f766e;">Engine: <strong>{engine_status}</strong></p>'
         
-        # Convert selectbox values to boolean/None for the function
-        aluminum_engine = None
-        if engine_type == "Aluminum":
-            aluminum_engine = True
-        elif engine_type == "Iron":
-            aluminum_engine = False
+        if 'last_aluminum_rims' in st.session_state and st.session_state['last_aluminum_rims'] is not None:
+            rims_status = "Aluminum" if st.session_state['last_aluminum_rims'] else "Steel"
+            vehicle_info += f'<p style="margin: 0.25rem 0; color: #0f766e;">Wheels: <strong>{rims_status}</strong></p>'
         
-        aluminum_rims = None
-        if rims_type == "Aluminum":
-            aluminum_rims = True
-        elif rims_type == "Steel":
-            aluminum_rims = False
+        vehicle_info += '</div>'
+        st.markdown(vehicle_info, unsafe_allow_html=True)
         
-        commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
-        totals = calculate_totals(commodities, cars_int, curb_weight_int)
+        # Add refresh button for current vehicle
+        if st.button("🔄 Refresh Estimate", use_container_width=True):
+            try:
+                cars_int = 1  # Default to 1 car
+                curb_weight_int = st.session_state.get('last_curb_weight', 3600)
+                
+                # Convert session state values to boolean/None for the function
+                aluminum_engine = None
+                if st.session_state.get('last_aluminum_engine') is True:
+                    aluminum_engine = True
+                elif st.session_state.get('last_aluminum_engine') is False:
+                    aluminum_engine = False
+                
+                aluminum_rims = None
+                if st.session_state.get('last_aluminum_rims') is True:
+                    aluminum_rims = True
+                elif st.session_state.get('last_aluminum_rims') is False:
+                    aluminum_rims = False
+                
+                # Perform the calculation
+                commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+                totals = calculate_totals(commodities, cars_int, curb_weight_int)
+                
+                # Store results in session state
+                st.session_state['calculation_results'] = {
+                    'commodities': commodities,
+                    'totals': totals,
+                    'cars': cars_int,
+                    'curb_weight': curb_weight_int
+                }
+                
+                st.success("Estimate refreshed!")
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"Error refreshing estimate: {e}")
         
-        # Display summary metrics
-        st.markdown('<h3 class="subsection-header">Summary Metrics</h3>', unsafe_allow_html=True)
+        # Manual calculation form (optional)
+        with st.expander("⚙️ Manual Calculation Settings", expanded=False):
+            with st.form(key="manual_calc_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    cars_input = st.text_input("Number of Cars", placeholder="e.g., 1", value="1")
+                with col2:
+                    curb_weight_input = st.text_input("Combined Curb Weight (lb)", placeholder="e.g., 3600", value=str(st.session_state.get('last_curb_weight', 3600)))
+                
+                # Engine and Rims Type Selection
+                col1, col2 = st.columns(2)
+                with col1:
+                    default_engine = "Unknown"
+                    if 'last_aluminum_engine' in st.session_state and st.session_state['last_aluminum_engine'] is not None:
+                        default_engine = "Aluminum" if st.session_state['last_aluminum_engine'] else "Iron"
+                    
+                    engine_type = st.selectbox(
+                        "Engine Block Type",
+                        options=["Unknown", "Aluminum", "Iron"],
+                        index=["Unknown", "Aluminum", "Iron"].index(default_engine)
+                    )
+                with col2:
+                    default_rims = "Unknown"
+                    if 'last_aluminum_rims' in st.session_state and st.session_state['last_aluminum_rims'] is not None:
+                        default_rims = "Aluminum" if st.session_state['last_aluminum_rims'] else "Steel"
+                    
+                    rims_type = st.selectbox(
+                        "Wheels/Rims Type",
+                        options=["Unknown", "Aluminum", "Steel"],
+                        index=["Unknown", "Aluminum", "Steel"].index(default_rims)
+                    )
+                
+                manual_calculate_button = st.form_submit_button(label="Recalculate", use_container_width=True)
+                
+                # Handle manual calculation
+                if manual_calculate_button:
+                    try:
+                        cars_int = int(cars_input.strip())
+                        curb_weight_int = int(curb_weight_input.strip())
+                        
+                        # Convert selectbox values to boolean/None for the function
+                        aluminum_engine = None
+                        if engine_type == "Aluminum":
+                            aluminum_engine = True
+                        elif engine_type == "Iron":
+                            aluminum_engine = False
+                        
+                        aluminum_rims = None
+                        if rims_type == "Aluminum":
+                            aluminum_rims = True
+                        elif rims_type == "Steel":
+                            aluminum_rims = False
+                        
+                        # Perform the calculation
+                        commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+                        totals = calculate_totals(commodities, cars_int, curb_weight_int)
+                        
+                        # Store results in session state
+                        st.session_state['calculation_results'] = {
+                            'commodities': commodities,
+                            'totals': totals,
+                            'cars': cars_int,
+                            'curb_weight': curb_weight_int
+                        }
+                        
+                        # Update session state with new values
+                        st.session_state['last_curb_weight'] = curb_weight_int
+                        st.session_state['last_aluminum_engine'] = aluminum_engine
+                        st.session_state['last_aluminum_rims'] = aluminum_rims
+                        
+                    except ValueError:
+                        st.error("Please enter valid numbers for cars and curb weight.")
+                    except Exception as e:
+                        st.error(f"Error during calculation: {e}")
         
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Total Sale Value", format_currency(totals["total_sale"]))
-        with col2:
-            st.metric("Total Costs", format_currency(totals["purchase"] + totals["tow"] + totals["lead"] + totals["nut"]))
-        with col3:
-            st.metric("Net Profit", format_currency(totals["net"]), 
-                     delta="Profit" if totals["net"] > 0 else "Loss")
-        
-        # Display commodities table
-        st.markdown('<h3 class="subsection-header">Commodity Breakdown</h3>', unsafe_allow_html=True)
-        
-        # Create DataFrame for better display
-        commodity_data = []
-        for commodity in commodities:
-            commodity_data.append({
-                "Commodity": commodity["label"],
-                "Weight (lb)": commodity['weight'],
-                "$/lb": commodity['unit_price'],
-                "Sale Value": commodity["sale_value"]
+        # Calculate and display results if vehicle is selected
+        if st.session_state.get('last_curb_weight') is not None:
+            # If no calculation results yet, calculate them
+            if 'calculation_results' not in st.session_state:
+                try:
+                    cars_int = 1  # Default to 1 car
+                    curb_weight_int = st.session_state.get('last_curb_weight', 3600)
+                    
+                    # Convert session state values to boolean/None for the function
+                    aluminum_engine = None
+                    if st.session_state.get('last_aluminum_engine') is True:
+                        aluminum_engine = True
+                    elif st.session_state.get('last_aluminum_engine') is False:
+                        aluminum_engine = False
+                    
+                    aluminum_rims = None
+                    if st.session_state.get('last_aluminum_rims') is True:
+                        aluminum_rims = True
+                    elif st.session_state.get('last_aluminum_rims') is False:
+                        aluminum_rims = False
+                    
+                    # Perform the calculation
+                    commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+                    totals = calculate_totals(commodities, cars_int, curb_weight_int)
+                    
+                    # Store results in session state
+                    st.session_state['calculation_results'] = {
+                        'commodities': commodities,
+                        'totals': totals,
+                        'cars': cars_int,
+                        'curb_weight': curb_weight_int
+                    }
+                except Exception as e:
+                    st.error(f"Error during calculation: {e}")
+                    st.stop()
+            
+            # Display calculation results
+            results = st.session_state['calculation_results']
+            commodities = results['commodities']
+            totals = results['totals']
+            
+            # Display summary metrics
+            st.markdown('<h3 class="subsection-header">Summary Metrics</h3>', unsafe_allow_html=True)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Sale Value", format_currency(totals["total_sale"]))
+            with col2:
+                st.metric("Total Costs", format_currency(totals["purchase"] + totals["tow"] + totals["lead"] + totals["nut"]))
+            with col3:
+                st.metric("Net Profit", format_currency(totals["net"]), 
+                         delta="Profit" if totals["net"] > 0 else "Loss")
+            
+            # Display commodities table
+            st.markdown('<h3 class="subsection-header">Commodity Breakdown</h3>', unsafe_allow_html=True)
+            
+            # Create DataFrame for better display
+            commodity_data = []
+            for commodity in commodities:
+                commodity_data.append({
+                    "Commodity": commodity["label"],
+                    "Weight (lb)": commodity['weight'],
+                    "$/lb": commodity['unit_price'],
+                    "Sale Value": commodity["sale_value"]
+                })
+            
+            commodity_df = pd.DataFrame(commodity_data)
+            
+            # Style the commodity dataframe
+            styled_commodity_df = commodity_df.style.set_properties(**{
+                'background-color': 'rgba(255, 255, 255, 0.95)',
+                'color': '#1e293b',
+                'border-color': 'rgba(220, 38, 38, 0.1)'
+            }).format({
+                'Weight (lb)': '{:,.1f}',
+                '$/lb': '{:.2f}'
             })
-        
-        commodity_df = pd.DataFrame(commodity_data)
-        
-        # Style the commodity dataframe
-        styled_commodity_df = commodity_df.style.set_properties(**{
-            'background-color': 'rgba(255, 255, 255, 0.95)',
-            'color': '#1e293b',
-            'border-color': 'rgba(220, 38, 38, 0.1)'
-        }).format({
-            'Weight (lb)': '{:,.1f}',
-            '$/lb': '{:.2f}'
-        })
-        
-        st.dataframe(styled_commodity_df, use_container_width=True, hide_index=True)
-        
-        # Display detailed cost breakdown
-        st.markdown('<h3 class="subsection-header">Cost Breakdown</h3>', unsafe_allow_html=True)
-        
-        # Create summary DataFrame with better formatting
-        summary_data = [
-            {"Item": "Total Sale", "Amount": format_currency(totals["total_sale"]), "Type": "Revenue"},
-            {"Item": "Purchase Cost", "Amount": f"-{format_currency(totals['purchase'])}", "Type": "Cost"},
-            {"Item": "Tow Fee", "Amount": f"-{format_currency(totals['tow'])}", "Type": "Cost"},
-            {"Item": "Lead Fee", "Amount": f"-{format_currency(totals['lead'])}", "Type": "Cost"},
-            {"Item": "Nut Fee", "Amount": f"-{format_currency(totals['nut'])}", "Type": "Cost"},
-        ]
-        
-        summary_df = pd.DataFrame(summary_data)
-        
-        # Style the summary dataframe
-        styled_summary_df = summary_df.style.set_properties(**{
-            'background-color': 'rgba(255, 255, 255, 0.95)',
-            'color': '#1e293b',
-            'border-color': 'rgba(220, 38, 38, 0.1)'
-        })
-        
-        st.dataframe(styled_summary_df, use_container_width=True, hide_index=True)
-        
-        # Net profit highlight
-        if totals["net"] > 0:
-            st.markdown(f"""
-            <div style="background: rgba(34, 197, 94, 0.1); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 1rem; border: 1px solid #22c55e;">
-                <h3 style="margin: 0; color: #166534;">Net Profit</h3>
-                <p style="font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #166534;">
-                    {format_currency(totals["net"])}
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div style="background: rgba(239, 68, 68, 0.1); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 1rem; border: 1px solid #ef4444;">
-                <h3 style="margin: 0; color: #991b1b;">Net Loss</h3>
-                <p style="font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #991b1b;">
-                    {format_currency(totals["net"])}
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            
+            st.dataframe(styled_commodity_df, use_container_width=True, hide_index=True)
+            
+            # Display detailed cost breakdown
+            st.markdown('<h3 class="subsection-header">Cost Breakdown</h3>', unsafe_allow_html=True)
+            
+            # Create summary DataFrame with better formatting
+            summary_data = [
+                {"Item": "Total Sale", "Amount": format_currency(totals["total_sale"]), "Type": "Revenue"},
+                {"Item": "Purchase Cost", "Amount": f"-{format_currency(totals['purchase'])}", "Type": "Cost"},
+                {"Item": "Tow Fee", "Amount": f"-{format_currency(totals['tow'])}", "Type": "Cost"},
+                {"Item": "Lead Fee", "Amount": f"-{format_currency(totals['lead'])}", "Type": "Cost"},
+                {"Item": "Nut Fee", "Amount": f"-{format_currency(totals['nut'])}", "Type": "Cost"},
+            ]
+            
+            summary_df = pd.DataFrame(summary_data)
+            
+            # Style the summary dataframe
+            styled_summary_df = summary_df.style.set_properties(**{
+                'background-color': 'rgba(255, 255, 255, 0.95)',
+                'color': '#1e293b',
+                'border-color': 'rgba(220, 38, 38, 0.1)'
+            })
+            
+            st.dataframe(styled_summary_df, use_container_width=True, hide_index=True)
+            
+            # Net profit highlight
+            if totals["net"] > 0:
+                st.markdown(f"""
+                <div style="background: rgba(34, 197, 94, 0.1); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 1rem; border: 1px solid #22c55e;">
+                    <h3 style="margin: 0; color: #166534;">Net Profit</h3>
+                    <p style="font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #166534;">
+                        {format_currency(totals["net"])}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="background: rgba(239, 68, 68, 0.1); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 1rem; border: 1px solid #ef4444;">
+                    <h3 style="margin: 0; color: #991b1b;">Net Loss</h3>
+                    <p style="font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #991b1b;">
+                        {format_currency(totals["net"])}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+    
+
+    
+
 
 # --- Footer ---
 st.markdown("---")
@@ -1075,3 +1219,15 @@ st.markdown("""
 if 'db_created' not in st.session_state:
     create_database()
     st.session_state['db_created'] = True
+
+# Initialize session state variables if they don't exist
+if 'last_curb_weight' not in st.session_state:
+    st.session_state['last_curb_weight'] = None
+if 'last_aluminum_engine' not in st.session_state:
+    st.session_state['last_aluminum_engine'] = None
+if 'last_aluminum_rims' not in st.session_state:
+    st.session_state['last_aluminum_rims'] = None
+if 'last_vehicle_info' not in st.session_state:
+    st.session_state['last_vehicle_info'] = None
+if 'auto_calculate' not in st.session_state:
+    st.session_state['auto_calculate'] = False
