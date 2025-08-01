@@ -117,11 +117,14 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
 
     return list_commodities
 
-def calculate_totals(commodities, cars, curb_weight):
+def calculate_totals(commodities, cars, curb_weight, purchase_price=None, tow_fee=None):
     """Calculate total sale value and all costs."""
     total_sale = sum(c["sale_value"] for c in commodities)
-    purchase = FLAT_COSTS["PURCHASE"]
-    tow = FLAT_COSTS["TOW"]
+    
+    # Use provided values or fall back to defaults
+    purchase = purchase_price if purchase_price is not None else FLAT_COSTS["PURCHASE"]
+    tow = tow_fee if tow_fee is not None else FLAT_COSTS["TOW"]
+    
     lead = cars * FLAT_COSTS["LEAD_PER_CAR"]
     nut = curb_weight * FLAT_COSTS["NUT_PER_LB"]
     net = total_sale - (purchase + tow + lead + nut)
@@ -769,6 +772,62 @@ with left_col:
     </h2>
     """, unsafe_allow_html=True)
 
+    # --- Display Current Vehicle Details (if available) ---
+    if 'detailed_vehicle_info' in st.session_state:
+        vehicle_info = st.session_state['detailed_vehicle_info']
+        
+        st.markdown('<h3 class="subsection-header">Current Vehicle</h3>', unsafe_allow_html=True)
+        
+        # Display vehicle name
+        vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
+        st.markdown(f"""
+        <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid #14b8a6; margin-bottom: 1rem;">
+            <h4 style="margin: 0; color: #0f766e;">{vehicle_name}</h4>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Display curb weight, engine, and rims info in three side-by-side boxes
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown(f"""
+            <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #22c55e;">
+                <strong>Weight:</strong> <span style="color: #22c55e; font-weight: 600;">{vehicle_info['weight']} lbs</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            if vehicle_info['aluminum_engine'] is not None:
+                engine_status = "Aluminum" if vehicle_info['aluminum_engine'] else "Iron"
+                engine_color = "#22c55e" if vehicle_info['aluminum_engine'] else "#f59e0b"
+                st.markdown(f"""
+                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color};">
+                    <strong>Engine:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
+                    <strong>Engine:</strong> <span style="color: #6b7280;">Unknown</span>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col3:
+            if vehicle_info['aluminum_rims'] is not None:
+                rims_status = "Aluminum" if vehicle_info['aluminum_rims'] else "Steel"
+                rims_color = "#22c55e" if vehicle_info['aluminum_rims'] else "#f59e0b"
+                st.markdown(f"""
+                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color};">
+                    <strong>Rims:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
+                    <strong>Rims:</strong> <span style="color: #6b7280;">Unknown</span>
+                </div>
+                """, unsafe_allow_html=True)
+
     # --- Main Form ---
     with st.form(key="vehicle_form"):
         st.markdown('<h3 class="subsection-header">Look Up Vehicle</h3>', unsafe_allow_html=True)
@@ -888,17 +947,9 @@ with left_col:
 
 # --- Right Column: Cost Estimator Results ---
 with right_col:
-    # Dynamic header based on vehicle info
-    if 'detailed_vehicle_info' in st.session_state:
-        vehicle_info = st.session_state['detailed_vehicle_info']
-        vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
-        header_text = vehicle_name
-    else:
-        header_text = "Cost Estimate Results"
-    
-    st.markdown(f"""
+    st.markdown("""
     <h2 class="section-header">
-        {header_text}
+        Cost Estimate Results
         <div class="info-icon-container">
             <span class="info-icon" title="Automatically calculated commodity weights, sale values, costs, and net profit based on the searched vehicle.">ⓘ</span>
         </div>
@@ -930,16 +981,23 @@ with right_col:
             elif last_aluminum_rims is False or last_aluminum_rims == 0:
                 aluminum_rims = False
             
+            # Get stored purchase price and tow fee, or use defaults
+            stored_results = st.session_state.get('calculation_results', {})
+            purchase_price = stored_results.get('purchase_price', FLAT_COSTS["PURCHASE"])
+            tow_fee = stored_results.get('tow_fee', FLAT_COSTS["TOW"])
+            
             # Perform the calculation
             commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
-            totals = calculate_totals(commodities, cars_int, curb_weight_int)
+            totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price, tow_fee)
             
             # Store results in session state
             st.session_state['calculation_results'] = {
                 'commodities': commodities,
                 'totals': totals,
                 'cars': cars_int,
-                'curb_weight': curb_weight_int
+                'curb_weight': curb_weight_int,
+                'purchase_price': purchase_price,
+                'tow_fee': tow_fee
             }
             
         except Exception as e:
@@ -961,6 +1019,13 @@ with right_col:
                     cars_input = st.text_input("Number of Cars", placeholder="e.g., 1", value="1", key="cars_no_vehicle")
                 with col2:
                     curb_weight_input = st.text_input("Combined Curb Weight (lb)", placeholder="e.g., 3600", value="3600", key="weight_no_vehicle")
+                
+                # Purchase Price and Tow Fee
+                col1, col2 = st.columns(2)
+                with col1:
+                    purchase_price_input = st.number_input("Purchase Price ($)", min_value=0.0, value=float(FLAT_COSTS["PURCHASE"]), step=1.0, key="purchase_no_vehicle")
+                with col2:
+                    tow_fee_input = st.number_input("Tow Fee ($)", min_value=0.0, value=float(FLAT_COSTS["TOW"]), step=1.0, key="tow_no_vehicle")
                 
                 # Engine and Rims Type Selection
                 col1, col2 = st.columns(2)
@@ -1002,14 +1067,16 @@ with right_col:
                         
                         # Perform the calculation
                         commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
-                        totals = calculate_totals(commodities, cars_int, curb_weight_int)
+                        totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price_input, tow_fee_input)
                         
                         # Store results in session state
                         st.session_state['calculation_results'] = {
                             'commodities': commodities,
                             'totals': totals,
                             'cars': cars_int,
-                            'curb_weight': curb_weight_int
+                            'curb_weight': curb_weight_int,
+                            'purchase_price': purchase_price_input,
+                            'tow_fee': tow_fee_input
                         }
                         
                         # Update session state with new values
@@ -1035,77 +1102,7 @@ with right_col:
                         st.error("Please enter valid numbers for cars and curb weight.")
                     except Exception as e:
                         st.error(f"Error during calculation: {e}")
-    else:
-        # Display the current vehicle info with detailed styling
-        if 'detailed_vehicle_info' in st.session_state:
-            vehicle_info = st.session_state['detailed_vehicle_info']
-            
-            # Display curb weight, engine, and rims info in three side-by-side boxes
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.markdown(f"""
-                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #22c55e;">
-                    <strong>Weight:</strong> <span style="color: #22c55e; font-weight: 600;">{vehicle_info['weight']} lbs</span>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                if vehicle_info['aluminum_engine'] is not None:
-                    engine_status = "Aluminum" if vehicle_info['aluminum_engine'] else "Iron"
-                    engine_color = "#22c55e" if vehicle_info['aluminum_engine'] else "#f59e0b"
-                    st.markdown(f"""
-                    <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color};">
-                        <strong>Engine:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown("""
-                    <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
-                        <strong>Engine:</strong> <span style="color: #6b7280;">Unknown</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            with col3:
-                if vehicle_info['aluminum_rims'] is not None:
-                    rims_status = "Aluminum" if vehicle_info['aluminum_rims'] else "Steel"
-                    rims_color = "#22c55e" if vehicle_info['aluminum_rims'] else "#f59e0b"
-                    st.markdown(f"""
-                    <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color};">
-                        <strong>Rims:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown("""
-                    <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
-                        <strong>Rims:</strong> <span style="color: #6b7280;">Unknown</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-        else:
-            # Fallback to simple display if no detailed info
-            vehicle_name = st.session_state.get('last_vehicle_info', 'Unknown Vehicle')
-            vehicle_info = f"""
-            <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid #14b8a6; margin-bottom: 1rem;">
-                <h4 style="margin: 0; color: #0f766e;">Current Vehicle</h4>
-                <p style="margin: 0.5rem 0; color: #0f766e;">
-                    <strong>{vehicle_name}</strong>
-                </p>
-                <p style="margin: 0.5rem 0; color: #0f766e;">
-                    Weight: <strong>{st.session_state['last_curb_weight']} lbs</strong>
-                </p>
-            """
-            
-            # Add engine and rims info if available
-            if 'last_aluminum_engine' in st.session_state and st.session_state['last_aluminum_engine'] is not None:
-                engine_status = "Aluminum" if st.session_state['last_aluminum_engine'] else "Iron"
-                vehicle_info += f'<p style="margin: 0.25rem 0; color: #0f766e;">Engine: <strong>{engine_status}</strong></p>'
-            
-            if 'last_aluminum_rims' in st.session_state and st.session_state['last_aluminum_rims'] is not None:
-                rims_status = "Aluminum" if st.session_state['last_aluminum_rims'] else "Steel"
-                vehicle_info += f'<p style="margin: 0.25rem 0; color: #0f766e;">Wheels: <strong>{rims_status}</strong></p>'
-            
-            vehicle_info += '</div>'
-            st.markdown(vehicle_info, unsafe_allow_html=True)
+
         
 
         
@@ -1132,16 +1129,22 @@ with right_col:
                     elif last_aluminum_rims is False or last_aluminum_rims == 0:
                         aluminum_rims = False
                     
+                    # Use default purchase price and tow fee for initial calculation
+                    purchase_price = FLAT_COSTS["PURCHASE"]
+                    tow_fee = FLAT_COSTS["TOW"]
+                    
                     # Perform the calculation
                     commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
-                    totals = calculate_totals(commodities, cars_int, curb_weight_int)
+                    totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price, tow_fee)
                     
                     # Store results in session state
                     st.session_state['calculation_results'] = {
                         'commodities': commodities,
                         'totals': totals,
                         'cars': cars_int,
-                        'curb_weight': curb_weight_int
+                        'curb_weight': curb_weight_int,
+                        'purchase_price': purchase_price,
+                        'tow_fee': tow_fee
                     }
                 except Exception as e:
                     st.error(f"Error during calculation: {e}")
@@ -1163,6 +1166,44 @@ with right_col:
             with col3:
                 st.metric("Net Profit", format_currency(totals["net"]), 
                          delta="Profit" if totals["net"] > 0 else "Loss")
+            
+            # Purchase Price and Tow Fee Input Fields
+            st.markdown('<h3 class="subsection-header">Adjust Costs</h3>', unsafe_allow_html=True)
+            
+            with st.form(key="cost_adjustment_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    purchase_price_input = st.number_input("Purchase Price ($)", min_value=0.0, value=float(results.get('purchase_price', FLAT_COSTS["PURCHASE"])), step=1.0, key="purchase_adjustment")
+                with col2:
+                    tow_fee_input = st.number_input("Tow Fee ($)", min_value=0.0, value=float(results.get('tow_fee', FLAT_COSTS["TOW"])), step=1.0, key="tow_adjustment")
+                
+                recalculate_button = st.form_submit_button(label="Recalculate with New Costs", use_container_width=True)
+                
+                # Handle cost adjustment
+                if recalculate_button:
+                    try:
+                        # Perform the calculation with new values
+                        commodities = compute_commodities(results['cars'], results['curb_weight'], 
+                                                        st.session_state.get('last_aluminum_engine'), 
+                                                        st.session_state.get('last_aluminum_rims'))
+                        totals = calculate_totals(commodities, results['cars'], results['curb_weight'], 
+                                                purchase_price_input, tow_fee_input)
+                        
+                        # Update results in session state
+                        st.session_state['calculation_results'] = {
+                            'commodities': commodities,
+                            'totals': totals,
+                            'cars': results['cars'],
+                            'curb_weight': results['curb_weight'],
+                            'purchase_price': purchase_price_input,
+                            'tow_fee': tow_fee_input
+                        }
+                        
+                        st.success("Costs updated and recalculated!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Error during recalculation: {e}")
             
             # Disclaimer about estimates and accuracy
             st.markdown("""
@@ -1237,82 +1278,7 @@ with right_col:
             
 
         
-        # Manual calculation form at the bottom when results are displayed
-        with st.expander("❓ Unknown make/model? Enter curb weight manually", expanded=False):
-            with st.form(key="manual_calc_form_with_vehicle"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    cars_input = st.text_input("Number of Cars", placeholder="e.g., 1", value="1", key="cars_with_vehicle")
-                with col2:
-                    curb_weight_input = st.text_input("Combined Curb Weight (lb)", placeholder="e.g., 3600", value=str(st.session_state.get('last_curb_weight', 3600)), key="weight_with_vehicle")
-                
-                # Engine and Rims Type Selection
-                col1, col2 = st.columns(2)
-                with col1:
-                    default_engine = "Unknown"
-                    if 'last_aluminum_engine' in st.session_state and st.session_state['last_aluminum_engine'] is not None:
-                        default_engine = "Aluminum" if st.session_state['last_aluminum_engine'] else "Iron"
-                    
-                    engine_type = st.selectbox(
-                        "Engine Block Type",
-                        options=["Unknown", "Aluminum", "Iron"],
-                        index=["Unknown", "Aluminum", "Iron"].index(default_engine),
-                        key="engine_with_vehicle"
-                    )
-                with col2:
-                    default_rims = "Unknown"
-                    if 'last_aluminum_rims' in st.session_state and st.session_state['last_aluminum_rims'] is not None:
-                        default_rims = "Aluminum" if st.session_state['last_aluminum_rims'] else "Steel"
-                    
-                    rims_type = st.selectbox(
-                        "Wheels/Rims Type",
-                        options=["Unknown", "Aluminum", "Steel"],
-                        index=["Unknown", "Aluminum", "Steel"].index(default_rims),
-                        key="rims_with_vehicle"
-                    )
-                
-                manual_calculate_button = st.form_submit_button(label="Recalculate", use_container_width=True)
-                
-                # Handle manual calculation
-                if manual_calculate_button:
-                    try:
-                        cars_int = int(cars_input.strip())
-                        curb_weight_int = int(curb_weight_input.strip())
-                        
-                        # Convert selectbox values to boolean/None for the function
-                        aluminum_engine = None
-                        if engine_type == "Aluminum":
-                            aluminum_engine = True
-                        elif engine_type == "Iron":
-                            aluminum_engine = False
-                        
-                        aluminum_rims = None
-                        if rims_type == "Aluminum":
-                            aluminum_rims = True
-                        elif rims_type == "Steel":
-                            aluminum_rims = False
-                        
-                        # Perform the calculation
-                        commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
-                        totals = calculate_totals(commodities, cars_int, curb_weight_int)
-                        
-                        # Store results in session state
-                        st.session_state['calculation_results'] = {
-                            'commodities': commodities,
-                            'totals': totals,
-                            'cars': cars_int,
-                            'curb_weight': curb_weight_int
-                        }
-                        
-                        # Update session state with new values
-                        st.session_state['last_curb_weight'] = curb_weight_int
-                        st.session_state['last_aluminum_engine'] = aluminum_engine
-                        st.session_state['last_aluminum_rims'] = aluminum_rims
-                        
-                    except ValueError:
-                        st.error("Please enter valid numbers for cars and curb weight.")
-                    except Exception as e:
-                        st.error(f"Error during calculation: {e}")
+
     
 
     
