@@ -1,11 +1,10 @@
-import sqlite3
 import os
 import google.generativeai as genai
 import re
 import streamlit as st
-import shutil
-import json
-from datetime import datetime
+import pandas as pd
+from database_config import create_database_engine, get_database_connection, create_tables, test_database_connection, get_database_info
+from sqlalchemy import text
 
 # --- Configuration ---
 # Get API key from environment variables (works with Railway, Streamlit Cloud, and local development)
@@ -19,205 +18,123 @@ if not GEMINI_API_KEY:
         # Fallback for local development - set your API key in .streamlit/secrets.toml
         GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
 
-# Database file path - use Railway's persistent volume if available
-DB_FILE = os.getenv("DATABASE_PATH", "/data/vehicle_weights.db")
+# Database setup
+print("=== DATABASE SETUP ===")
+db_info = get_database_info()
+for key, value in db_info.items():
+    print(f"{key}: {value}")
 
-# Check if we're in Railway environment
-if os.getenv("RAILWAY_ENVIRONMENT"):
-    # In Railway, try to use persistent volume
-    if os.path.exists("/data") and os.access("/data", os.W_OK):
-        DB_FILE = "/data/vehicle_weights.db"
-        print("✅ Using Railway persistent volume at /data")
-    else:
-        # Try to create /data directory
-        try:
-            os.makedirs("/data", exist_ok=True)
-            if os.access("/data", os.W_OK):
-                DB_FILE = "/data/vehicle_weights.db"
-                print("✅ Created and using /data directory")
-            else:
-                # Fallback to a directory that might persist
-                DB_FILE = "/tmp/vehicle_weights.db"
-                print("⚠️ /data not writable, using /tmp fallback")
-        except Exception as e:
-            print(f"⚠️ Could not create /data directory: {e}")
-            DB_FILE = "/tmp/vehicle_weights.db"
-            print("⚠️ Using /tmp fallback")
+# Test database connection
+success, message = test_database_connection()
+print(f"Database connection: {message}")
+
+if success:
+    create_tables()
 else:
-    # Local development
-    DB_FILE = "vehicle_weights.db"
-    print("✅ Using local development database")
-
-# Ensure the database directory exists
-db_dir = os.path.dirname(DB_FILE)
-if db_dir and not os.path.exists(db_dir):
-    try:
-        os.makedirs(db_dir, exist_ok=True)
-        print(f"✅ Created database directory: {db_dir}")
-    except Exception as e:
-        print(f"❌ Could not create database directory {db_dir}: {e}")
-        # Final fallback to current directory
-        DB_FILE = "vehicle_weights.db"
-        print("⚠️ Using current directory fallback")
-
-print(f"Using database file: {DB_FILE}")
-print(f"Database directory: {db_dir}")
-print(f"Directory exists: {os.path.exists(db_dir)}")
-print(f"Directory writable: {os.access(db_dir, os.W_OK) if os.path.exists(db_dir) else 'N/A'}")
-print(f"Railway environment: {os.getenv('RAILWAY_ENVIRONMENT', 'Not set')}")
-print(f"Current working directory: {os.getcwd()}")
-print(f"Available directories: {[d for d in os.listdir('.') if os.path.isdir(d)]}")
-
-
-def create_database():
-    """Creates the SQLite database and table if they don't exist."""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS vehicles (
-            id INTEGER PRIMARY KEY,
-            year INTEGER NOT NULL,
-            make TEXT NOT NULL,
-            model TEXT NOT NULL,
-            curb_weight_lbs INTEGER,
-            aluminum_engine BOOLEAN,
-            aluminum_rims BOOLEAN,
-            UNIQUE(year, make, model)
-        )
-    """)
-    
-    # Check if new columns exist, if not add them
-    c.execute("PRAGMA table_info(vehicles)")
-    columns = [row[1] for row in c.fetchall()]
-    
-    if 'aluminum_engine' not in columns:
-        c.execute("ALTER TABLE vehicles ADD COLUMN aluminum_engine BOOLEAN")
-        print("Added aluminum_engine column to existing table")
-    
-    if 'aluminum_rims' not in columns:
-        c.execute("ALTER TABLE vehicles ADD COLUMN aluminum_rims BOOLEAN")
-        print("Added aluminum_rims column to existing table")
-    
-    conn.commit()
-    conn.close()
+    print("❌ Database connection failed - check your Railway database configuration")
 
 
 def backup_database():
     """Creates a backup of the database."""
-    if os.path.exists(DB_FILE):
-        backup_file = f"{DB_FILE}.backup"
-        shutil.copy2(DB_FILE, backup_file)
-        print(f"Database backed up to: {backup_file}")
-        return backup_file
+    # This function will need to be updated to use PostgreSQL
+    # For now, it will just print a placeholder message
+    print("Backup functionality is not yet implemented for PostgreSQL.")
     return None
 
 
 def restore_database():
     """Restores the database from backup if it doesn't exist."""
-    backup_file = f"{DB_FILE}.backup"
-    if not os.path.exists(DB_FILE) and os.path.exists(backup_file):
-        shutil.copy2(backup_file, DB_FILE)
-        print(f"Database restored from: {backup_file}")
-        return True
+    # This function will need to be updated to use PostgreSQL
+    # For now, it will just print a placeholder message
+    print("Restore functionality is not yet implemented for PostgreSQL.")
     return False
 
 
 def export_database_to_json():
     """Exports all vehicle data to JSON for backup purposes."""
-    if not os.path.exists(DB_FILE):
-        return None
-    
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles")
-    rows = c.fetchall()
-    conn.close()
-    
-    data = []
-    for row in rows:
-        data.append({
-            'year': row[0],
-            'make': row[1],
-            'model': row[2],
-            'curb_weight_lbs': row[3],
-            'aluminum_engine': row[4],
-            'aluminum_rims': row[5]
-        })
-    
-    export_file = f"vehicle_data_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(export_file, 'w') as f:
-        json.dump(data, f, indent=2)
-    
-    print(f"Database exported to: {export_file}")
-    return export_file
+    # This function will need to be updated to use PostgreSQL
+    # For now, it will just print a placeholder message
+    print("Export functionality is not yet implemented for PostgreSQL.")
+    return None
 
 
 def import_database_from_json(json_file):
     """Imports vehicle data from JSON backup."""
-    if not os.path.exists(json_file):
-        return False
-    
-    with open(json_file, 'r') as f:
-        data = json.load(f)
-    
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    
-    for vehicle in data:
-        c.execute("""
-            INSERT OR REPLACE INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (vehicle['year'], vehicle['make'], vehicle['model'], 
-              vehicle['curb_weight_lbs'], vehicle['aluminum_engine'], vehicle['aluminum_rims']))
-    
-    conn.commit()
-    conn.close()
-    print(f"Database imported from: {json_file}")
-    return True
+    # This function will need to be updated to use PostgreSQL
+    # For now, it will just print a placeholder message
+    print("Import functionality is not yet implemented for PostgreSQL.")
+    return False
 
 
 def get_curb_weight_from_db(year, make, model):
     """Checks the database for the curb weight of a specific vehicle."""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT curb_weight_lbs FROM vehicles WHERE year = ? AND make = ? AND model = ?", (year, make, model))
-    result = c.fetchone()
-    conn.close()
-    if result and result[0] is not None:
-        return result[0]
+    try:
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            result = conn.execute(text(
+                "SELECT curb_weight_lbs FROM vehicles WHERE year = :year AND make = :make AND model = :model"
+            ), {"year": year, "make": make, "model": model})
+            row = result.fetchone()
+            if row and row[0] is not None:
+                return row[0]
+    except Exception as e:
+        print(f"Error getting curb weight from database: {e}")
     return None
-
 
 def get_vehicle_data_from_db(year, make, model):
     """Checks the database for all vehicle data."""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles WHERE year = ? AND make = ? AND model = ?", (year, make, model))
-    result = c.fetchone()
-    conn.close()
-    if result:
-        return {
-            'curb_weight_lbs': result[0],
-            'aluminum_engine': result[1],
-            'aluminum_rims': result[2]
-        }
+    try:
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            result = conn.execute(text(
+                "SELECT curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles WHERE year = :year AND make = :make AND model = :model"
+            ), {"year": year, "make": make, "model": model})
+            row = result.fetchone()
+            if row:
+                return {
+                    'curb_weight_lbs': row[0],
+                    'aluminum_engine': row[1],
+                    'aluminum_rims': row[2]
+                }
+    except Exception as e:
+        print(f"Error getting vehicle data from database: {e}")
     return None
-
 
 def update_vehicle_data_in_db(year, make, model, weight, aluminum_engine=None, aluminum_rims=None):
     """Inserts or updates the vehicle data in the database."""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""
-        INSERT INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(year, make, model) DO UPDATE SET 
-            curb_weight_lbs = excluded.curb_weight_lbs,
-            aluminum_engine = excluded.aluminum_engine,
-            aluminum_rims = excluded.aluminum_rims;
-    """, (year, make, model, weight, aluminum_engine, aluminum_rims))
-    conn.commit()
-    conn.close()
+    try:
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims)
+                VALUES (:year, :make, :model, :weight, :aluminum_engine, :aluminum_rims)
+                ON CONFLICT (year, make, model) DO UPDATE SET 
+                    curb_weight_lbs = EXCLUDED.curb_weight_lbs,
+                    aluminum_engine = EXCLUDED.aluminum_engine,
+                    aluminum_rims = EXCLUDED.aluminum_rims
+            """), {
+                "year": year, 
+                "make": make, 
+                "model": model, 
+                "weight": weight, 
+                "aluminum_engine": aluminum_engine, 
+                "aluminum_rims": aluminum_rims
+            })
+            conn.commit()
+            print(f"✅ Vehicle data updated in PostgreSQL database: {year} {make} {model}")
+    except Exception as e:
+        print(f"Error updating vehicle data in database: {e}")
+
+def get_last_ten_entries():
+    """Fetches the last 10 vehicle entries from the database."""
+    try:
+        engine = create_database_engine()
+        query = text("SELECT year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles ORDER BY id DESC LIMIT 10")
+        df = pd.read_sql_query(query, engine)
+        return df
+    except Exception as e:
+        print(f"Database error: {e}")
+        return pd.DataFrame()  # Return empty DataFrame on error
 
 
 def get_aluminum_engine_from_api(year: int, make: str, model: str):
@@ -415,58 +332,22 @@ def process_vehicle(year, make, model):
 
 def check_database_status():
     """Check and report database status for debugging persistent volume issues."""
-    status = {
-        'database_file': DB_FILE,
-        'database_exists': os.path.exists(DB_FILE),
-        'database_size': os.path.getsize(DB_FILE) if os.path.exists(DB_FILE) else 0,
-        'database_dir': os.path.dirname(DB_FILE),
-        'directory_exists': os.path.exists(os.path.dirname(DB_FILE)),
-        'directory_writable': os.access(os.path.dirname(DB_FILE), os.W_OK) if os.path.exists(os.path.dirname(DB_FILE)) else False,
-        'railway_environment': os.getenv('RAILWAY_ENVIRONMENT', 'Not set'),
-        'data_dir_exists': os.path.exists('/data'),
-        'data_dir_writable': os.access('/data', os.W_OK) if os.path.exists('/data') else False,
-        'backup_exists': os.path.exists(f"{DB_FILE}.backup"),
-        'backup_size': os.path.getsize(f"{DB_FILE}.backup") if os.path.exists(f"{DB_FILE}.backup") else 0
-    }
-    
-    print("=== DATABASE STATUS REPORT ===")
-    for key, value in status.items():
-        print(f"{key}: {value}")
-    print("=============================")
-    
-    return status
+    # This function will need to be updated to use PostgreSQL
+    # For now, it will just print a placeholder message
+    print("check_database_status is not yet implemented for PostgreSQL.")
+    return {}
 
 
 def test_persistent_volume():
     """Test if persistent volume is working by writing and reading a test file."""
-    test_file = "/data/persistent_volume_test.txt"
-    test_content = f"Persistent volume test - {datetime.now().isoformat()}"
-    
-    try:
-        # Write test file
-        with open(test_file, 'w') as f:
-            f.write(test_content)
-        print(f"✅ Successfully wrote test file: {test_file}")
-        
-        # Read test file
-        with open(test_file, 'r') as f:
-            read_content = f.read()
-        
-        if read_content == test_content:
-            print("✅ Successfully read test file - content matches")
-            print("✅ Persistent volume is working correctly!")
-            return True
-        else:
-            print("❌ Test file content doesn't match - persistent volume may not be working")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Error testing persistent volume: {e}")
-        return False
+    # This function will need to be updated to use PostgreSQL
+    # For now, it will just print a placeholder message
+    print("test_persistent_volume is not yet implemented for PostgreSQL.")
+    return False
 
 
 if __name__ == "__main__":
-    create_database()
+    # create_database() # This line is no longer needed as create_tables is called in database_config
 
     vehicles_to_process = [
         (2019, "Kia", "Sportage"),

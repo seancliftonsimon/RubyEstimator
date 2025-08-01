@@ -1,8 +1,8 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
-from vehicle_data import process_vehicle, create_database, DB_FILE
+from vehicle_data import process_vehicle, get_last_ten_entries
 from auth import setup_password_protection
+from database_config import test_database_connection, get_database_info
 
 # --- Cost Estimator Constants ---
 PRICE_PER_LB = {
@@ -138,19 +138,6 @@ def calculate_totals(commodities, cars, curb_weight):
 def format_currency(amount):
     """Format amount as currency with proper rounding."""
     return f"${round(amount, 2):,.2f}"
-
-def get_last_ten_entries():
-    """Fetches the last 10 vehicle entries from the database."""
-    try:
-        conn = sqlite3.connect(DB_FILE)
-        # Order by id DESC to get the most recent entries
-        query = "SELECT year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles ORDER BY id DESC LIMIT 10"
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df
-    except sqlite3.Error as e:
-        st.error(f"Database error: {e}")
-        return pd.DataFrame() # Return empty DataFrame on error
 
 # --- Streamlit App ---
 
@@ -1347,38 +1334,19 @@ st.markdown("""
 # --- Initial Setup ---
 if 'db_created' not in st.session_state:
     try:
-        # Import database functions
-        from vehicle_data import restore_database, backup_database, create_database, check_database_status, test_persistent_volume
-        
-        # Check database status before setup
-        print("=== PRE-SETUP DATABASE STATUS ===")
-        check_database_status()
-        
-        # Test persistent volume
-        print("=== TESTING PERSISTENT VOLUME ===")
-        test_persistent_volume()
-        
-        # Try to restore database from backup first
-        restored = restore_database()
-        if restored:
-            print("Database restored from backup")
-        
-        # Create database (this will create it if it doesn't exist)
-        create_database()
-        
-        # Create a backup after successful creation/restoration
-        backup_database()
-        
-        # Check database status after setup
-        print("=== POST-SETUP DATABASE STATUS ===")
-        check_database_status()
-        
-        st.session_state['db_created'] = True
+        # Test database connection
+        success, message = test_database_connection()
+        if success:
+            print("✅ Database connection successful")
+            st.session_state['db_created'] = True
+        else:
+            print(f"❌ Database connection failed: {message}")
+            st.error(f"Database connection failed: {message}")
+            st.stop()
     except Exception as e:
         print(f"Error during database setup: {e}")
-        # Fallback: just create the database
-        create_database()
-        st.session_state['db_created'] = True
+        st.error(f"Database setup error: {e}")
+        st.stop()
 
 # Initialize session state variables if they don't exist
 if 'last_curb_weight' not in st.session_state:
@@ -1393,12 +1361,3 @@ if 'auto_calculate' not in st.session_state:
     st.session_state['auto_calculate'] = False
 if 'detailed_vehicle_info' not in st.session_state:
     st.session_state['detailed_vehicle_info'] = None
-
-# Periodic backup (runs once per session)
-if 'backup_created' not in st.session_state:
-    try:
-        from vehicle_data import backup_database
-        backup_database()
-        st.session_state['backup_created'] = True
-    except Exception as e:
-        print(f"Error during periodic backup: {e}")
