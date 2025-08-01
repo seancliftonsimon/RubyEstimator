@@ -902,6 +902,83 @@ st.markdown("""
          margin: 0 !important;
          padding: 0 !important;
      }
+     
+     /* Remove any dark green backgrounds from refresh button containers */
+     .stForm [data-testid="baseButton-secondaryFormSubmit"],
+     .stForm [data-testid="baseButton-secondaryFormSubmit"] > div,
+     .stForm [data-testid="baseButton-secondaryFormSubmit"] > div > div,
+     .stForm [data-testid="baseButton-secondaryFormSubmit"] > div > div > div,
+     /* Target any parent containers that might have dark backgrounds */
+     .stForm > div:has([data-testid="baseButton-secondaryFormSubmit"]),
+     .stForm > div > div:has([data-testid="baseButton-secondaryFormSubmit"]),
+     /* Remove any gradient or dark backgrounds */
+     [data-testid="baseButton-secondaryFormSubmit"] {
+         background: rgba(20, 184, 166, 0.9) !important;
+         background-image: none !important;
+         background-gradient: none !important;
+         border: 2px solid rgba(20, 184, 166, 0.8) !important;
+         border-radius: 8px !important;
+         box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4) !important;
+         color: #ffffff !important;
+         padding: 0.75rem 1.5rem !important;
+         margin: 0 !important;
+     }
+     
+     /* Remove any dark backgrounds from form submit button containers */
+     .stForm .stButton,
+     .stForm .stButton > div,
+     .stForm .stButton > div > div,
+     .stForm .stButton > div > div > div {
+         background: transparent !important;
+         background-image: none !important;
+         background-gradient: none !important;
+         border: none !important;
+         box-shadow: none !important;
+         margin: 0 !important;
+         padding: 0 !important;
+     }
+     
+     /* Additional rules to remove any remaining dark green backgrounds */
+     /* Target any element with dark green background that might be behind buttons */
+     [style*="background-color: rgb(127, 29, 29)"],
+     [style*="background-color: rgba(127, 29, 29"],
+     [style*="background: rgb(127, 29, 29)"],
+     [style*="background: rgba(127, 29, 29"],
+     /* Target any dark green backgrounds in form containers */
+     .stForm [style*="background"],
+     .stForm > div[style*="background"],
+     .stForm > div > div[style*="background"] {
+         background: transparent !important;
+         background-color: transparent !important;
+         background-image: none !important;
+     }
+     
+     /* Ensure the refresh button specifically has the correct styling */
+     button[data-testid="baseButton-secondaryFormSubmit"] {
+         background: rgba(20, 184, 166, 0.9) !important;
+         background-color: rgba(20, 184, 166, 0.9) !important;
+         background-image: none !important;
+         border: 2px solid rgba(20, 184, 166, 0.8) !important;
+         border-radius: 8px !important;
+         box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4) !important;
+         color: #ffffff !important;
+         padding: 0.75rem 1.5rem !important;
+         margin: 0 !important;
+         font-weight: 700 !important;
+         font-size: 1rem !important;
+         transition: all 0.2s ease !important;
+         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+     }
+     
+     /* Remove any gradient effects that might be causing the dark appearance */
+     button[data-testid="baseButton-secondaryFormSubmit"]:hover {
+         background: rgba(20, 184, 166, 1) !important;
+         background-color: rgba(20, 184, 166, 1) !important;
+         background-image: none !important;
+         transform: translateY(-2px) !important;
+         box-shadow: 0 6px 20px rgba(20, 184, 166, 0.5) !important;
+         border-color: rgba(20, 184, 166, 1) !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
