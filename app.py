@@ -752,6 +752,26 @@ st.markdown("""
          box-shadow: 0 2px 8px rgba(15, 118, 110, 0.5) !important;
          border-color: rgba(15, 118, 110, 1) !important;
      }
+     
+     /* Remove any unwanted background elements from form submit buttons */
+     .stForm .stButton > div {
+         background: transparent !important;
+         border: none !important;
+         box-shadow: none !important;
+     }
+     
+     /* Ensure form submit buttons are properly aligned */
+     .stForm .stButton {
+         margin-top: 0 !important;
+         margin-bottom: 0 !important;
+         padding: 0 !important;
+     }
+     
+     /* Remove any extra spacing around form elements */
+     .stForm > div:last-child {
+         margin-bottom: 0 !important;
+         padding-bottom: 0 !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1069,6 +1089,7 @@ with right_col:
                 with col2:
                     tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(results.get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment")
                 with col3:
+                    st.markdown('<div style="margin-top: 1.5rem;"></div>', unsafe_allow_html=True)
                     recalculate_button = st.form_submit_button("🔄", help="Recalculate with new costs")
                 
                 # Handle cost adjustment
