@@ -797,6 +797,33 @@ st.markdown("""
          border: none !important;
          box-shadow: none !important;
      }
+     
+     /* Remove the flat background from the tooltip icon container */
+     .stTooltipIcon,
+     .st-emotion-cache-900wwq,
+     .ewgb6652 {
+         background: transparent !important;
+         border: none !important;
+         box-shadow: none !important;
+         margin: 0 !important;
+         padding: 0 !important;
+     }
+     
+     /* Remove background from tooltip hover target */
+     [data-testid="tooltipHoverTarget"] {
+         background: transparent !important;
+         border: none !important;
+         box-shadow: none !important;
+     }
+     
+     /* Ensure the button itself maintains its styling while removing container backgrounds */
+     .stTooltipIcon button,
+     .stTooltipIcon [data-testid="baseButton-secondaryFormSubmit"] {
+         background: rgba(20, 184, 166, 0.9) !important;
+         border: 2px solid rgba(20, 184, 166, 0.8) !important;
+         border-radius: 8px !important;
+         box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4) !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
