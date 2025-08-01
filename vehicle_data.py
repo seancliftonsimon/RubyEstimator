@@ -11,12 +11,14 @@ from sqlalchemy import text
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     try:
-        # Fallback for Streamlit Cloud
-        import streamlit as st
-        GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+        # Fallback for Streamlit Cloud or local development
+        GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
     except:
-        # Fallback for local development - set your API key in .streamlit/secrets.toml
+        # If secrets are not available, use placeholder
         GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+
+if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
+    print("⚠️ Warning: GEMINI_API_KEY not set. Please set it in Railway environment variables.")
 
 # Database setup
 print("=== DATABASE SETUP ===")

@@ -12,14 +12,19 @@ def check_password():
     def password_entered():
         """Checks whether a password entered by the user is correct."""
         try:
-            stored_hash = st.secrets.get("password_hash", "")
+            # Try to get password hash from environment variable first
+            stored_hash = os.getenv("PASSWORD_HASH", "")
+            if not stored_hash:
+                # Fallback to secrets (for local development)
+                stored_hash = st.secrets.get("password_hash", "")
+            
             if hash_password(st.session_state["password"]) == stored_hash:
                 st.session_state["password_correct"] = True
                 del st.session_state["password"]  # Don't store password
             else:
                 st.session_state["password_correct"] = False
         except:
-            # If secrets are not available, allow access
+            # If no password protection is configured, allow access
             st.session_state["password_correct"] = True
             del st.session_state["password"]
 
@@ -42,12 +47,16 @@ def setup_password_protection():
     """Setup password protection for the app"""
     
     try:
-        # Check if password protection is enabled
-        password_hash = st.secrets.get("password_hash")
+        # Check if password protection is enabled via environment variable
+        password_hash = os.getenv("PASSWORD_HASH")
+        if not password_hash:
+            # Fallback to secrets (for local development)
+            password_hash = st.secrets.get("password_hash", "")
+        
         if not password_hash:
             return True  # No password protection enabled
     except:
-        # If secrets are not available, assume no password protection
+        # If no password protection is configured, allow access
         return True
     
     # Show login form
