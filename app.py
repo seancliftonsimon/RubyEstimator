@@ -2,6 +2,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from vehicle_data import process_vehicle, create_database, DB_FILE
+from auth import setup_password_protection
 
 # --- Cost Estimator Constants ---
 PRICE_PER_LB = {
@@ -160,6 +161,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# Check password protection
+if not setup_password_protection():
+    st.stop()
 
 # Custom CSS for light theme with ruby and teal accents
 st.markdown("""

@@ -8,4 +8,4 @@ cmds = ["python3 -m pip install --user -r requirements.txt"]
 cmds = ["echo 'Build phase completed'"]
 
 [start]
-cmd = "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0" 
+cmd = "streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0" 
