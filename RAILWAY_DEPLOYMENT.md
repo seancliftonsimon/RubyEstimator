@@ -26,7 +26,8 @@ Your repository is already ready! The API key is secured and the code is set up 
    - Click "Deploy"
 
 4. **Automatic Configuration**:
-   - Railway will use the `nixpacks.toml` file to configure the deployment
+   - Railway will use the `Dockerfile` for deployment (more reliable)
+   - If Dockerfile fails, it will fall back to `nixpacks.toml`
    - No manual configuration needed - the start command is already specified
    - The app will deploy automatically
 
@@ -99,6 +100,14 @@ If you see errors like "No matching distribution found":
 - Check that all package versions in `requirements.txt` are valid
 - Ensure `google-generativeai==0.8.5` (not >=0.10)
 - Verify all dependencies are available on PyPI
+
+### "pip: command not found" Error
+
+If you see this error, it means the build environment is missing pip:
+
+- Railway will automatically use the `Dockerfile` instead of `nixpacks.toml`
+- The Dockerfile includes all necessary system dependencies
+- This should resolve the pip installation issues
 
 ### API Key Not Working
 
