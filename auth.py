@@ -11,11 +11,17 @@ def check_password():
     
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if hash_password(st.session_state["password"]) == st.secrets.get("password_hash", ""):
+        try:
+            stored_hash = st.secrets.get("password_hash", "")
+            if hash_password(st.session_state["password"]) == stored_hash:
+                st.session_state["password_correct"] = True
+                del st.session_state["password"]  # Don't store password
+            else:
+                st.session_state["password_correct"] = False
+        except:
+            # If secrets are not available, allow access
             st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Don't store password
-        else:
-            st.session_state["password_correct"] = False
+            del st.session_state["password"]
 
     # First run, show inputs for username + password.
     if "password_correct" not in st.session_state:
@@ -35,9 +41,14 @@ def check_password():
 def setup_password_protection():
     """Setup password protection for the app"""
     
-    # Check if password protection is enabled
-    if not st.secrets.get("password_hash"):
-        return True  # No password protection enabled
+    try:
+        # Check if password protection is enabled
+        password_hash = st.secrets.get("password_hash")
+        if not password_hash:
+            return True  # No password protection enabled
+    except:
+        # If secrets are not available, assume no password protection
+        return True
     
     # Show login form
     st.markdown("""
