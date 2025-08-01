@@ -776,8 +776,6 @@ with left_col:
     if st.session_state.get('detailed_vehicle_info'):
         vehicle_info = st.session_state['detailed_vehicle_info']
         
-        st.markdown('<h3 class="subsection-header">Current Vehicle</h3>', unsafe_allow_html=True)
-        
         # Display vehicle name
         vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
         st.markdown(f"""
@@ -829,9 +827,10 @@ with left_col:
                 """, unsafe_allow_html=True)
 
     # --- Main Form ---
+    # Add padding above the vehicle search section
+    st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
+    
     with st.form(key="vehicle_form"):
-        st.markdown('<h3 class="subsection-header">Look Up Vehicle</h3>', unsafe_allow_html=True)
-        
         col1, col2, col3 = st.columns(3)
         with col1:
             year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013")
@@ -1053,8 +1052,6 @@ with right_col:
             totals = results['totals']
             
             # Display summary metrics
-            st.markdown('<h3 class="subsection-header">Summary Metrics</h3>', unsafe_allow_html=True)
-            
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Total Sale Value", format_currency(totals["total_sale"]))
@@ -1116,7 +1113,8 @@ with right_col:
                 <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
                     <strong>Disclaimer:</strong> Information is an estimate from AI search. Double-check numbers that don't look right.
                 </p>
-                <p style="margin: 0.5rem 0 0 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
+                <br>
+                <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
                     <strong>🔧 Catalytic Converter:</strong> Costs still being factored in. Current figures are not accurate.
                 </p>
             </div>
