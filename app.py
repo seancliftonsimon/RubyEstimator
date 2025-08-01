@@ -172,7 +172,8 @@ st.markdown("""
         font-size: 2.5rem;
         font-weight: 700;
         text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
+        margin-top: 0.5rem;
         color: #dc2626;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
@@ -454,7 +455,7 @@ st.markdown("""
     
     /* Add padding and spacing */
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1rem;
         padding-bottom: 2rem;
         padding-left: 3rem;
         padding-right: 3rem;
@@ -751,9 +752,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Main title with ruby gradient effect
+# Main title with minimal padding
 st.markdown('<h1 class="main-title">🚗 Ruby GEM</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #475569; font-size: 1.1rem; margin-bottom: 2rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">Vehicle Weight Estimator & Cost Calculator</p>', unsafe_allow_html=True)
 
 # Create two columns for the main layout with spacing
 left_col, spacer, right_col = st.columns([1, 0.1, 1])
