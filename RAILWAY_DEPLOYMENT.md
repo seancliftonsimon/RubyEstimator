@@ -92,6 +92,14 @@ If you see this error, it means the deployment configuration files are missing:
 - Check that `runtime.txt` specifies a valid Python version
 - Make sure all files are committed and pushed to GitHub
 
+### Package Installation Errors
+
+If you see errors like "No matching distribution found":
+
+- Check that all package versions in `requirements.txt` are valid
+- Ensure `google-generativeai==0.8.5` (not >=0.10)
+- Verify all dependencies are available on PyPI
+
 ### API Key Not Working
 
 - Double-check the environment variable name: `GEMINI_API_KEY`
