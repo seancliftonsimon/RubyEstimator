@@ -860,6 +860,48 @@ st.markdown("""
          outline: none !important;
          box-shadow: none !important;
      }
+     
+     /* Target the specific button hover states that are causing the dark red */
+     .stTooltipIcon button:hover,
+     .stTooltipIcon button:focus,
+     .stTooltipIcon button:active,
+     .st-emotion-cache-900wwq button:hover,
+     .st-emotion-cache-900wwq button:focus,
+     .st-emotion-cache-900wwq button:active,
+     .ewgb6652 button:hover,
+     .ewgb6652 button:focus,
+     .ewgb6652 button:active,
+     [data-testid="baseButton-secondaryFormSubmit"]:hover,
+     [data-testid="baseButton-secondaryFormSubmit"]:focus,
+     [data-testid="baseButton-secondaryFormSubmit"]:active {
+         background: rgba(20, 184, 166, 0.9) !important;
+         border: 2px solid rgba(20, 184, 166, 0.8) !important;
+         box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4) !important;
+         transform: translateY(-2px) !important;
+     }
+     
+     /* Make the tooltip container completely invisible */
+     .stTooltipIcon,
+     .st-emotion-cache-900wwq,
+     .ewgb6652 {
+         background: transparent !important;
+         border: none !important;
+         box-shadow: none !important;
+         margin: 0 !important;
+         padding: 0 !important;
+         position: relative !important;
+     }
+     
+     /* Ensure the tooltip container doesn't interfere with button styling */
+     .stTooltipIcon > div,
+     .st-emotion-cache-900wwq > div,
+     .ewgb6652 > div {
+         background: transparent !important;
+         border: none !important;
+         box-shadow: none !important;
+         margin: 0 !important;
+         padding: 0 !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
