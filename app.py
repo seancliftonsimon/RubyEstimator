@@ -824,6 +824,42 @@ st.markdown("""
          border-radius: 8px !important;
          box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4) !important;
      }
+     
+     /* Aggressive removal of all background elements from tooltip containers */
+     .stTooltipIcon *,
+     .st-emotion-cache-900wwq *,
+     .ewgb6652 *,
+     [data-testid="stTooltipIcon"] * {
+         background: transparent !important;
+         border: none !important;
+         box-shadow: none !important;
+         margin: 0 !important;
+         padding: 0 !important;
+     }
+     
+     /* Exception: only the actual button should have styling */
+     .stTooltipIcon button[data-testid="baseButton-secondaryFormSubmit"],
+     .st-emotion-cache-900wwq button[data-testid="baseButton-secondaryFormSubmit"],
+     .ewgb6652 button[data-testid="baseButton-secondaryFormSubmit"] {
+         background: rgba(20, 184, 166, 0.9) !important;
+         border: 2px solid rgba(20, 184, 166, 0.8) !important;
+         border-radius: 8px !important;
+         box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4) !important;
+         padding: 0.75rem 1.5rem !important;
+         margin: 0 !important;
+     }
+     
+     /* Remove any highlight or focus effects */
+     .stTooltipIcon *:focus,
+     .stTooltipIcon *:hover,
+     .st-emotion-cache-900wwq *:focus,
+     .st-emotion-cache-900wwq *:hover,
+     .ewgb6652 *:focus,
+     .ewgb6652 *:hover {
+         background: transparent !important;
+         outline: none !important;
+         box-shadow: none !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
