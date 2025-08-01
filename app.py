@@ -890,6 +890,7 @@ with left_col:
                         
                         # Auto-populate and calculate the cost estimator
                         st.session_state['auto_calculate'] = True
+                        st.rerun()
                     else:
                         st.markdown("""
                         <div class="error-message">
