@@ -1063,13 +1063,13 @@ with right_col:
             
             # Purchase Price and Tow Fee Input Fields
             with st.form(key="cost_adjustment_form"):
-                col1, col2 = st.columns(2)
+                col1, col2, col3 = st.columns([1, 1, 0.2])
                 with col1:
                     purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(results.get('purchase_price', FLAT_COSTS["PURCHASE"]))), key="purchase_adjustment")
                 with col2:
                     tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(results.get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment")
-                
-                recalculate_button = st.form_submit_button(label="Recalculate with New Costs", use_container_width=True)
+                with col3:
+                    recalculate_button = st.form_submit_button("🔄", help="Recalculate with new costs")
                 
                 # Handle cost adjustment
                 if recalculate_button:
@@ -1111,7 +1111,10 @@ with right_col:
             st.markdown("""
             <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #f59e0b;">
                 <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
-                    <strong>Disclaimer:</strong> Information is an estimate from AI search. Double-check numbers that don't look right.
+                    <strong>⚠️ Disclaimer:</strong> Information is an estimate from AI search.
+                </p>
+                <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
+                    Double-check numbers that don't look right.
                 </p>
                 <br>
                 <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
