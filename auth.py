@@ -16,7 +16,11 @@ def check_password():
             stored_hash = os.getenv("PASSWORD_HASH", "")
             if not stored_hash:
                 # Fallback to secrets (for local development)
-                stored_hash = st.secrets.get("password_hash", "")
+                try:
+                    stored_hash = st.secrets.get("password_hash", "")
+                except:
+                    # If secrets are not available, allow access
+                    stored_hash = ""
             
             if hash_password(st.session_state["password"]) == stored_hash:
                 st.session_state["password_correct"] = True
@@ -51,7 +55,11 @@ def setup_password_protection():
         password_hash = os.getenv("PASSWORD_HASH")
         if not password_hash:
             # Fallback to secrets (for local development)
-            password_hash = st.secrets.get("password_hash", "")
+            try:
+                password_hash = st.secrets.get("password_hash", "")
+            except:
+                # If secrets are not available, allow access
+                password_hash = ""
         
         if not password_hash:
             return True  # No password protection enabled
