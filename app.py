@@ -1184,9 +1184,10 @@ with right_col:
             st.markdown("""
             <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #f59e0b;">
                 <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
-                    <strong>⚠️ Important Disclaimer:</strong> The information provided here is an estimate and draws from AI search results. 
-                    Please double-check any numbers that don't look right and don't blindly trust the output while accuracy is still being fine-tuned. 
-                    Additionally, catalytic converter costs are still being factored in, so the figures currently shown for catalytic converter amounts are not accurate.
+                    <strong>Disclaimer:</strong> Information is an estimate from AI search. Double-check numbers that don't look right.
+                </p>
+                <p style="margin: 0.5rem 0 0 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
+                    <strong>🔧 Catalytic Converter:</strong> Costs still being factored in. Current figures are not accurate.
                 </p>
             </div>
             """, unsafe_allow_html=True)
@@ -1345,8 +1346,39 @@ st.markdown("""
 
 # --- Initial Setup ---
 if 'db_created' not in st.session_state:
-    create_database()
-    st.session_state['db_created'] = True
+    try:
+        # Import database functions
+        from vehicle_data import restore_database, backup_database, create_database, check_database_status, test_persistent_volume
+        
+        # Check database status before setup
+        print("=== PRE-SETUP DATABASE STATUS ===")
+        check_database_status()
+        
+        # Test persistent volume
+        print("=== TESTING PERSISTENT VOLUME ===")
+        test_persistent_volume()
+        
+        # Try to restore database from backup first
+        restored = restore_database()
+        if restored:
+            print("Database restored from backup")
+        
+        # Create database (this will create it if it doesn't exist)
+        create_database()
+        
+        # Create a backup after successful creation/restoration
+        backup_database()
+        
+        # Check database status after setup
+        print("=== POST-SETUP DATABASE STATUS ===")
+        check_database_status()
+        
+        st.session_state['db_created'] = True
+    except Exception as e:
+        print(f"Error during database setup: {e}")
+        # Fallback: just create the database
+        create_database()
+        st.session_state['db_created'] = True
 
 # Initialize session state variables if they don't exist
 if 'last_curb_weight' not in st.session_state:
@@ -1361,3 +1393,12 @@ if 'auto_calculate' not in st.session_state:
     st.session_state['auto_calculate'] = False
 if 'detailed_vehicle_info' not in st.session_state:
     st.session_state['detailed_vehicle_info'] = None
+
+# Periodic backup (runs once per session)
+if 'backup_created' not in st.session_state:
+    try:
+        from vehicle_data import backup_database
+        backup_database()
+        st.session_state['backup_created'] = True
+    except Exception as e:
+        print(f"Error during periodic backup: {e}")

@@ -3,6 +3,9 @@ import os
 import google.generativeai as genai
 import re
 import streamlit as st
+import shutil
+import json
+from datetime import datetime
 
 # --- Configuration ---
 # Get API key from environment variables (works with Railway, Streamlit Cloud, and local development)
@@ -15,8 +18,34 @@ if not GEMINI_API_KEY:
     except:
         # Fallback for local development - set your API key in .streamlit/secrets.toml
         GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
-    
-DB_FILE = "vehicle_weights.db"
+
+# Database file path - use Railway's persistent volume if available
+DB_FILE = os.getenv("DATABASE_PATH", "/data/vehicle_weights.db")
+
+# Check if we're in Railway environment
+if os.getenv("RAILWAY_ENVIRONMENT"):
+    # In Railway, try to use persistent volume
+    if os.path.exists("/data"):
+        DB_FILE = "/data/vehicle_weights.db"
+    else:
+        # Fallback to a directory that might persist
+        DB_FILE = "/tmp/vehicle_weights.db"
+else:
+    # Local development
+    DB_FILE = "vehicle_weights.db"
+
+# Ensure the database directory exists
+db_dir = os.path.dirname(DB_FILE)
+if db_dir and not os.path.exists(db_dir):
+    os.makedirs(db_dir, exist_ok=True)
+
+print(f"Using database file: {DB_FILE}")
+print(f"Database directory: {db_dir}")
+print(f"Directory exists: {os.path.exists(db_dir)}")
+print(f"Directory writable: {os.access(db_dir, os.W_OK) if os.path.exists(db_dir) else 'N/A'}")
+print(f"Railway environment: {os.getenv('RAILWAY_ENVIRONMENT', 'Not set')}")
+print(f"Current working directory: {os.getcwd()}")
+print(f"Available directories: {[d for d in os.listdir('.') if os.path.isdir(d)]}")
 
 
 def create_database():
@@ -50,6 +79,80 @@ def create_database():
     
     conn.commit()
     conn.close()
+
+
+def backup_database():
+    """Creates a backup of the database."""
+    if os.path.exists(DB_FILE):
+        backup_file = f"{DB_FILE}.backup"
+        shutil.copy2(DB_FILE, backup_file)
+        print(f"Database backed up to: {backup_file}")
+        return backup_file
+    return None
+
+
+def restore_database():
+    """Restores the database from backup if it doesn't exist."""
+    backup_file = f"{DB_FILE}.backup"
+    if not os.path.exists(DB_FILE) and os.path.exists(backup_file):
+        shutil.copy2(backup_file, DB_FILE)
+        print(f"Database restored from: {backup_file}")
+        return True
+    return False
+
+
+def export_database_to_json():
+    """Exports all vehicle data to JSON for backup purposes."""
+    if not os.path.exists(DB_FILE):
+        return None
+    
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles")
+    rows = c.fetchall()
+    conn.close()
+    
+    data = []
+    for row in rows:
+        data.append({
+            'year': row[0],
+            'make': row[1],
+            'model': row[2],
+            'curb_weight_lbs': row[3],
+            'aluminum_engine': row[4],
+            'aluminum_rims': row[5]
+        })
+    
+    export_file = f"vehicle_data_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    with open(export_file, 'w') as f:
+        json.dump(data, f, indent=2)
+    
+    print(f"Database exported to: {export_file}")
+    return export_file
+
+
+def import_database_from_json(json_file):
+    """Imports vehicle data from JSON backup."""
+    if not os.path.exists(json_file):
+        return False
+    
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+    
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    for vehicle in data:
+        c.execute("""
+            INSERT OR REPLACE INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (vehicle['year'], vehicle['make'], vehicle['model'], 
+              vehicle['curb_weight_lbs'], vehicle['aluminum_engine'], vehicle['aluminum_rims']))
+    
+    conn.commit()
+    conn.close()
+    print(f"Database imported from: {json_file}")
+    return True
 
 
 def get_curb_weight_from_db(year, make, model):
@@ -287,6 +390,58 @@ def process_vehicle(year, make, model):
             'aluminum_engine': aluminum_engine,
             'aluminum_rims': aluminum_rims
         }
+
+
+def check_database_status():
+    """Check and report database status for debugging persistent volume issues."""
+    status = {
+        'database_file': DB_FILE,
+        'database_exists': os.path.exists(DB_FILE),
+        'database_size': os.path.getsize(DB_FILE) if os.path.exists(DB_FILE) else 0,
+        'database_dir': os.path.dirname(DB_FILE),
+        'directory_exists': os.path.exists(os.path.dirname(DB_FILE)),
+        'directory_writable': os.access(os.path.dirname(DB_FILE), os.W_OK) if os.path.exists(os.path.dirname(DB_FILE)) else False,
+        'railway_environment': os.getenv('RAILWAY_ENVIRONMENT', 'Not set'),
+        'data_dir_exists': os.path.exists('/data'),
+        'data_dir_writable': os.access('/data', os.W_OK) if os.path.exists('/data') else False,
+        'backup_exists': os.path.exists(f"{DB_FILE}.backup"),
+        'backup_size': os.path.getsize(f"{DB_FILE}.backup") if os.path.exists(f"{DB_FILE}.backup") else 0
+    }
+    
+    print("=== DATABASE STATUS REPORT ===")
+    for key, value in status.items():
+        print(f"{key}: {value}")
+    print("=============================")
+    
+    return status
+
+
+def test_persistent_volume():
+    """Test if persistent volume is working by writing and reading a test file."""
+    test_file = "/data/persistent_volume_test.txt"
+    test_content = f"Persistent volume test - {datetime.now().isoformat()}"
+    
+    try:
+        # Write test file
+        with open(test_file, 'w') as f:
+            f.write(test_content)
+        print(f"✅ Successfully wrote test file: {test_file}")
+        
+        # Read test file
+        with open(test_file, 'r') as f:
+            read_content = f.read()
+        
+        if read_content == test_content:
+            print("✅ Successfully read test file - content matches")
+            print("✅ Persistent volume is working correctly!")
+            return True
+        else:
+            print("❌ Test file content doesn't match - persistent volume may not be working")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error testing persistent volume: {e}")
+        return False
 
 
 if __name__ == "__main__":

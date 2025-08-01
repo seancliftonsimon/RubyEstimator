@@ -5,7 +5,10 @@ nixPkgs = ["python3", "gcc"]
 cmds = ["python3 -m pip install --user -r requirements.txt"]
 
 [phases.build]
-cmds = ["echo 'Build phase completed'"]
+cmds = [
+    "mkdir -p /data",
+    "echo 'Build phase completed'"
+]
 
 [start]
 cmd = "streamlit run app.py --server.port=8501 --server.address=0.0.0.0" 

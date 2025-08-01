@@ -4,8 +4,15 @@
 		"builder": "NIXPACKS"
 	},
 	"deploy": {
-		"startCommand": "streamlit run app.py --server.port=8501 --server.address=0.0.0.0",
+		"startCommand": "python test_persistent_volume.py && streamlit run app.py --server.port=8501 --server.address=0.0.0.0",
 		"restartPolicyType": "ON_FAILURE",
 		"restartPolicyMaxRetries": 10
-	}
+	},
+	"volumes": [
+		{
+			"name": "database",
+			"mountPath": "/data",
+			"size": "1GB"
+		}
+	]
 }
