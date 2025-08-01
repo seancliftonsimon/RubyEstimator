@@ -20,6 +20,17 @@ if not GEMINI_API_KEY:
 if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
     print("⚠️ Warning: GEMINI_API_KEY not set. Please set it in Railway environment variables.")
 
+# Initialize Gemini model once at module level
+def initialize_gemini_model():
+    """Initialize and return a shared Gemini model instance."""
+    if GEMINI_API_KEY != "YOUR_GEMINI_API_KEY":
+        genai.configure(api_key=GEMINI_API_KEY)
+        return genai.GenerativeModel(model_name='gemini-1.5-flash-latest')
+    return None
+
+# Create shared model instance
+SHARED_GEMINI_MODEL = initialize_gemini_model()
+
 # Database setup
 print("=== DATABASE SETUP ===")
 db_info = get_database_info()
@@ -148,10 +159,11 @@ def get_aluminum_engine_from_api(year: int, make: str, model: str):
         print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
         return None
 
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model_instance = genai.GenerativeModel(model_name='gemini-1.5-flash-latest')
+    if SHARED_GEMINI_MODEL is None:
+        print("Gemini model not initialized. Please check your API key.")
+        return None
 
+    try:
         prompt = (
             f"Search the web to determine if the {year} {make} {model} has an aluminum engine block or iron engine block. "
             "Search for engine specifications, materials, and construction details. "
@@ -159,7 +171,7 @@ def get_aluminum_engine_from_api(year: int, make: str, model: str):
             "Do not include any other text or explanation."
         )
         
-        response = model_instance.generate_content(
+        response = SHARED_GEMINI_MODEL.generate_content(
             prompt,
             tools=[{"google_search_retrieval": {}}],
             generation_config={"temperature": 0, "max_output_tokens": 16}
@@ -190,10 +202,11 @@ def get_aluminum_rims_from_api(year: int, make: str, model: str):
         print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
         return None
 
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model_instance = genai.GenerativeModel(model_name='gemini-1.5-flash-latest')
+    if SHARED_GEMINI_MODEL is None:
+        print("Gemini model not initialized. Please check your API key.")
+        return None
 
+    try:
         prompt = (
             f"Search the web to determine if the {year} {make} {model} has aluminum wheels/rims or steel wheels/rims. "
             "Search for wheel specifications, materials, and construction details. "
@@ -201,7 +214,7 @@ def get_aluminum_rims_from_api(year: int, make: str, model: str):
             "Do not include any other text or explanation."
         )
         
-        response = model_instance.generate_content(
+        response = SHARED_GEMINI_MODEL.generate_content(
             prompt,
             tools=[{"google_search_retrieval": {}}],
             generation_config={"temperature": 0, "max_output_tokens": 16}
@@ -232,10 +245,11 @@ def get_curb_weight_from_api(year: int, make: str, model: str):
         print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
         return None
 
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model_instance = genai.GenerativeModel(model_name='gemini-1.5-flash-latest')
+    if SHARED_GEMINI_MODEL is None:
+        print("Gemini model not initialized. Please check your API key.")
+        return None
 
+    try:
         # Step 1: Gather candidate weights with preferred sources
         gather_prompt = (
             f"Search the web and list every curb-weight figure (in pounds) you find for a {year} {make} {model}. "
@@ -243,7 +257,7 @@ def get_curb_weight_from_api(year: int, make: str, model: str):
             "Return one line per finding in the exact format '<WEIGHT> <source>'. Only include numbers; omit commentary."
         )
 
-        gather_resp = model_instance.generate_content(
+        gather_resp = SHARED_GEMINI_MODEL.generate_content(
             gather_prompt,
             tools=[{"google_search_retrieval": {}}],
             generation_config={"temperature": 0, "max_output_tokens": 64},
@@ -268,7 +282,7 @@ def get_curb_weight_from_api(year: int, make: str, model: str):
                 "Return ONLY the weight number, no other text."
             )
 
-            interpret_resp = model_instance.generate_content(
+            interpret_resp = SHARED_GEMINI_MODEL.generate_content(
                 interpret_prompt,
                 tools=[{"google_search_retrieval": {}}],
                 generation_config={"temperature": 0, "max_output_tokens": 8},
