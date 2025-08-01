@@ -351,6 +351,130 @@ st.markdown("""
         border-color: rgba(220, 38, 38, 0.1) !important;
     }
     
+    /* Hide scroll bars on dataframes */
+    .dataframe::-webkit-scrollbar {
+        display: none !important;
+    }
+    
+    .dataframe {
+        -ms-overflow-style: none !important;
+        scrollbar-width: none !important;
+    }
+    
+    /* Ensure tables fit their containers without scroll bars */
+    .stDataFrame {
+        overflow: hidden !important;
+    }
+    
+    .stDataFrame > div {
+        overflow: hidden !important;
+    }
+    
+    .stDataFrame > div > div {
+        overflow: hidden !important;
+    }
+    
+    /* Table styling for st.table() */
+    .stTable {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px);
+        width: 100% !important;
+    }
+    
+    .stTable table {
+        width: 100% !important;
+        border-collapse: collapse;
+    }
+    
+    .stTable th {
+        background: rgba(127, 29, 29, 0.9) !important;
+        color: #ffffff !important;
+        font-weight: 600;
+        border-color: rgba(220, 38, 38, 0.5) !important;
+        padding: 0.75rem !important;
+        text-align: left !important;
+    }
+    
+    .stTable td {
+        background: rgba(255, 255, 255, 0.9) !important;
+        color: #1e293b !important;
+        border-color: rgba(220, 38, 38, 0.1) !important;
+        padding: 0.75rem !important;
+    }
+    
+    /* Additional table styling to prevent scroll bars */
+    .stTable > div {
+        overflow: hidden !important;
+        max-width: 100% !important;
+    }
+    
+    .stTable table {
+        table-layout: fixed !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Ensure table cells don't overflow */
+    .stTable th,
+    .stTable td {
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        max-width: 0 !important;
+    }
+    
+    /* Remove any default table scroll bars */
+    .stTable::-webkit-scrollbar,
+    .stTable > div::-webkit-scrollbar,
+    .stTable table::-webkit-scrollbar {
+        display: none !important;
+    }
+    
+    .stTable,
+    .stTable > div,
+    .stTable table {
+        -ms-overflow-style: none !important;
+        scrollbar-width: none !important;
+    }
+    
+    /* Prevent any table overflow and ensure proper sizing */
+    .stTable {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+    
+    /* Ensure table container doesn't create scroll bars */
+    [data-testid="stTable"] {
+        overflow: hidden !important;
+        max-width: 100% !important;
+    }
+    
+    [data-testid="stTable"] > div {
+        overflow: hidden !important;
+        max-width: 100% !important;
+    }
+    
+    /* Force table to fit container width */
+    .stTable table {
+        min-width: 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    /* Prevent any horizontal scrolling */
+    .stTable,
+    .stTable > div,
+    .stTable table,
+    [data-testid="stTable"],
+    [data-testid="stTable"] > div {
+        overflow-x: hidden !important;
+        overflow-y: hidden !important;
+    }
+    
     /* Metric styling */
     .metric-value {
         font-size: 1.5rem;
@@ -1261,15 +1385,10 @@ with left_col:
                 display_df = display_df[['year', 'make', 'model', 'curb_weight_lbs', 'E', 'W']]
                 display_df.columns = ['Year', 'Make', 'Model', 'Weight', 'E', 'W']
                 
-                # Style the dataframe
-                styled_df = display_df.style.set_properties(**{
-                    'background-color': 'rgba(255, 255, 255, 0.95)',
-                    'color': '#1e293b',
-                    'border-color': 'rgba(220, 38, 38, 0.1)',
-                    'font-size': '0.8rem'
-                }).format({'Weight': '{:,.0f}'})
+                # Format the dataframe for display
+                display_df['Weight'] = display_df['Weight'].apply(lambda x: f"{x:,.0f}")
                 
-                st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                st.table(display_df)
                 st.caption("E = Engine (Al=Aluminum, Fe=Iron), W = Wheels (Al=Aluminum, St=Steel)")
             else:
                 st.info("No vehicles searched yet.")
@@ -1468,18 +1587,12 @@ with right_col:
             
             commodity_df = pd.DataFrame(commodity_data)
             
-            # Style the commodity dataframe
-            styled_commodity_df = commodity_df.style.set_properties(**{
-                'background-color': 'rgba(255, 255, 255, 0.95)',
-                'color': '#1e293b',
-                'border-color': 'rgba(220, 38, 38, 0.1)'
-            }).format({
-                'Weight (lb)': '{:,.1f}',
-                '$/lb': '{:.2f}',
-                'Sale Value': '{:.2f}'
-            })
+            # Format the commodity dataframe for display
+            commodity_df['Weight (lb)'] = commodity_df['Weight (lb)'].apply(lambda x: f"{x:,.1f}")
+            commodity_df['$/lb'] = commodity_df['$/lb'].apply(lambda x: f"${x:.2f}")
+            commodity_df['Sale Value'] = commodity_df['Sale Value'].apply(lambda x: f"${x:.2f}")
             
-            st.dataframe(styled_commodity_df, use_container_width=True, hide_index=True)
+            st.table(commodity_df)
             
             # Add note about engine weight estimation
             st.markdown("""
@@ -1506,14 +1619,7 @@ with right_col:
             
             summary_df = pd.DataFrame(summary_data)
             
-            # Style the summary dataframe
-            styled_summary_df = summary_df.style.set_properties(**{
-                'background-color': 'rgba(255, 255, 255, 0.95)',
-                'color': '#1e293b',
-                'border-color': 'rgba(220, 38, 38, 0.1)'
-            })
-            
-            st.dataframe(styled_summary_df, use_container_width=True, hide_index=True)
+            st.table(summary_df)
     
     else:
         # Show a message when no vehicle has been searched yet
