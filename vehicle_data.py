@@ -5,12 +5,16 @@ import re
 import streamlit as st
 
 # --- Configuration ---
-# Get API key from Streamlit secrets (secure)
-try:
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-except:
-    # Fallback for local development - set your API key in .streamlit/secrets.toml
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY")
+# Get API key from environment variables (works with Railway, Streamlit Cloud, and local development)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    try:
+        # Fallback for Streamlit Cloud
+        import streamlit as st
+        GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+    except:
+        # Fallback for local development - set your API key in .streamlit/secrets.toml
+        GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
     
 DB_FILE = "vehicle_weights.db"
 

@@ -27,7 +27,7 @@ git push origin main
 2. **Go to Settings** → **Secrets**
 3. **Add your Gemini API key**:
    ```toml
-   GEMINI_API_KEY = "AIzaSyDhOpIAllne17hVDZI2ADXuUcSeE0cPYvY"
+   GEMINI_API_KEY = "your-actual-api-key-here"
    ```
 4. **Save** and your app will automatically redeploy
 
