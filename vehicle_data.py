@@ -2,11 +2,16 @@ import sqlite3
 import os
 import google.generativeai as genai
 import re
+import streamlit as st
 
 # --- Configuration ---
-# IMPORTANT: Replace with your actual Gemini API Key.
-# You can get a key from Google AI Studio: https://aistudio.google.com/app/apikey
-GEMINI_API_KEY = "AIzaSyDhOpIAllne17hVDZI2ADXuUcSeE0cPYvY"
+# Get API key from Streamlit secrets (secure)
+try:
+    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+except:
+    # Fallback for local development - set your API key in .streamlit/secrets.toml
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY")
+    
 DB_FILE = "vehicle_weights.db"
 
 
