@@ -159,7 +159,12 @@ st.set_page_config(
     page_title="RubyEstimator - Vehicle Weight & Cost Calculator",
     page_icon="🚗",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': "RubyEstimator - Vehicle Weight & Cost Calculator"
+    }
 )
 
 # Check password protection
@@ -463,12 +468,24 @@ st.markdown("""
         color: #0f766e;
     }
     
-    /* Remove extra spacing */
+    /* Add padding and spacing */
     .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        padding-left: 3rem;
+        padding-right: 3rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    /* Add spacing between columns */
+    .row-widget.stHorizontal > div {
+        margin: 0 1rem;
+    }
+    
+    /* Add some breathing room between sections */
+    .main .block-container > div {
+        margin-bottom: 2rem;
     }
     
     /* Streamlit metric containers */
@@ -517,6 +534,21 @@ st.markdown("""
     /* Override Streamlit's default dark theme elements */
     .stApp {
         background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%);
+    }
+    
+    /* Force light mode */
+    [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%) !important;
+    }
+    
+    /* Add subtle spacing to form elements */
+    .stForm > div {
+        margin-bottom: 1rem;
+    }
+    
+    /* Improve spacing for expanders */
+    .streamlit-expanderHeader {
+        margin-bottom: 0.5rem;
     }
     
     /* Ensure all Streamlit elements have proper light mode styling */
@@ -739,8 +771,8 @@ st.markdown("""
 st.markdown('<h1 class="main-title">🚗 RubyEstimator</h1>', unsafe_allow_html=True)
 st.markdown('<p style="text-align: center; color: #475569; font-size: 1.1rem; margin-bottom: 2rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">Vehicle Weight Estimator & Cost Calculator</p>', unsafe_allow_html=True)
 
-# Create two columns for the main layout
-left_col, right_col = st.columns([1, 1])
+# Create two columns for the main layout with spacing
+left_col, spacer, right_col = st.columns([1, 0.1, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
