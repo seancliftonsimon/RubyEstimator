@@ -1065,40 +1065,48 @@ with right_col:
                          delta="Profit" if totals["net"] > 0 else "Loss")
             
             # Purchase Price and Tow Fee Input Fields
-            st.markdown('<h3 class="subsection-header">Adjust Costs</h3>', unsafe_allow_html=True)
-            
             with st.form(key="cost_adjustment_form"):
                 col1, col2 = st.columns(2)
                 with col1:
-                    purchase_price_input = st.number_input("Purchase Price ($)", min_value=0.0, value=float(results.get('purchase_price', FLAT_COSTS["PURCHASE"])), step=1.0, key="purchase_adjustment")
+                    purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(results.get('purchase_price', FLAT_COSTS["PURCHASE"]))), key="purchase_adjustment")
                 with col2:
-                    tow_fee_input = st.number_input("Tow Fee ($)", min_value=0.0, value=float(results.get('tow_fee', FLAT_COSTS["TOW"])), step=1.0, key="tow_adjustment")
+                    tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(results.get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment")
                 
                 recalculate_button = st.form_submit_button(label="Recalculate with New Costs", use_container_width=True)
                 
                 # Handle cost adjustment
                 if recalculate_button:
                     try:
-                        # Perform the calculation with new values
-                        commodities = compute_commodities(results['cars'], results['curb_weight'], 
-                                                        st.session_state.get('last_aluminum_engine'), 
-                                                        st.session_state.get('last_aluminum_rims'))
-                        totals = calculate_totals(commodities, results['cars'], results['curb_weight'], 
-                                                purchase_price_input, tow_fee_input)
+                        # Convert text inputs to floats
+                        purchase_price_float = float(purchase_price_input.strip())
+                        tow_fee_float = float(tow_fee_input.strip())
                         
-                        # Update results in session state
-                        st.session_state['calculation_results'] = {
-                            'commodities': commodities,
-                            'totals': totals,
-                            'cars': results['cars'],
-                            'curb_weight': results['curb_weight'],
-                            'purchase_price': purchase_price_input,
-                            'tow_fee': tow_fee_input
-                        }
+                        # Validate values are non-negative
+                        if purchase_price_float < 0 or tow_fee_float < 0:
+                            st.error("Purchase price and tow fee must be non-negative values.")
+                        else:
+                            # Perform the calculation with new values
+                            commodities = compute_commodities(results['cars'], results['curb_weight'], 
+                                                            st.session_state.get('last_aluminum_engine'), 
+                                                            st.session_state.get('last_aluminum_rims'))
+                            totals = calculate_totals(commodities, results['cars'], results['curb_weight'], 
+                                                    purchase_price_float, tow_fee_float)
                         
-                        st.success("Costs updated and recalculated!")
-                        st.rerun()
+                            # Update results in session state
+                            st.session_state['calculation_results'] = {
+                                'commodities': commodities,
+                                'totals': totals,
+                                'cars': results['cars'],
+                                'curb_weight': results['curb_weight'],
+                                'purchase_price': purchase_price_float,
+                                'tow_fee': tow_fee_float
+                            }
+                            
+                            st.success("Costs updated and recalculated!")
+                            st.rerun()
                         
+                    except ValueError:
+                        st.error("Please enter valid numbers for purchase price and tow fee.")
                     except Exception as e:
                         st.error(f"Error during recalculation: {e}")
             
@@ -1193,9 +1201,9 @@ with right_col:
                 # Purchase Price and Tow Fee
                 col1, col2 = st.columns(2)
                 with col1:
-                    purchase_price_input = st.number_input("Purchase Price ($)", min_value=0.0, value=float(FLAT_COSTS["PURCHASE"]), step=1.0, key="purchase_no_vehicle")
+                    purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(FLAT_COSTS["PURCHASE"])), key="purchase_no_vehicle")
                 with col2:
-                    tow_fee_input = st.number_input("Tow Fee ($)", min_value=0.0, value=float(FLAT_COSTS["TOW"]), step=1.0, key="tow_no_vehicle")
+                    tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(FLAT_COSTS["TOW"])), key="tow_no_vehicle")
                 
                 # Engine and Rims Type Selection
                 col1, col2 = st.columns(2)
@@ -1221,55 +1229,61 @@ with right_col:
                     try:
                         cars_int = int(cars_input.strip())
                         curb_weight_int = int(curb_weight_input.strip())
+                        purchase_price_float = float(purchase_price_input.strip())
+                        tow_fee_float = float(tow_fee_input.strip())
                         
-                        # Convert selectbox values to boolean/None for the function
-                        aluminum_engine = None
-                        if engine_type == "Aluminum":
-                            aluminum_engine = True
-                        elif engine_type == "Iron":
-                            aluminum_engine = False
+                        # Validate values are non-negative
+                        if cars_int <= 0 or curb_weight_int <= 0 or purchase_price_float < 0 or tow_fee_float < 0:
+                            st.error("Please enter positive values for cars and curb weight, and non-negative values for purchase price and tow fee.")
+                        else:
+                            # Convert selectbox values to boolean/None for the function
+                            aluminum_engine = None
+                            if engine_type == "Aluminum":
+                                aluminum_engine = True
+                            elif engine_type == "Iron":
+                                aluminum_engine = False
+                            
+                            aluminum_rims = None
+                            if rims_type == "Aluminum":
+                                aluminum_rims = True
+                            elif rims_type == "Steel":
+                                aluminum_rims = False
+                            
+                            # Perform the calculation
+                            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+                            totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price_float, tow_fee_float)
                         
-                        aluminum_rims = None
-                        if rims_type == "Aluminum":
-                            aluminum_rims = True
-                        elif rims_type == "Steel":
-                            aluminum_rims = False
-                        
-                        # Perform the calculation
-                        commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
-                        totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price_input, tow_fee_input)
-                        
-                        # Store results in session state
-                        st.session_state['calculation_results'] = {
-                            'commodities': commodities,
-                            'totals': totals,
-                            'cars': cars_int,
-                            'curb_weight': curb_weight_int,
-                            'purchase_price': purchase_price_input,
-                            'tow_fee': tow_fee_input
-                        }
-                        
-                        # Update session state with new values
-                        st.session_state['last_curb_weight'] = curb_weight_int
-                        st.session_state['last_aluminum_engine'] = aluminum_engine
-                        st.session_state['last_aluminum_rims'] = aluminum_rims
-                        st.session_state['last_vehicle_info'] = f"Manual Entry ({curb_weight_int} lbs)"
-                        
-                        # Create detailed vehicle info for display
-                        st.session_state['detailed_vehicle_info'] = {
-                            'year': 'Manual',
-                            'make': 'Entry',
-                            'model': f'{curb_weight_int} lbs',
-                            'weight': curb_weight_int,
-                            'aluminum_engine': aluminum_engine,
-                            'aluminum_rims': aluminum_rims
-                        }
-                        
-                        st.success("Manual estimate calculated!")
-                        st.rerun()
+                            # Store results in session state
+                            st.session_state['calculation_results'] = {
+                                'commodities': commodities,
+                                'totals': totals,
+                                'cars': cars_int,
+                                'curb_weight': curb_weight_int,
+                                'purchase_price': purchase_price_float,
+                                'tow_fee': tow_fee_float
+                            }
+                            
+                            # Update session state with new values
+                            st.session_state['last_curb_weight'] = curb_weight_int
+                            st.session_state['last_aluminum_engine'] = aluminum_engine
+                            st.session_state['last_aluminum_rims'] = aluminum_rims
+                            st.session_state['last_vehicle_info'] = f"Manual Entry ({curb_weight_int} lbs)"
+                            
+                            # Create detailed vehicle info for display
+                            st.session_state['detailed_vehicle_info'] = {
+                                'year': 'Manual',
+                                'make': 'Entry',
+                                'model': f'{curb_weight_int} lbs',
+                                'weight': curb_weight_int,
+                                'aluminum_engine': aluminum_engine,
+                                'aluminum_rims': aluminum_rims
+                            }
+                            
+                            st.success("Manual estimate calculated!")
+                            st.rerun()
                         
                     except ValueError:
-                        st.error("Please enter valid numbers for cars and curb weight.")
+                        st.error("Please enter valid numbers for cars, curb weight, purchase price, and tow fee.")
                     except Exception as e:
                         st.error(f"Error during calculation: {e}")
 
