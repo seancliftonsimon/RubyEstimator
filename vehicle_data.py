@@ -25,19 +25,40 @@ DB_FILE = os.getenv("DATABASE_PATH", "/data/vehicle_weights.db")
 # Check if we're in Railway environment
 if os.getenv("RAILWAY_ENVIRONMENT"):
     # In Railway, try to use persistent volume
-    if os.path.exists("/data"):
+    if os.path.exists("/data") and os.access("/data", os.W_OK):
         DB_FILE = "/data/vehicle_weights.db"
+        print("✅ Using Railway persistent volume at /data")
     else:
-        # Fallback to a directory that might persist
-        DB_FILE = "/tmp/vehicle_weights.db"
+        # Try to create /data directory
+        try:
+            os.makedirs("/data", exist_ok=True)
+            if os.access("/data", os.W_OK):
+                DB_FILE = "/data/vehicle_weights.db"
+                print("✅ Created and using /data directory")
+            else:
+                # Fallback to a directory that might persist
+                DB_FILE = "/tmp/vehicle_weights.db"
+                print("⚠️ /data not writable, using /tmp fallback")
+        except Exception as e:
+            print(f"⚠️ Could not create /data directory: {e}")
+            DB_FILE = "/tmp/vehicle_weights.db"
+            print("⚠️ Using /tmp fallback")
 else:
     # Local development
     DB_FILE = "vehicle_weights.db"
+    print("✅ Using local development database")
 
 # Ensure the database directory exists
 db_dir = os.path.dirname(DB_FILE)
 if db_dir and not os.path.exists(db_dir):
-    os.makedirs(db_dir, exist_ok=True)
+    try:
+        os.makedirs(db_dir, exist_ok=True)
+        print(f"✅ Created database directory: {db_dir}")
+    except Exception as e:
+        print(f"❌ Could not create database directory {db_dir}: {e}")
+        # Final fallback to current directory
+        DB_FILE = "vehicle_weights.db"
+        print("⚠️ Using current directory fallback")
 
 print(f"Using database file: {DB_FILE}")
 print(f"Database directory: {db_dir}")

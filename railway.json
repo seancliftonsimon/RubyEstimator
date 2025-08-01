@@ -10,7 +10,7 @@
 	},
 	"volumes": [
 		{
-			"name": "database",
+			"name": "database-storage",
 			"mountPath": "/data",
 			"size": "1GB"
 		}

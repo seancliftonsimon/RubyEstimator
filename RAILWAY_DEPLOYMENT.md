@@ -22,7 +22,7 @@ The app is configured to use Railway's persistent volumes to store the SQLite da
 2. The persistent volume will be automatically created
 3. Database will persist between deployments
 
-### Solution 2: Environment Variable Override
+### Solution 2: Environment Variable Override (Fallback)
 
 If persistent volumes don't work, you can set a custom database path:
 
@@ -30,6 +30,12 @@ If persistent volumes don't work, you can set a custom database path:
 2. Navigate to Variables tab
 3. Add environment variable: `DATABASE_PATH=/tmp/vehicle_weights.db`
 4. Redeploy
+
+**Alternative paths to try:**
+
+- `/tmp/vehicle_weights.db` (temporary directory, may persist)
+- `/app/data/vehicle_weights.db` (app directory)
+- `./vehicle_weights.db` (current directory)
 
 ### Solution 3: Manual Backup/Restore
 
@@ -39,14 +45,26 @@ The app includes automatic backup/restore functionality:
 - **Backup location**: `vehicle_weights.db.backup` (same directory as main DB)
 - **JSON export**: Available via `export_database_to_json()` function
 
-## Deployment Steps
+## Troubleshooting Persistent Volume Issues
 
-1. **Connect your repository** to Railway
-2. **Deploy automatically** - Railway will use the `railway.json` configuration
-3. **Monitor logs** for database path confirmation
-4. **Test persistence** by adding a vehicle, then redeploying
+### If /data directory doesn't exist:
 
-## Troubleshooting
+1. **Check Railway volume configuration**:
+
+   - Go to Railway dashboard → Volumes tab
+   - Ensure volume is created and mounted
+   - Check volume size and permissions
+
+2. **Try environment variable override**:
+
+   ```
+   DATABASE_PATH=/tmp/vehicle_weights.db
+   ```
+
+3. **Check Railway logs** for these messages:
+   - `✅ Using Railway persistent volume at /data`
+   - `✅ Created and using /data directory`
+   - `⚠️ /data not writable, using /tmp fallback`
 
 ### Database not persisting?
 
@@ -58,6 +76,7 @@ The app includes automatic backup/restore functionality:
 
 1. Ensure `/data` directory exists and is writable
 2. Check Railway volume configuration in dashboard
+3. Try alternative paths via environment variables
 
 ### Data loss after deployment?
 
@@ -105,7 +124,20 @@ If you have existing data in a local database:
 2. Upload the JSON file to your Railway deployment
 
 3. Import the data:
+
    ```python
    from vehicle_data import import_database_from_json
    import_database_from_json("vehicle_data_backup_YYYYMMDD_HHMMSS.json")
    ```
+
+## Quick Fix for Current Issue
+
+Since the persistent volume isn't working, try this immediate solution:
+
+1. **Go to Railway dashboard** → Variables tab
+2. **Add environment variable**:
+   - Name: `DATABASE_PATH`
+   - Value: `/tmp/vehicle_weights.db`
+3. **Redeploy** your app
+
+This will use the `/tmp` directory which may persist better between deployments than the current setup.
