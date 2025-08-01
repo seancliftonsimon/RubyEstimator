@@ -264,7 +264,7 @@ def get_curb_weight_from_api(year: int, make: str, model: str):
             interpret_prompt = (
                 f"Based on the curb weight candidates for a {year} {make} {model}: {candidate_numbers}, "
                 "determine the most likely accurate curb weight in pounds. "
-                "Consider typical weight ranges for this vehicle type and year. "
+                "Consider typical weight ranges for this vehicle type and year, and in cases with several viable figures for curb weight, choose the lower number. "
                 "Return ONLY the weight number, no other text."
             )
 
