@@ -1063,7 +1063,7 @@ with right_col:
             
             # Purchase Price and Tow Fee Input Fields
             with st.form(key="cost_adjustment_form"):
-                col1, col2, col3 = st.columns([1, 1, 0.2])
+                col1, col2, col3 = st.columns([0.4, 0.4, 0.2])
                 with col1:
                     purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(results.get('purchase_price', FLAT_COSTS["PURCHASE"]))), key="purchase_adjustment")
                 with col2:
