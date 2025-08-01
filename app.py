@@ -979,6 +979,111 @@ st.markdown("""
          box-shadow: 0 6px 20px rgba(20, 184, 166, 0.5) !important;
          border-color: rgba(20, 184, 166, 1) !important;
      }
+     
+     /* Target the specific form structure that contains the refresh button */
+     /* Remove dark backgrounds from the cost adjustment form and its columns */
+     .stForm[data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]),
+     .stForm[data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) > div,
+     .stForm[data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) > div > div,
+     /* Target the specific column that contains the refresh button */
+     .stForm [data-testid="column"]:has([data-testid="baseButton-secondaryFormSubmit"]),
+     .stForm [data-testid="column"]:has([data-testid="baseButton-secondaryFormSubmit"]) > div,
+     /* Target any element that might be creating the dark rectangular background */
+     .stForm [data-testid="column"]:has([data-testid="baseButton-secondaryFormSubmit"]) * {
+         background: transparent !important;
+         background-color: transparent !important;
+         background-image: none !important;
+         border: none !important;
+         box-shadow: none !important;
+     }
+     
+     /* More aggressive targeting of the dark background issue */
+     /* Target any element with the dark red color that might be behind the button */
+     div[style*="background-color: rgb(127, 29, 29)"],
+     div[style*="background-color: rgba(127, 29, 29"],
+     div[style*="background: rgb(127, 29, 29)"],
+     div[style*="background: rgba(127, 29, 29"],
+     /* Target any element that might be creating a rectangular background */
+     .stForm div[style*="background"],
+     .stForm > div div[style*="background"],
+     /* Target the specific area around the refresh button */
+     .stForm:has([data-testid="baseButton-secondaryFormSubmit"]) div,
+     .stForm:has([data-testid="baseButton-secondaryFormSubmit"]) > div,
+     .stForm:has([data-testid="baseButton-secondaryFormSubmit"]) > div > div {
+         background: transparent !important;
+         background-color: transparent !important;
+         background-image: none !important;
+         border: none !important;
+         box-shadow: none !important;
+     }
+     
+     /* Force the refresh button container to be completely transparent */
+     .stForm:has([data-testid="baseButton-secondaryFormSubmit"]) {
+         background: transparent !important;
+         background-color: transparent !important;
+         background-image: none !important;
+         border: none !important;
+         box-shadow: none !important;
+         margin: 0 !important;
+         padding: 0 !important;
+     }
+     
+     /* Target any remaining dark elements that might be causing the issue */
+     /* This targets any element that might have a dark background near the button */
+     .stForm *:has([data-testid="baseButton-secondaryFormSubmit"]),
+     .stForm *:has([data-testid="baseButton-secondaryFormSubmit"]) * {
+         background: transparent !important;
+         background-color: transparent !important;
+         background-image: none !important;
+     }
+     
+     /* Target Streamlit's column structure specifically */
+     /* Remove any backgrounds from the horizontal layout that contains the refresh button */
+     .stHorizontalBlock,
+     .stHorizontalBlock > div,
+     .stHorizontalBlock > div > div,
+     .stHorizontalBlock > div > div > div,
+     /* Target the specific column that contains the refresh button */
+     .stHorizontalBlock [data-testid="column"]:last-child,
+     .stHorizontalBlock [data-testid="column"]:last-child > div,
+     .stHorizontalBlock [data-testid="column"]:last-child > div > div {
+         background: transparent !important;
+         background-color: transparent !important;
+         background-image: none !important;
+         border: none !important;
+         box-shadow: none !important;
+         margin: 0 !important;
+         padding: 0 !important;
+     }
+     
+     /* Target any element that might be creating the dark rectangular shape */
+     /* This is a more aggressive approach to remove any dark backgrounds */
+     [data-testid="stForm"] [data-testid="column"]:last-child,
+     [data-testid="stForm"] [data-testid="column"]:last-child *,
+     [data-testid="stForm"] [data-testid="column"]:last-child > div,
+     [data-testid="stForm"] [data-testid="column"]:last-child > div * {
+         background: transparent !important;
+         background-color: transparent !important;
+         background-image: none !important;
+         border: none !important;
+         box-shadow: none !important;
+     }
+     
+     /* Exception: only the button itself should have styling */
+     [data-testid="stForm"] [data-testid="column"]:last-child [data-testid="baseButton-secondaryFormSubmit"] {
+         background: rgba(20, 184, 166, 0.9) !important;
+         background-color: rgba(20, 184, 166, 0.9) !important;
+         border: 2px solid rgba(20, 184, 166, 0.8) !important;
+         border-radius: 8px !important;
+         box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4) !important;
+         color: #ffffff !important;
+         padding: 0.75rem 1.5rem !important;
+         margin: 0 !important;
+         font-weight: 700 !important;
+         font-size: 1rem !important;
+         transition: all 0.2s ease !important;
+         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
