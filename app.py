@@ -773,7 +773,7 @@ with left_col:
     """, unsafe_allow_html=True)
 
     # --- Display Current Vehicle Details (if available) ---
-    if 'detailed_vehicle_info' in st.session_state:
+    if st.session_state.get('detailed_vehicle_info'):
         vehicle_info = st.session_state['detailed_vehicle_info']
         
         st.markdown('<h3 class="subsection-header">Current Vehicle</h3>', unsafe_allow_html=True)
