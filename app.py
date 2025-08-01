@@ -772,6 +772,31 @@ st.markdown("""
          margin-bottom: 0 !important;
          padding-bottom: 0 !important;
      }
+     
+     /* Target and remove the flat background box behind form submit buttons */
+     .stForm .stButton > div > div,
+     .stForm .stButton > div > div > div,
+     .stForm .stButton > div > div > div > div {
+         background: transparent !important;
+         border: none !important;
+         box-shadow: none !important;
+         margin: 0 !important;
+         padding: 0 !important;
+     }
+     
+     /* Remove any background from the form container itself */
+     .stForm {
+         background: transparent !important;
+     }
+     
+     /* Target any remaining background elements */
+     .stForm [data-testid="stButton"] > div,
+     .stForm [data-testid="stButton"] > div > div,
+     .stForm [data-testid="stButton"] > div > div > div {
+         background: transparent !important;
+         border: none !important;
+         box-shadow: none !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
