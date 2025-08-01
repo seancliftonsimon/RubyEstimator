@@ -37,7 +37,10 @@ Your repository is already ready! The API key is secured and the code is set up 
 2. **Add Environment Variable**:
    - **Name**: `GEMINI_API_KEY`
    - **Value**: `AIzaSyDhOpIAllne17hVDZI2ADXuUcSeE0cPYvY`
-3. **Save** - your app will automatically redeploy
+3. **Add Port Variable** (if not automatically set):
+   - **Name**: `PORT`
+   - **Value**: `8501`
+4. **Save** - your app will automatically redeploy
 
 ### Step 4: Add Password Protection (Optional)
 
@@ -122,6 +125,14 @@ If you see this error, it means the build environment is missing pip:
 - Railway will automatically use the `Dockerfile` instead of `nixpacks.toml`
 - The Dockerfile includes all necessary system dependencies
 - This should resolve the pip installation issues
+
+### Port Configuration Errors
+
+If you see "Invalid value for '--server.port'" errors:
+
+- The app is now configured to use port 8501 by default
+- Railway will automatically handle port mapping
+- Make sure the `PORT` environment variable is set to `8501` in Railway variables
 
 ### API Key Not Working
 
