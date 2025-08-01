@@ -67,12 +67,13 @@ def setup_password_protection():
         # If no password protection is configured, allow access
         return True
     
-    # Show login form
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem;">
-        <h1>🔒 RubyEstimator</h1>
-        <p>Please enter the password to access the application.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Only show login form if password is not correct
+    if "password_correct" not in st.session_state or not st.session_state["password_correct"]:
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem;">
+            <h1>🔒 RubyEstimator</h1>
+            <p>Please enter the password to access the application.</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     return check_password() 

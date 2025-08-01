@@ -143,14 +143,14 @@ def format_currency(amount):
 
 # Configure page with light mode styling
 st.set_page_config(
-    page_title="RubyEstimator - Vehicle Weight & Cost Calculator",
+    page_title="Ruby GEM - Vehicle Weight & Cost Calculator",
     page_icon="🚗",
     layout="wide",
     initial_sidebar_state="collapsed",
     menu_items={
         'Get Help': None,
         'Report a bug': None,
-        'About': "RubyEstimator - Vehicle Weight & Cost Calculator"
+        'About': "Ruby GEM - Vehicle Weight & Cost Calculator"
     }
 )
 
@@ -755,7 +755,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Main title with ruby gradient effect
-st.markdown('<h1 class="main-title">🚗 RubyEstimator</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-title">🚗 Ruby GEM</h1>', unsafe_allow_html=True)
 st.markdown('<p style="text-align: center; color: #475569; font-size: 1.1rem; margin-bottom: 2rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">Vehicle Weight Estimator & Cost Calculator</p>', unsafe_allow_html=True)
 
 # Create two columns for the main layout with spacing
@@ -1326,7 +1326,7 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #475569; padding: 1rem 0;">
     <p style="margin: 0; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">
-        Built with Streamlit | RubyEstimator v1.0
+        Built with Streamlit | Ruby GEM v1.0
     </p>
 </div>
 """, unsafe_allow_html=True)
