@@ -1180,7 +1180,16 @@ with right_col:
                 st.metric("Net Profit", format_currency(totals["net"]), 
                          delta="Profit" if totals["net"] > 0 else "Loss")
             
-
+            # Disclaimer about estimates and accuracy
+            st.markdown("""
+            <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
+                    <strong>⚠️ Important Disclaimer:</strong> The information provided here is an estimate and draws from AI search results. 
+                    Please double-check any numbers that don't look right and don't blindly trust the output while accuracy is still being fine-tuned. 
+                    Additionally, catalytic converter costs are still being factored in, so the figures currently shown for catalytic converter amounts are not accurate.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
             
             # Create DataFrame for better display
             commodity_data = []
