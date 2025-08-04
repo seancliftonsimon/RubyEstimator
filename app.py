@@ -188,7 +188,7 @@ st.markdown("""
 <style>
     /* Global background and text colors - Light Mode */
     .main {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, rgba(76, 241, 179, 0.50) 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, rgba(153, 12, 65, 0.15) 100%);
         color: #1e293b;
     }
     
@@ -245,37 +245,37 @@ st.markdown("""
         border-radius: 12px;
         border: 1px solid rgba(153, 12, 65, 0.18);
         box-shadow: 0 8px 32px rgba(153, 12, 65, 0.08);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
     }
     
     /* Success message styling */
     .success-message {
         background: rgba(76, 241, 179, 0.12);
-        padding: 1rem;
+        padding: 0.5rem;
         border-radius: 8px;
         border-left: 4px solid #0C9964;
-        margin: 1rem 0;
+        margin: 0.5rem 0;
         color: #0C9964;
     }
     
     /* Warning message styling */
     .warning-message {
         background: rgba(241, 76, 138, 0.10);
-        padding: 1rem;
+        padding: 0.5rem;
         border-radius: 8px;
         border-left: 4px solid #F14C8A;
-        margin: 1rem 0;
+        margin: 0.5rem 0;
         color: #E0115F;
     }
     
     /* Error message styling */
     .error-message {
         background: rgba(224, 17, 95, 0.10);
-        padding: 1rem;
+        padding: 0.5rem;
         border-radius: 8px;
         border-left: 4px solid #990C41;
-        margin: 1rem 0;
+        margin: 0.5rem 0;
         color: #990C41;
     }
     
@@ -283,7 +283,7 @@ st.markdown("""
     .stForm {
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
-        padding: 1.5rem;
+        padding: 0.75rem;
         border-radius: 8px;
         border: 1px solid rgba(153, 12, 65, 0.18);
         box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);
@@ -297,6 +297,11 @@ st.markdown("""
         padding: 0.75rem;
         transition: all 0.2s ease;
         color: #1e293b !important;
+        pointer-events: auto !important;
+        user-select: text !important;
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
     }
     
     .stNumberInput > div > div > input {
@@ -335,6 +340,16 @@ st.markdown("""
     
     .stTextInput > div > div > input::placeholder {
         color: rgba(71, 85, 105, 0.6) !important;
+    }
+    
+    /* Ensure text input containers are interactive */
+    .stTextInput > div,
+    .stTextInput > div > div {
+        pointer-events: auto !important;
+        user-select: text !important;
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
     }
     
                    /* Button styling */
@@ -649,8 +664,8 @@ st.markdown("""
     
     /* Add padding and spacing */
     .block-container {
-        padding-top: 1rem;
-        padding-bottom: 2rem;
+        padding-top: 0.5rem;
+        padding-bottom: 1rem;
         padding-left: 3rem;
         padding-right: 3rem;
         max-width: 1400px;
@@ -662,9 +677,9 @@ st.markdown("""
         margin: 0 1rem;
     }
     
-    /* Add some breathing room between sections */
+    /* Add minimal breathing room between sections */
     .main .block-container > div {
-        margin-bottom: 2rem;
+        margin-bottom: 0.5rem;
     }
     
     /* Streamlit metric containers */
@@ -672,7 +687,7 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border-radius: 8px;
-        padding: 1rem;
+        padding: 0.5rem;
         border: 1px solid rgba(153, 12, 65, 0.18);
         box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);
     }
@@ -712,22 +727,22 @@ st.markdown("""
     
     /* Override Streamlit's default dark theme elements */
     .stApp {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, rgba(153, 12, 65, 0.1) 100%);
     }
     
     /* Force light mode */
     [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%) !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, rgba(153, 12, 65, 0.1) 100%) !important;
     }
     
     /* Add subtle spacing to form elements */
     .stForm > div {
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
     
     /* Improve spacing for expanders */
     .streamlit-expanderHeader {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
     }
     
     /* Ensure all Streamlit elements have proper light mode styling */
@@ -1530,7 +1545,7 @@ with left_col:
         # Display vehicle name
         vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
         st.markdown(f"""
-        <div style="background: rgba(153, 12, 65, 0.1); padding: 1rem; border-radius: 8px; border: 2px solid #990C41; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(153, 12, 65, 0.15);">
+        <div style="background: rgba(153, 12, 65, 0.1); padding: 0.5rem; border-radius: 8px; border: 2px solid #990C41; margin-bottom: 0.5rem; box-shadow: 0 4px 12px rgba(153, 12, 65, 0.15);">
             <h4 style="margin: 0; color: #990C41; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(153, 12, 65, 0.1); font-size: 1.25rem;">{vehicle_name}</h4>
         </div>
         """, unsafe_allow_html=True)
@@ -1578,8 +1593,8 @@ with left_col:
                 """, unsafe_allow_html=True)
 
     # --- Main Form ---
-    # Add padding above the vehicle search section
-    st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
+    # Add minimal padding above the vehicle search section
+    st.markdown('<div style="margin-top: 0.5rem;"></div>', unsafe_allow_html=True)
     
     with st.form(key="vehicle_form"):
         col1, col2, col3 = st.columns(3)
