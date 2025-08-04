@@ -1406,6 +1406,84 @@ st.markdown("""
      [id]::after {
          display: none !important;
      }
+     
+     /* Comprehensive removal of all anchor/link hover elements - Latest 2024 approach */
+     /* Target all possible heading anchor elements */
+     h1::before, h2::before, h3::before, h4::before, h5::before, h6::before,
+     h1::after, h2::after, h3::after, h4::after, h5::after, h6::after {
+         display: none !important;
+         content: none !important;
+     }
+     
+     /* Remove all pseudo-elements that might show anchor icons */
+     *::before, *::after {
+         content: none !important;
+     }
+     
+     /* Exception: keep our custom title underline */
+     .main-title::after {
+         content: '' !important;
+         display: block !important;
+     }
+     
+     /* Remove all link-related hover effects */
+     a:hover::before, a:hover::after,
+     a:focus::before, a:focus::after {
+         display: none !important;
+         content: none !important;
+     }
+     
+     /* Target Streamlit's specific anchor implementation */
+     .stMarkdown *::before,
+     .stMarkdown *::after,
+     [data-testid="stMarkdown"] *::before,
+     [data-testid="stMarkdown"] *::after {
+         content: none !important;
+     }
+     
+     /* Exception: keep our custom elements */
+     .main-title::after,
+     .info-icon:hover::after,
+     .info-icon:hover::before {
+         content: attr(title) !important;
+         display: block !important;
+     }
+     
+     /* Remove all possible anchor link implementations */
+     [data-anchor]::before,
+     [data-anchor]::after,
+     [class*="anchor"]::before,
+     [class*="anchor"]::after,
+     [class*="link"]::before,
+     [class*="link"]::after {
+         display: none !important;
+         content: none !important;
+     }
+     
+     /* Target any element with an ID that might show anchor icons */
+     [id] {
+         scroll-margin-top: 0 !important;
+     }
+     
+     [id]::before,
+     [id]::after {
+         display: none !important;
+         content: none !important;
+     }
+     
+     /* Remove all possible Streamlit chart controls and hover elements */
+     [data-testid="stChart"] *,
+     .stChart * {
+         pointer-events: none !important;
+     }
+     
+     /* Exception: allow basic chart interaction but remove controls */
+     [data-testid="stChart"] canvas,
+     [data-testid="stChart"] svg,
+     .stChart canvas,
+     .stChart svg {
+         pointer-events: auto !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
