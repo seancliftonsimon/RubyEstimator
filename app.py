@@ -311,7 +311,12 @@ st.markdown("""
     input[placeholder],
     /* Streamlit specific text input selectors */
     [data-testid="stTextInput"] input,
-    .stTextInput input {
+    .stTextInput input,
+    /* Force styling on all columns including third column */
+    .stColumn:nth-child(3) .stTextInput input,
+    .stColumn:nth-child(5) .stTextInput input,
+    [data-testid="column"]:nth-child(3) .stTextInput input,
+    [data-testid="column"]:nth-child(5) .stTextInput input {
         background: #ffffff !important;
         border: 2px solid rgba(153, 12, 65, 0.25) !important;
         border-radius: 6px !important;
@@ -321,6 +326,9 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
         caret-color: #1e293b !important;
         cursor: text !important;
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
     
     .stNumberInput > div > div > input {
@@ -362,7 +370,12 @@ st.markdown("""
     [data-testid="stTextInput"] input[type="text"]:focus,
     /* Streamlit specific text input focus selectors */
     [data-testid="stTextInput"] input:focus,
-    .stTextInput input:focus {
+    .stTextInput input:focus,
+    /* Force focus styling on all columns including third column */
+    .stColumn:nth-child(3) .stTextInput input:focus,
+    .stColumn:nth-child(5) .stTextInput input:focus,
+    [data-testid="column"]:nth-child(3) .stTextInput input:focus,
+    [data-testid="column"]:nth-child(5) .stTextInput input:focus {
         border-color: #990C41 !important;
         box-shadow: 0 0 0 3px rgba(153, 12, 65, 0.2) !important;
         outline: none !important;
@@ -1331,11 +1344,11 @@ st.markdown("""
      }
      
      /* Target any element that might be creating the dark rectangular shape */
-         /* This is a more aggressive approach to remove any dark backgrounds */
-    [data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) [data-testid="column"]:last-child,
-    [data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) [data-testid="column"]:last-child *,
-    [data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) [data-testid="column"]:last-child > div,
-    [data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) [data-testid="column"]:last-child > div * {
+     /* This is a more aggressive approach to remove any dark backgrounds */
+     [data-testid="stForm"] [data-testid="column"]:last-child,
+     [data-testid="stForm"] [data-testid="column"]:last-child *,
+     [data-testid="stForm"] [data-testid="column"]:last-child > div,
+     [data-testid="stForm"] [data-testid="column"]:last-child > div * {
          background: transparent !important;
          background-color: transparent !important;
          background-image: none !important;
@@ -1488,13 +1501,36 @@ st.markdown("""
          display: none !important;
      }
      
-     /* Comprehensive removal of all anchor/link hover elements */
-     /* Target all possible heading anchor elements */
-     h1::before, h2::before, h3::before, h4::before, h5::before, h6::before,
-     h1::after, h2::after, h3::after, h4::after, h5::after, h6::after {
-         display: none !important;
-         content: none !important;
-     }
+         /* Force proper input field rendering for all columns */
+    .stTextInput,
+    [data-testid="stTextInput"] {
+        min-height: 50px !important;
+        width: 100% !important;
+    }
+    
+    /* Ensure all text inputs within forms are properly styled */
+    .stForm .stTextInput input,
+    .stForm [data-testid="stTextInput"] input {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* Prevent text inputs from collapsing in narrow columns */
+    [data-testid="column"] .stTextInput,
+    [data-testid="column"] [data-testid="stTextInput"] {
+        width: 100% !important;
+        min-width: 150px !important;
+    }
+
+    /* Comprehensive removal of all anchor/link hover elements */
+    /* Target all possible heading anchor elements */
+    h1::before, h2::before, h3::before, h4::before, h5::before, h6::before,
+    h1::after, h2::after, h3::after, h4::after, h5::after, h6::after {
+        display: none !important;
+        content: none !important;
+    }
      
      /* Remove anchor icons from headings but keep the text visible */
      h1::before, h2::before, h3::before, h4::before, h5::before, h6::before,
@@ -1753,13 +1789,17 @@ with left_col:
     # --- Main Form ---
     
     with st.form(key="vehicle_form"):
-        col1, col2, col3 = st.columns(3)
+        # Use columns with explicit gap parameter
+        col1, col2, col3 = st.columns(3, gap="large")
+        
         with col1:
-            year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013")
+            year_input = st.text_input("Year", placeholder="e.g., 2013", key="year_input_main")
+        
         with col2:
-            make_input = st.text_input("Make", placeholder="e.g., Toyota", value="Toyota")
+            make_input = st.text_input("Make", placeholder="e.g., Toyota", key="make_input_main")
+        
         with col3:
-            model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry")
+            model_input = st.text_input("Model", placeholder="e.g., Camry", key="model_input_main")
 
         submit_button = st.form_submit_button(label="Search Vehicle & Calculate", use_container_width=True)
 
