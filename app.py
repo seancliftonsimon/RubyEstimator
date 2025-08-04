@@ -52,21 +52,19 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
     if aluminum_engine is True:
         # All aluminum engines
         engine_commodities = [
-            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": w(total_engine_weight), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
-            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": 0, "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
+            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": w(total_engine_weight), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0, "is_engine": True},
         ]
     elif aluminum_engine is False:
         # All iron engines
         engine_commodities = [
-            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": 0, "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
-            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(total_engine_weight), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
+            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(total_engine_weight), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0, "is_engine": True},
         ]
     else:
         # Unknown engine type - split actual engine weight 50/50
         half_engine_weight = total_engine_weight / 2
         engine_commodities = [
-            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": w(half_engine_weight), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
-            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(half_engine_weight), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
+            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": w(half_engine_weight), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0, "is_engine": True},
+            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(half_engine_weight), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0, "is_engine": True},
         ]
     
     # Determine rims type based on aluminum_rims parameter
@@ -94,15 +92,14 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
 
     # Calculate ELV weight per car (curb weight minus engine and all fixed components)
     # Note: engine weights are already multiplied by cars, so we need per-car values
-    al_engine_per_car = engine_commodities[0]["weight"] / cars if cars > 0 else 0
-    fe_engine_per_car = engine_commodities[1]["weight"] / cars if cars > 0 else 0
+    total_engine_weight_per_car = sum(commodity["weight"] for commodity in engine_commodities) / cars if cars > 0 else 0
     
     # Sum of all fixed component weights per car
     fixed_components_per_car = (23 + 20.5 + 5 + 12 + 5.5 + 13.5 + 3.5 + battery_weight + 
                               (40 if aluminum_rims is True else 0))
     
     # ELV weight per car, then multiply by number of cars
-    elv_per_car = curb_weight - al_engine_per_car - fe_engine_per_car - fixed_components_per_car
+    elv_per_car = curb_weight - total_engine_weight_per_car - fixed_components_per_car
     elv_weight = max(0, elv_per_car * cars)  # Ensure non-negative
 
     # Add ELV at the beginning
@@ -191,7 +188,7 @@ st.markdown("""
 <style>
     /* Global background and text colors - Light Mode */
     .main {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, rgba(76, 241, 179, 0.15) 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, rgba(76, 241, 179, 0.50) 100%);
         color: #1e293b;
     }
     
@@ -1870,8 +1867,18 @@ with right_col:
                         "Sale Value": f"${commodity['sale_value']:.2f}"
                     })
                 else:
+                    # Filter out zero-weight engine entries
+                    if commodity.get("is_engine") and commodity["weight"] == 0:
+                        continue
+                    
+                    # Add info icon for engine commodities
+                    if commodity.get("is_engine"):
+                        commodity_label = f"{commodity['label']} <span class='info-icon-container'><span class='info-icon' title='Engine weight estimated at 13.9% of curb weight based on typical engine weights: 4-cylinder (300-400 lbs), V6 (400-500 lbs), V8 (500-700 lbs). For unknown engine materials, weight is split 50/50 between aluminum and iron.'>ⓘ</span></span>"
+                    else:
+                        commodity_label = commodity["label"]
+                    
                     weight_based.append({
-                        "Commodity": commodity["label"],
+                        "Commodity": commodity_label,
                         "Weight (lb)": f"{commodity['weight']:,.1f}",
                         "$/lb": f"${commodity['unit_price']:.2f}",
                         "Sale Value": f"${commodity['sale_value']:.2f}"
@@ -1881,7 +1888,11 @@ with right_col:
             if weight_based:
                 st.markdown('<div class="subsection-header">Estimated by Weight</div>', unsafe_allow_html=True)
                 weight_df = pd.DataFrame(weight_based)
-                st.table(weight_df)
+                st.markdown(f"""
+                <div style="background: rgba(255, 255, 255, 0.95); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);">
+                    {weight_df.to_html(escape=False, index=False, classes=['dataframe'], table_id='weight-table')}
+                </div>
+                """, unsafe_allow_html=True)
             
             # Display count-based commodities  
             if count_based:
@@ -1889,16 +1900,7 @@ with right_col:
                 count_df = pd.DataFrame(count_based)
                 st.table(count_df)
             
-            # Add note about engine weight estimation
-            st.markdown("""
-            <div style="background: rgba(156, 163, 175, 0.1); padding: 0.75rem; border-radius: 6px; margin: 0.5rem 0; border-left: 3px solid #9ca3af;">
-                <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">
-                    <strong>Note:</strong> Engine weight estimated at 13.9% of curb weight based on typical engine weights: 
-                    4-cylinder (300-400 lbs), V6 (400-500 lbs), V8 (500-700 lbs). 
-                    For unknown engine materials, weight is split 50/50 between aluminum and iron.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+
             
             # Display detailed cost breakdown
             st.markdown('<div class="subsection-header">Cost Breakdown</div>', unsafe_allow_html=True)
