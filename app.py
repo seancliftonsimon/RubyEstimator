@@ -188,7 +188,7 @@ st.markdown("""
 <style>
     /* Global background and text colors - Light Mode */
     .main {
-        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 50%, rgba(153, 12, 65, 0.15) 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 40%, rgba(153, 12, 65, 0.15) 60%, rgba(153, 12, 65, 0.25) 100%);
         color: #1e293b;
     }
     
@@ -290,12 +290,15 @@ st.markdown("""
     }
     
     /* Enhanced input field styling */
-    .stTextInput > div > div > input {
+    .stTextInput > div > div > input,
+    [data-testid="stTextInput"] > div > div > input,
+    .stTextInput input,
+    [data-testid="stTextInput"] input {
         background: rgba(255, 255, 255, 0.95) !important;
         border: 2px solid rgba(153, 12, 65, 0.25) !important;
-        border-radius: 6px;
-        padding: 0.75rem;
-        transition: all 0.2s ease;
+        border-radius: 6px !important;
+        padding: 0.75rem !important;
+        transition: all 0.2s ease !important;
         color: #1e293b !important;
         box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
     }
@@ -321,10 +324,13 @@ st.markdown("""
         background: #990C41 !important;
     }
     
-    .stTextInput > div > div > input:focus {
+    .stTextInput > div > div > input:focus,
+    [data-testid="stTextInput"] > div > div > input:focus,
+    .stTextInput input:focus,
+    [data-testid="stTextInput"] input:focus {
         border-color: #990C41 !important;
         box-shadow: 0 0 0 3px rgba(153, 12, 65, 0.2) !important;
-        outline: none;
+        outline: none !important;
         background: rgba(255, 255, 255, 1) !important;
     }
     
@@ -714,12 +720,12 @@ st.markdown("""
     
     /* Override Streamlit's default dark theme elements */
     .stApp {
-        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 50%, rgba(153, 12, 65, 0.15) 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 40%, rgba(153, 12, 65, 0.15) 60%, rgba(153, 12, 65, 0.25) 100%);
     }
     
     /* Force light mode */
     [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 50%, rgba(153, 12, 65, 0.15) 100%) !important;
+        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 40%, rgba(153, 12, 65, 0.15) 60%, rgba(153, 12, 65, 0.25) 100%) !important;
     }
     
     /* Add subtle spacing to form elements */
@@ -828,11 +834,17 @@ st.markdown("""
          font-weight: 500;
      }
      
-     /* Exception for text inputs - keep them white */
-     .stTextInput > div > div > input {
-         background: rgba(255, 255, 255, 0.95) !important;
-         color: #1e293b !important;
-     }
+         /* Exception for text inputs - keep them white */
+    .stTextInput > div > div > input,
+    [data-testid="stTextInput"] > div > div > input,
+    .stTextInput input,
+    [data-testid="stTextInput"] input {
+        background: rgba(255, 255, 255, 0.95) !important;
+        color: #1e293b !important;
+        border: 2px solid rgba(153, 12, 65, 0.25) !important;
+        border-radius: 6px !important;
+        box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
+    }
     
     /* Style info messages */
     .stAlert {
@@ -1580,8 +1592,6 @@ with left_col:
                 """, unsafe_allow_html=True)
 
     # --- Main Form ---
-    # Add padding above the vehicle search section
-    st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
     
     with st.form(key="vehicle_form"):
         col1, col2, col3 = st.columns(3)
@@ -1850,7 +1860,6 @@ with right_col:
                 with col2:
                     tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(results.get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment")
                 with col3:
-                    st.markdown('<div style="margin-top: 1.5rem;"></div>', unsafe_allow_html=True)
                     recalculate_button = st.form_submit_button("🔄")
                 
                 # Handle cost adjustment
