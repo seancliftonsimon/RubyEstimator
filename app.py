@@ -188,7 +188,7 @@ st.markdown("""
 <style>
     /* Global background and text colors - Light Mode */
     .main {
-        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 40%, rgba(153, 12, 65, 0.15) 60%, rgba(153, 12, 65, 0.25) 100%);
+        background: #ffffff;
         color: #1e293b;
     }
     
@@ -293,14 +293,18 @@ st.markdown("""
     .stTextInput > div > div > input,
     [data-testid="stTextInput"] > div > div > input,
     .stTextInput input,
-    [data-testid="stTextInput"] input {
-        background: rgba(255, 255, 255, 0.95) !important;
+    [data-testid="stTextInput"] input,
+    input[type="text"],
+    input[placeholder] {
+        background: #ffffff !important;
         border: 2px solid rgba(153, 12, 65, 0.25) !important;
         border-radius: 6px !important;
         padding: 0.75rem !important;
         transition: all 0.2s ease !important;
         color: #1e293b !important;
         box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
+        caret-color: #1e293b !important;
+        cursor: text !important;
     }
     
     .stNumberInput > div > div > input {
@@ -327,11 +331,15 @@ st.markdown("""
     .stTextInput > div > div > input:focus,
     [data-testid="stTextInput"] > div > div > input:focus,
     .stTextInput input:focus,
-    [data-testid="stTextInput"] input:focus {
+    [data-testid="stTextInput"] input:focus,
+    input[type="text"]:focus,
+    input[placeholder]:focus {
         border-color: #990C41 !important;
         box-shadow: 0 0 0 3px rgba(153, 12, 65, 0.2) !important;
         outline: none !important;
-        background: rgba(255, 255, 255, 1) !important;
+        background: #ffffff !important;
+        caret-color: #1e293b !important;
+        cursor: text !important;
     }
     
     .stNumberInput > div > div > input:focus {
@@ -720,12 +728,12 @@ st.markdown("""
     
     /* Override Streamlit's default dark theme elements */
     .stApp {
-        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 40%, rgba(153, 12, 65, 0.15) 60%, rgba(153, 12, 65, 0.25) 100%);
+        background: #ffffff;
     }
     
     /* Force light mode */
     [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 40%, rgba(153, 12, 65, 0.15) 60%, rgba(153, 12, 65, 0.25) 100%) !important;
+        background: #ffffff !important;
     }
     
     /* Add subtle spacing to form elements */
@@ -834,17 +842,21 @@ st.markdown("""
          font-weight: 500;
      }
      
-         /* Exception for text inputs - keep them white */
-    .stTextInput > div > div > input,
-    [data-testid="stTextInput"] > div > div > input,
-    .stTextInput input,
-    [data-testid="stTextInput"] input {
-        background: rgba(255, 255, 255, 0.95) !important;
-        color: #1e293b !important;
-        border: 2px solid rgba(153, 12, 65, 0.25) !important;
-        border-radius: 6px !important;
-        box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
-    }
+             /* Exception for text inputs - keep them white */
+     .stTextInput > div > div > input,
+     [data-testid="stTextInput"] > div > div > input,
+     .stTextInput input,
+     [data-testid="stTextInput"] input,
+     input[type="text"],
+     input[placeholder] {
+         background: #ffffff !important;
+         color: #1e293b !important;
+         border: 2px solid rgba(153, 12, 65, 0.25) !important;
+         border-radius: 6px !important;
+         box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
+         caret-color: #1e293b !important;
+         cursor: text !important;
+     }
     
     /* Style info messages */
     .stAlert {
