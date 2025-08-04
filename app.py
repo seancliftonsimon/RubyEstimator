@@ -480,6 +480,17 @@ st.markdown("""
         color: #1e293b !important;
         border-color: rgba(224, 17, 95, 0.10) !important;
         padding: 0.75rem !important;
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+    }
+    
+    /* Alternate row colors for better readability */
+    .stTable tbody tr:nth-child(even) td {
+        background: rgba(248, 250, 252, 0.9) !important;
+    }
+    
+    .stTable tbody tr:nth-child(odd) td {
+        background: rgba(255, 255, 255, 0.9) !important;
     }
     
     /* Force table text color override */
@@ -545,6 +556,23 @@ st.markdown("""
         min-width: 100% !important;
         max-width: 100% !important;
         width: 100% !important;
+        table-layout: auto !important;
+    }
+    
+    /* Ensure table columns have adequate width */
+    .stTable th,
+    .stTable td {
+        min-width: 80px !important;
+        max-width: none !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+    
+    /* Allow text wrapping for longer content */
+    .stTable td {
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
     }
     
     /* Prevent any horizontal scrolling */
@@ -1529,14 +1557,55 @@ st.markdown("""
      div[data-testid="StyledLinkIconContainer"] * {
          display: none !important;
      }
+     
+     /* Responsive design for smaller screens */
+     @media (max-width: 1200px) {
+         .block-container {
+             padding-left: 1rem !important;
+             padding-right: 1rem !important;
+         }
+         
+         .main-title {
+             font-size: 2.5rem !important;
+         }
+         
+         .section-header {
+             font-size: 1.3rem !important;
+         }
+     }
+     
+     @media (max-width: 768px) {
+         .block-container {
+             padding-left: 0.5rem !important;
+             padding-right: 0.5rem !important;
+         }
+         
+         .main-title {
+             font-size: 2rem !important;
+         }
+         
+         .section-header {
+             font-size: 1.1rem !important;
+         }
+         
+         /* Stack columns vertically on mobile */
+         .stHorizontalBlock {
+             flex-direction: column !important;
+         }
+         
+         .stHorizontalBlock > div {
+             width: 100% !important;
+             margin: 0.5rem 0 !important;
+         }
+     }
 </style>
 """, unsafe_allow_html=True)
 
 # Main title with minimal padding
 st.markdown('<div class="main-title">🚗 Ruby GEM</div>', unsafe_allow_html=True)
 
-# Create two columns for the main layout with spacing
-left_col, spacer, right_col = st.columns([1, 0.1, 1])
+# Create two columns for the main layout with better spacing
+left_col, spacer, right_col = st.columns([1, 0.2, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
@@ -1866,13 +1935,13 @@ with right_col:
             
             # Purchase Price and Tow Fee Input Fields
             with st.form(key="cost_adjustment_form"):
-                col1, col2, col3 = st.columns([0.4, 0.4, 0.2])
+                col1, col2, col3 = st.columns([0.35, 0.35, 0.3])
                 with col1:
                     purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(results.get('purchase_price', FLAT_COSTS["PURCHASE"]))), key="purchase_adjustment")
                 with col2:
                     tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(results.get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment")
                 with col3:
-                    recalculate_button = st.form_submit_button("🔄")
+                    recalculate_button = st.form_submit_button("🔄", use_container_width=True)
                 
                 # Handle cost adjustment
                 if recalculate_button:
@@ -2101,15 +2170,15 @@ with right_col:
 
 # --- Bottom Left Disclaimer ---
 st.markdown("""
-<div style="position: fixed; bottom: 20px; left: 20px; background: rgba(245, 158, 11, 0.1); padding: 0.75rem; border-radius: 6px; border-left: 3px solid #f59e0b; max-width: 300px; z-index: 1000;">
-    <p style="margin: 0; color: #92400e; font-size: 0.75rem; line-height: 1.3;">
-        <strong>⚠️ Disclaimer:</strong> Information is an estimate from AI search.
+<div style="position: fixed; bottom: 20px; left: 20px; background: rgba(245, 158, 11, 0.15); padding: 1rem; border-radius: 8px; border-left: 4px solid #f59e0b; max-width: 320px; z-index: 1000; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+    <p style="margin: 0 0 0.5rem 0; color: #92400e; font-size: 0.8rem; line-height: 1.4; font-weight: 600;">
+        ⚠️ Disclaimer: Information is an estimate from AI search.
     </p>
-    <p style="margin: 0; color: #92400e; font-size: 0.75rem; line-height: 1.3;">
+    <p style="margin: 0 0 0.5rem 0; color: #92400e; font-size: 0.8rem; line-height: 1.4;">
         Double-check numbers that don't look right.
     </p>
-    <p style="margin: 0; color: #92400e; font-size: 0.75rem; line-height: 1.3;">
-        <strong>🔧 Note:</strong> Catalytic converters now calculated at 1.36 converters per car as specified.
+    <p style="margin: 0; color: #92400e; font-size: 0.8rem; line-height: 1.4;">
+        🔧 Note: Catalytic converters calculated at 1.36 per car.
     </p>
 </div>
 """, unsafe_allow_html=True)
