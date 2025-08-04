@@ -1871,28 +1871,38 @@ with right_col:
                     if commodity.get("is_engine") and commodity["weight"] == 0:
                         continue
                     
-                    # Add info icon for engine commodities
-                    if commodity.get("is_engine"):
-                        commodity_label = f"{commodity['label']} <span class='info-icon-container'><span class='info-icon' title='Engine weight estimated at 13.9% of curb weight based on typical engine weights: 4-cylinder (300-400 lbs), V6 (400-500 lbs), V8 (500-700 lbs). For unknown engine materials, weight is split 50/50 between aluminum and iron.'>ⓘ</span></span>"
-                    else:
-                        commodity_label = commodity["label"]
-                    
                     weight_based.append({
-                        "Commodity": commodity_label,
+                        "Commodity": commodity["label"],
                         "Weight (lb)": f"{commodity['weight']:,.1f}",
                         "$/lb": f"${commodity['unit_price']:.2f}",
-                        "Sale Value": f"${commodity['sale_value']:.2f}"
+                        "Sale Value": f"${commodity['sale_value']:.2f}",
+                        "is_engine": commodity.get("is_engine", False)
                     })
             
             # Display weight-based commodities
             if weight_based:
                 st.markdown('<div class="subsection-header">Estimated by Weight</div>', unsafe_allow_html=True)
-                weight_df = pd.DataFrame(weight_based)
-                st.markdown(f"""
-                <div style="background: rgba(255, 255, 255, 0.95); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);">
-                    {weight_df.to_html(escape=False, index=False, classes=['dataframe'], table_id='weight-table')}
-                </div>
-                """, unsafe_allow_html=True)
+                
+                # Check if there are engine commodities and add a small note
+                engine_commodities = [item for item in weight_based if item.get('is_engine')]
+                if engine_commodities:
+                    st.markdown("""
+                    <div style="margin-bottom: 0.5rem; text-align: right;">
+                        <span style="color: #6b7280; font-size: 0.875rem;">
+                            <span class="info-icon-container">
+                                <span class="info-icon" title="Engine weight estimated at 13.9% of curb weight based on typical engine weights: 4-cylinder (300-400 lbs), V6 (400-500 lbs), V8 (500-700 lbs). For unknown engine materials, weight is split 50/50 between aluminum and iron.">ⓘ</span>
+                            </span>
+                            Engine weight info
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Create display dataframe without the is_engine column
+                display_df = pd.DataFrame(weight_based)
+                display_df = display_df.drop('is_engine', axis=1)
+                
+                # Display the table
+                st.table(display_df)
             
             # Display count-based commodities  
             if count_based:
