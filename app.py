@@ -1512,7 +1512,7 @@ with left_col:
     <div class="section-header">
         Vehicle Search & Estimator
         <div class="info-icon-container">
-            <span class="info-icon" title="Search for vehicle details to get curb weight and specifications, then calculate costs automatically.">ⓘ</span>
+            <span class="info-icon">ⓘ</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1690,7 +1690,7 @@ with right_col:
     <div class="section-header">
         Cost Estimate Results
         <div class="info-icon-container">
-            <span class="info-icon" title="Automatically calculated commodity weights, sale values, costs, and net profit based on the searched vehicle.">ⓘ</span>
+            <span class="info-icon">ⓘ</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1810,7 +1810,7 @@ with right_col:
                     tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(results.get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment")
                 with col3:
                     st.markdown('<div style="margin-top: 1.5rem;"></div>', unsafe_allow_html=True)
-                    recalculate_button = st.form_submit_button("🔄", help="Recalculate with new costs")
+                    recalculate_button = st.form_submit_button("🔄")
                 
                 # Handle cost adjustment
                 if recalculate_button:
