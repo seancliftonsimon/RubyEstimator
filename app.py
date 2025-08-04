@@ -297,7 +297,21 @@ st.markdown("""
     input[type="text"],
     input[placeholder],
     .stTextInput > div > div > div > input,
-    [data-testid="stTextInput"] > div > div > div > input {
+    [data-testid="stTextInput"] > div > div > div > input,
+    /* Additional selectors for all possible text input variations */
+    .stTextInput > div > div > div > div > input,
+    [data-testid="stTextInput"] > div > div > div > div > input,
+    .stTextInput > div > div > div > div > div > input,
+    [data-testid="stTextInput"] > div > div > div > div > div > input,
+    /* Target any input within stTextInput containers */
+    .stTextInput input[type="text"],
+    [data-testid="stTextInput"] input[type="text"],
+    /* Universal text input styling */
+    input[type="text"],
+    input[placeholder],
+    /* Streamlit specific text input selectors */
+    [data-testid="stTextInput"] input,
+    .stTextInput input {
         background: #ffffff !important;
         border: 2px solid rgba(153, 12, 65, 0.25) !important;
         border-radius: 6px !important;
@@ -335,7 +349,20 @@ st.markdown("""
     .stTextInput input:focus,
     [data-testid="stTextInput"] input:focus,
     input[type="text"]:focus,
-    input[placeholder]:focus {
+    input[placeholder]:focus,
+    /* Additional focus selectors for all possible text input variations */
+    .stTextInput > div > div > div > input:focus,
+    [data-testid="stTextInput"] > div > div > div > input:focus,
+    .stTextInput > div > div > div > div > input:focus,
+    [data-testid="stTextInput"] > div > div > div > div > input:focus,
+    .stTextInput > div > div > div > div > div > input:focus,
+    [data-testid="stTextInput"] > div > div > div > div > div > input:focus,
+    /* Target any input within stTextInput containers */
+    .stTextInput input[type="text"]:focus,
+    [data-testid="stTextInput"] input[type="text"]:focus,
+    /* Streamlit specific text input focus selectors */
+    [data-testid="stTextInput"] input:focus,
+    .stTextInput input:focus {
         border-color: #990C41 !important;
         box-shadow: 0 0 0 3px rgba(153, 12, 65, 0.2) !important;
         outline: none !important;
@@ -1620,8 +1647,19 @@ with left_col:
     </div>
     """, unsafe_allow_html=True)
 
-    # --- Purchase Price and Tow Fee Input Fields (Left Column) ---
+    # --- Display Current Vehicle Details (if available) ---
     if st.session_state.get('detailed_vehicle_info'):
+        vehicle_info = st.session_state['detailed_vehicle_info']
+        
+        # Display vehicle name with green styling
+        vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
+        st.markdown(f"""
+        <div style="background: rgba(76, 241, 179, 0.15); padding: 1rem; border-radius: 8px; border: 2px solid #0C9964; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(76, 241, 179, 0.2);">
+            <h4 style="margin: 0; color: #0C9964; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(12, 153, 100, 0.1); font-size: 1.25rem;">{vehicle_name}</h4>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # --- Purchase Price and Tow Fee Input Fields (Below Vehicle Info) ---
         with st.form(key="cost_adjustment_form_left"):
             col1, col2 = st.columns(2)
             with col1:
@@ -1669,18 +1707,6 @@ with left_col:
                     st.error("Please enter valid numbers for purchase price and tow fee.")
                 except Exception as e:
                     st.error(f"Error during recalculation: {e}")
-
-    # --- Display Current Vehicle Details (if available) ---
-    if st.session_state.get('detailed_vehicle_info'):
-        vehicle_info = st.session_state['detailed_vehicle_info']
-        
-        # Display vehicle name
-        vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
-        st.markdown(f"""
-        <div style="background: rgba(153, 12, 65, 0.1); padding: 1rem; border-radius: 8px; border: 2px solid #990C41; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(153, 12, 65, 0.15);">
-            <h4 style="margin: 0; color: #990C41; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(153, 12, 65, 0.1); font-size: 1.25rem;">{vehicle_name}</h4>
-        </div>
-        """, unsafe_allow_html=True)
         
         # Display curb weight, engine, and rims info in three side-by-side boxes
         col1, col2, col3 = st.columns(3)
