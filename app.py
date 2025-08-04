@@ -191,19 +191,38 @@ st.markdown("""
 <style>
     /* Global background and text colors - Light Mode */
     .main {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #4CF1B3 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, rgba(76, 241, 179, 0.15) 100%);
         color: #1e293b;
     }
     
     /* Main title styling */
     .main-title {
-        font-size: 2.5rem;
-        font-weight: 700;
+        font-size: 3rem;
+        font-weight: 800;
         text-align: center;
-        margin-bottom: 1rem;
-        margin-top: 0.5rem;
+        margin-bottom: 1.5rem;
+        margin-top: 1rem;
         color: #990C41;
-        text-shadow: 0 2px 4px rgba(153, 12, 65, 0.15);
+        text-shadow: 0 4px 8px rgba(153, 12, 65, 0.25);
+        background: linear-gradient(135deg, #990C41 0%, #E0115F 50%, #F14C8A 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 0.05em;
+        position: relative;
+    }
+    
+    .main-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 120px;
+        height: 4px;
+        background: linear-gradient(90deg, #990C41 0%, #E0115F 50%, #F14C8A 100%);
+        border-radius: 2px;
+        box-shadow: 0 2px 8px rgba(153, 12, 65, 0.3);
     }
     
     /* Section headers */
@@ -1261,6 +1280,34 @@ st.markdown("""
          font-size: 1rem !important;
          transition: all 0.2s ease !important;
          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+     }
+     
+     /* Hide index column in dataframes and tables */
+     .dataframe th:first-child,
+     .dataframe td:first-child,
+     [data-testid="stDataFrame"] th:first-child,
+     [data-testid="stDataFrame"] td:first-child,
+     .stTable th:first-child,
+     .stTable td:first-child,
+     [data-testid="stTable"] th:first-child,
+     [data-testid="stTable"] td:first-child {
+         display: none !important;
+     }
+     
+     /* Hide index column in Streamlit's internal table structure */
+     [data-testid="stDataFrame"] table thead tr th:first-child,
+     [data-testid="stDataFrame"] table tbody tr td:first-child,
+     [data-testid="stTable"] table thead tr th:first-child,
+     [data-testid="stTable"] table tbody tr td:first-child {
+         display: none !important;
+     }
+     
+     /* Additional selectors for pandas DataFrame index column */
+     .dataframe .index,
+     .dataframe .index_col,
+     [data-testid="stDataFrame"] .index,
+     [data-testid="stDataFrame"] .index_col {
+         display: none !important;
      }
 </style>
 """, unsafe_allow_html=True)
