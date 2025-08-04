@@ -1346,6 +1346,66 @@ st.markdown("""
      .stChart .chart-controls {
          display: none !important;
      }
+     
+     /* Remove section anchor icons (like #63fbbdc3) */
+     .stMarkdown h1::before,
+     .stMarkdown h2::before,
+     .stMarkdown h3::before,
+     .stMarkdown h4::before,
+     .stMarkdown h5::before,
+     .stMarkdown h6::before,
+     [data-testid="stMarkdown"] h1::before,
+     [data-testid="stMarkdown"] h2::before,
+     [data-testid="stMarkdown"] h3::before,
+     [data-testid="stMarkdown"] h4::before,
+     [data-testid="stMarkdown"] h5::before,
+     [data-testid="stMarkdown"] h6::before {
+         display: none !important;
+     }
+     
+     /* Remove chart fullscreen buttons and controls */
+     [data-testid="stChart"] [data-testid="baseButton-secondary"],
+     [data-testid="stChart"] [data-testid="baseButton-primary"],
+     [data-testid="stChart"] button[aria-label*="fullscreen"],
+     [data-testid="stChart"] button[aria-label*="Fullscreen"],
+     [data-testid="stChart"] button[title*="fullscreen"],
+     [data-testid="stChart"] button[title*="Fullscreen"],
+     .stChart [data-testid="baseButton-secondary"],
+     .stChart [data-testid="baseButton-primary"],
+     .stChart button[aria-label*="fullscreen"],
+     .stChart button[aria-label*="Fullscreen"],
+     .stChart button[title*="fullscreen"],
+     .stChart button[title*="Fullscreen"] {
+         display: none !important;
+     }
+     
+     /* Remove any Plotly chart controls */
+     [data-testid="stChart"] .plotly-controls,
+     [data-testid="stChart"] .plotly-control-bar,
+     [data-testid="stChart"] .modebar,
+     [data-testid="stChart"] .modebar-container,
+     .stChart .plotly-controls,
+     .stChart .plotly-control-bar,
+     .stChart .modebar,
+     .stChart .modebar-container {
+         display: none !important;
+     }
+     
+     /* Remove any Streamlit chart toolbar */
+     [data-testid="stChart"] .stChartToolbar,
+     [data-testid="stChart"] .chart-toolbar,
+     .stChart .stChartToolbar,
+     .stChart .chart-toolbar {
+         display: none !important;
+     }
+     
+     /* Remove any anchor link icons globally */
+     a[href^="#"]::before,
+     a[href^="#"]::after,
+     [id]::before,
+     [id]::after {
+         display: none !important;
+     }
 </style>
 """, unsafe_allow_html=True)
 
