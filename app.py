@@ -1415,12 +1415,17 @@ st.markdown("""
          content: none !important;
      }
      
-     /* Remove all pseudo-elements that might show anchor icons */
-     *::before, *::after {
+     /* Remove only anchor/link pseudo-elements, not all content */
+     /* Target specific anchor link pseudo-elements */
+     a[href]::before, a[href]::after,
+     [id]::before, [id]::after,
+     h1[id]::before, h2[id]::before, h3[id]::before, h4[id]::before, h5[id]::before, h6[id]::before,
+     h1[data-anchor]::before, h2[data-anchor]::before, h3[data-anchor]::before, h4[data-anchor]::before, h5[data-anchor]::before, h6[data-anchor]::before {
+         display: none !important;
          content: none !important;
      }
      
-     /* Exception: keep our custom title underline */
+     /* Keep our custom title underline */
      .main-title::after {
          content: '' !important;
          display: block !important;
@@ -1433,11 +1438,16 @@ st.markdown("""
          content: none !important;
      }
      
-     /* Target Streamlit's specific anchor implementation */
-     .stMarkdown *::before,
-     .stMarkdown *::after,
-     [data-testid="stMarkdown"] *::before,
-     [data-testid="stMarkdown"] *::after {
+     /* Target Streamlit's specific anchor implementation - more precise */
+     .stMarkdown a[href]::before,
+     .stMarkdown a[href]::after,
+     .stMarkdown [id]::before,
+     .stMarkdown [id]::after,
+     [data-testid="stMarkdown"] a[href]::before,
+     [data-testid="stMarkdown"] a[href]::after,
+     [data-testid="stMarkdown"] [id]::before,
+     [data-testid="stMarkdown"] [id]::after {
+         display: none !important;
          content: none !important;
      }
      
