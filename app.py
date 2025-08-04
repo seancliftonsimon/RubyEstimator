@@ -1800,9 +1800,23 @@ with right_col:
             # Display summary metrics
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Sale Value", format_currency(totals["total_sale"]))
+                st.markdown(f"""
+                <div style="background: rgba(76, 241, 179, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(76, 241, 179, 0.3); margin-bottom: 1rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.875rem; color: #0C9964; font-weight: 600; margin-bottom: 0.5rem;">Total Sale Value</div>
+                        <div style="font-size: 1.5rem; color: #0C9964; font-weight: 700;">{format_currency(totals["total_sale"])}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             with col2:
-                st.metric("Total Costs", format_currency(totals["purchase"] + totals["tow"] + totals["lead"] + totals["nut"]))
+                st.markdown(f"""
+                <div style="background: rgba(76, 241, 179, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(76, 241, 179, 0.3); margin-bottom: 1rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.875rem; color: #0C9964; font-weight: 600; margin-bottom: 0.5rem;">Total Costs</div>
+                        <div style="font-size: 1.5rem; color: #0C9964; font-weight: 700;">{format_currency(totals["purchase"] + totals["tow"] + totals["lead"] + totals["nut"])}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             with col3:
                 # Apply green background to net profit metric
                 if totals["net"] > 0:
