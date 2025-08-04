@@ -1415,12 +1415,9 @@ st.markdown("""
          content: none !important;
      }
      
-     /* Remove only anchor/link pseudo-elements, not all content */
-     /* Target specific anchor link pseudo-elements */
-     a[href]::before, a[href]::after,
-     [id]::before, [id]::after,
-     h1[id]::before, h2[id]::before, h3[id]::before, h4[id]::before, h5[id]::before, h6[id]::before,
-     h1[data-anchor]::before, h2[data-anchor]::before, h3[data-anchor]::before, h4[data-anchor]::before, h5[data-anchor]::before, h6[data-anchor]::before {
+     /* Remove anchor icons from headings but keep the text visible */
+     h1::before, h2::before, h3::before, h4::before, h5::before, h6::before,
+     h1::after, h2::after, h3::after, h4::after, h5::after, h6::after {
          display: none !important;
          content: none !important;
      }
@@ -1438,16 +1435,11 @@ st.markdown("""
          content: none !important;
      }
      
-     /* Target Streamlit's specific anchor implementation - more precise */
-     .stMarkdown a[href]::before,
-     .stMarkdown a[href]::after,
-     .stMarkdown [id]::before,
-     .stMarkdown [id]::after,
-     [data-testid="stMarkdown"] a[href]::before,
-     [data-testid="stMarkdown"] a[href]::after,
-     [data-testid="stMarkdown"] [id]::before,
-     [data-testid="stMarkdown"] [id]::after {
-         display: none !important;
+     /* Target Streamlit's specific anchor implementation */
+     .stMarkdown *::before,
+     .stMarkdown *::after,
+     [data-testid="stMarkdown"] *::before,
+     [data-testid="stMarkdown"] *::after {
          content: none !important;
      }
      
@@ -1509,7 +1501,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Main title with minimal padding
-st.markdown('<h1 class="main-title">🚗 Ruby GEM</h1>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🚗 Ruby GEM</div>', unsafe_allow_html=True)
 
 # Create two columns for the main layout with spacing
 left_col, spacer, right_col = st.columns([1, 0.1, 1])
@@ -1517,12 +1509,12 @@ left_col, spacer, right_col = st.columns([1, 0.1, 1])
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
     st.markdown("""
-    <h2 class="section-header">
+    <div class="section-header">
         Vehicle Search & Estimator
         <div class="info-icon-container">
             <span class="info-icon" title="Search for vehicle details to get curb weight and specifications, then calculate costs automatically.">ⓘ</span>
         </div>
-    </h2>
+    </div>
     """, unsafe_allow_html=True)
 
     # --- Display Current Vehicle Details (if available) ---
@@ -1695,12 +1687,12 @@ with left_col:
 # --- Right Column: Cost Estimator Results ---
 with right_col:
     st.markdown("""
-    <h2 class="section-header">
+    <div class="section-header">
         Cost Estimate Results
         <div class="info-icon-container">
             <span class="info-icon" title="Automatically calculated commodity weights, sale values, costs, and net profit based on the searched vehicle.">ⓘ</span>
         </div>
-    </h2>
+    </div>
     """, unsafe_allow_html=True)
     
     # Auto-calculate if vehicle was just searched
@@ -1901,13 +1893,13 @@ with right_col:
             
             # Display weight-based commodities
             if weight_based:
-                st.markdown('<h4 class="subsection-header">Estimated by Weight</h4>', unsafe_allow_html=True)
+                st.markdown('<div class="subsection-header">Estimated by Weight</div>', unsafe_allow_html=True)
                 weight_df = pd.DataFrame(weight_based)
                 st.table(weight_df)
             
             # Display count-based commodities  
             if count_based:
-                st.markdown('<h4 class="subsection-header">Estimated by Count</h4>', unsafe_allow_html=True)
+                st.markdown('<div class="subsection-header">Estimated by Count</div>', unsafe_allow_html=True)
                 count_df = pd.DataFrame(count_based)
                 st.table(count_df)
             
@@ -1923,7 +1915,7 @@ with right_col:
             """, unsafe_allow_html=True)
             
             # Display detailed cost breakdown
-            st.markdown('<h3 class="subsection-header">Cost Breakdown</h3>', unsafe_allow_html=True)
+            st.markdown('<div class="subsection-header">Cost Breakdown</div>', unsafe_allow_html=True)
             
             # Create summary DataFrame with better formatting
             summary_data = [
