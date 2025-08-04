@@ -1331,11 +1331,11 @@ st.markdown("""
      }
      
      /* Target any element that might be creating the dark rectangular shape */
-     /* This is a more aggressive approach to remove any dark backgrounds */
-     [data-testid="stForm"] [data-testid="column"]:last-child,
-     [data-testid="stForm"] [data-testid="column"]:last-child *,
-     [data-testid="stForm"] [data-testid="column"]:last-child > div,
-     [data-testid="stForm"] [data-testid="column"]:last-child > div * {
+         /* This is a more aggressive approach to remove any dark backgrounds */
+    [data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) [data-testid="column"]:last-child,
+    [data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) [data-testid="column"]:last-child *,
+    [data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) [data-testid="column"]:last-child > div,
+    [data-testid="stForm"]:has([data-testid="baseButton-secondaryFormSubmit"]) [data-testid="column"]:last-child > div * {
          background: transparent !important;
          background-color: transparent !important;
          background-image: none !important;
