@@ -1412,6 +1412,78 @@ st.markdown("""
          display: none !important;
      }
      
+     /* Additional aggressive targeting for persistent anchor icons */
+     [data-testid='stHeaderActionElements'] *,
+     [data-testid='stHeaderActionElements'] *::before,
+     [data-testid='stHeaderActionElements'] *::after {
+         display: none !important;
+         visibility: hidden !important;
+         opacity: 0 !important;
+     }
+     
+     /* Target any element with anchor-related classes or attributes */
+     [class*="anchor"],
+     [class*="link"],
+     [class*="header-action"],
+     [class*="headerAction"],
+     [data-anchor],
+     [data-link],
+     [data-header-action] {
+         display: none !important;
+         visibility: hidden !important;
+     }
+     
+     /* Target circular icons and chain link symbols specifically */
+     [class*="circle"],
+     [class*="icon"],
+     [class*="chain"],
+     [class*="link-icon"],
+     [class*="anchor-icon"] {
+         display: none !important;
+         visibility: hidden !important;
+     }
+     
+     /* Remove any element that might contain the chain link symbol */
+     svg[class*="anchor"],
+     svg[class*="link"],
+     svg[class*="chain"],
+     [class*="svg"] {
+         display: none !important;
+         visibility: hidden !important;
+     }
+     
+     /* Target the specific section header and remove any anchor elements */
+     .section-header::before,
+     .section-header::after,
+     .section-header *::before,
+     .section-header *::after {
+         display: none !important;
+         content: none !important;
+         visibility: hidden !important;
+     }
+     
+     /* Remove any anchor elements within section headers */
+     .section-header [class*="anchor"],
+     .section-header [class*="link"],
+     .section-header [data-testid*="anchor"],
+     .section-header [data-testid*="link"] {
+         display: none !important;
+         visibility: hidden !important;
+     }
+     
+     /* Nuclear option: hide all elements that might be anchor icons */
+     *[class*="anchor"],
+     *[class*="link"],
+     *[data-testid*="anchor"],
+     *[data-testid*="link"],
+     *[aria-label*="anchor"],
+     *[aria-label*="link"],
+     *[title*="anchor"],
+     *[title*="link"] {
+         display: none !important;
+         visibility: hidden !important;
+     }
+     
      /* Comprehensive removal of all anchor/link hover elements - Latest 2024 approach */
      /* Target all possible heading anchor elements */
      h1::before, h2::before, h3::before, h4::before, h5::before, h6::before,
