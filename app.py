@@ -191,7 +191,7 @@ st.markdown("""
 <style>
     /* Global background and text colors - Light Mode */
     .main {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #4CF1B3 100%);
         color: #1e293b;
     }
     
@@ -202,28 +202,28 @@ st.markdown("""
         text-align: center;
         margin-bottom: 1rem;
         margin-top: 0.5rem;
-        color: #dc2626;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        color: #990C41;
+        text-shadow: 0 2px 4px rgba(153, 12, 65, 0.15);
     }
     
     /* Section headers */
     .section-header {
         font-size: 1.5rem;
         font-weight: 600;
-        color: #1e293b;
+        color: #990C41;
         margin-bottom: 1rem;
         padding-bottom: 0.5rem;
-        border-bottom: 2px solid #dc2626;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        border-bottom: 2px solid #990C41;
+        text-shadow: 0 1px 2px rgba(153, 12, 65, 0.10);
     }
     
     /* Subsection headers */
     .subsection-header {
         font-size: 1.2rem;
         font-weight: 500;
-        color: #475569;
+        color: #E0115F;
         margin-bottom: 0.75rem;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        text-shadow: 0 1px 2px rgba(224, 17, 95, 0.08);
     }
     
     /* Enhanced card styling for main sections */
@@ -231,40 +231,40 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border-radius: 12px;
-        border: 1px solid rgba(220, 38, 38, 0.2);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(153, 12, 65, 0.18);
+        box-shadow: 0 8px 32px rgba(153, 12, 65, 0.08);
         padding: 1.5rem;
         margin-bottom: 1.5rem;
     }
     
     /* Success message styling */
     .success-message {
-        background: rgba(34, 197, 94, 0.1);
+        background: rgba(76, 241, 179, 0.12);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #22c55e;
+        border-left: 4px solid #0C9964;
         margin: 1rem 0;
-        color: #166534;
+        color: #0C9964;
     }
     
     /* Warning message styling */
     .warning-message {
-        background: rgba(245, 158, 11, 0.1);
+        background: rgba(241, 76, 138, 0.10);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #f59e0b;
+        border-left: 4px solid #F14C8A;
         margin: 1rem 0;
-        color: #92400e;
+        color: #E0115F;
     }
     
     /* Error message styling */
     .error-message {
-        background: rgba(239, 68, 68, 0.1);
+        background: rgba(224, 17, 95, 0.10);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #ef4444;
+        border-left: 4px solid #990C41;
         margin: 1rem 0;
-        color: #991b1b;
+        color: #990C41;
     }
     
     /* Form styling */
@@ -273,14 +273,14 @@ st.markdown("""
         backdrop-filter: blur(10px);
         padding: 1.5rem;
         border-radius: 8px;
-        border: 1px solid rgba(220, 38, 38, 0.2);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(153, 12, 65, 0.18);
+        box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);
     }
     
     /* Enhanced input field styling */
     .stTextInput > div > div > input {
         background: rgba(255, 255, 255, 0.95) !important;
-        border: 1px solid rgba(220, 38, 38, 0.3) !important;
+        border: 1px solid rgba(224, 17, 95, 0.25) !important;
         border-radius: 6px;
         padding: 0.75rem;
         transition: all 0.2s ease;
@@ -288,8 +288,8 @@ st.markdown("""
     }
     
     .stNumberInput > div > div > input {
-        background: rgba(127, 29, 29, 0.9) !important;
-        border: 1px solid rgba(220, 38, 38, 0.5) !important;
+        background: rgba(153, 12, 65, 0.92) !important;
+        border: 1px solid rgba(224, 17, 95, 0.35) !important;
         border-radius: 6px;
         padding: 0.75rem;
         transition: all 0.2s ease;
@@ -298,27 +298,27 @@ st.markdown("""
     
     /* Style number input buttons (plus/minus) */
     .stNumberInput > div > div > div > button {
-        background: rgba(127, 29, 29, 0.9) !important;
+        background: rgba(153, 12, 65, 0.92) !important;
         color: #ffffff !important;
-        border: 1px solid rgba(220, 38, 38, 0.5) !important;
+        border: 1px solid rgba(224, 17, 95, 0.35) !important;
     }
     
     .stNumberInput > div > div > div > button:hover {
-        background: rgba(127, 29, 29, 1) !important;
+        background: #990C41 !important;
     }
     
     .stTextInput > div > div > input:focus {
-        border-color: #dc2626 !important;
-        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+        border-color: #E0115F !important;
+        box-shadow: 0 0 0 2px rgba(224, 17, 95, 0.18) !important;
         outline: none;
         background: rgba(255, 255, 255, 1) !important;
     }
     
     .stNumberInput > div > div > input:focus {
-        border-color: #dc2626 !important;
-        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3) !important;
+        border-color: #E0115F !important;
+        box-shadow: 0 0 0 2px rgba(224, 17, 95, 0.18) !important;
         outline: none;
-        background: rgba(127, 29, 29, 1) !important;
+        background: #990C41 !important;
     }
     
     .stTextInput > div > div > input::placeholder {
@@ -327,53 +327,53 @@ st.markdown("""
     
                    /* Button styling */
       .stButton > button {
-          background: rgba(20, 184, 166, 0.9) !important;
+          background: #990C41 !important;
           color: #ffffff !important;
-          border: 2px solid rgba(20, 184, 166, 0.8) !important;
+          border: 2px solid #990C41 !important;
           border-radius: 8px;
           padding: 0.75rem 1.5rem;
           font-weight: 700;
           font-size: 1rem;
           transition: all 0.2s ease;
-          box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4);
+          box-shadow: 0 4px 12px rgba(224, 17, 95, 0.18);
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       }
       
       .stButton > button:hover {
           transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(20, 184, 166, 0.5);
-          background: rgba(20, 184, 166, 1) !important;
+          box-shadow: 0 6px 20px rgba(241, 76, 138, 0.18);
+          background: #E0115F !important;
           color: #ffffff !important;
-          border-color: rgba(20, 184, 166, 1) !important;
+          border-color: #E0115F !important;
       }
       
       .stButton > button:active {
-          background: rgba(15, 118, 110, 1) !important;
+          background: #F14C8A !important;
           transform: translateY(0);
-          box-shadow: 0 2px 8px rgba(15, 118, 110, 0.5);
-          border-color: rgba(15, 118, 110, 1) !important;
+          box-shadow: 0 2px 8px rgba(241, 76, 138, 0.18);
+          border-color: #F14C8A !important;
       }
     
     /* Dataframe styling - Light Mode */
     .dataframe, [data-testid="stDataFrame"] {
         border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);
         background: rgba(255, 255, 255, 0.95) !important;
         backdrop-filter: blur(10px);
     }
     
     .dataframe th, [data-testid="stDataFrame"] th {
-        background: rgba(127, 29, 29, 0.9) !important;
+        background: #990C41 !important;
         color: #ffffff !important;
         font-weight: 600;
-        border-color: rgba(220, 38, 38, 0.5) !important;
+        border-color: #E0115F !important;
     }
     
     .dataframe td, [data-testid="stDataFrame"] td {
         background: rgba(255, 255, 255, 0.9) !important;
         color: #1e293b !important;
-        border-color: rgba(220, 38, 38, 0.1) !important;
+        border-color: rgba(224, 17, 95, 0.10) !important;
     }
     
     /* Additional Streamlit dataframe styling */
@@ -387,7 +387,7 @@ st.markdown("""
     }
     
     [data-testid="stDataFrame"] table thead tr th {
-        background: rgba(127, 29, 29, 0.9) !important;
+        background: #990C41 !important;
         color: #ffffff !important;
         font-weight: 600;
     }
@@ -438,10 +438,10 @@ st.markdown("""
     
     .stTable th, [data-testid="stTable"] th,
     .stTable thead tr th, [data-testid="stTable"] thead tr th {
-        background: rgba(127, 29, 29, 0.9) !important;
+        background: #990C41 !important;
         color: #ffffff !important;
         font-weight: 600;
-        border-color: rgba(220, 38, 38, 0.5) !important;
+        border-color: #E0115F !important;
         padding: 0.75rem !important;
         text-align: left !important;
     }
@@ -450,7 +450,7 @@ st.markdown("""
     .stTable tbody tr td, [data-testid="stTable"] tbody tr td {
         background: rgba(255, 255, 255, 0.9) !important;
         color: #1e293b !important;
-        border-color: rgba(220, 38, 38, 0.1) !important;
+        border-color: rgba(224, 17, 95, 0.10) !important;
         padding: 0.75rem !important;
     }
     
@@ -626,12 +626,12 @@ st.markdown("""
     
     /* Info box styling (keeping for backward compatibility) */
     .info-box {
-        background: rgba(20, 184, 166, 0.1);
+        background: rgba(76, 241, 179, 0.18);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #14b8a6;
+        border-left: 4px solid #4CF1B3;
         margin: 1rem 0;
-        color: #0f766e;
+        color: #0C9964;
     }
     
     /* Add padding and spacing */
@@ -660,8 +660,8 @@ st.markdown("""
         backdrop-filter: blur(10px);
         border-radius: 8px;
         padding: 1rem;
-        border: 1px solid rgba(220, 38, 38, 0.2);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(153, 12, 65, 0.18);
+        box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);
     }
     
     /* Remove default Streamlit spacing */

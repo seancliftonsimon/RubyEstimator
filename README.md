@@ -10,6 +10,30 @@ A Streamlit web application that estimates vehicle curb weights and calculates c
 - **Material Detection**: Automatically detect aluminum vs iron engines and rims
 - **Password Protection**: Optional authentication for secure access
 
+## Color Palette & Usage
+
+RubyEstimator uses a distinctive six-color palette for a cohesive, branded look throughout the app:
+
+| Color Name     | Hex     | Sample                                                          | Usage                                                                       |
+| -------------- | ------- | --------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Big Dip O'Ruby | #990C41 | ![#990C41](https://via.placeholder.com/15/990C41/000000?text=+) | **Dominant color**: Main branding, headers, primary buttons, key highlights |
+| Ruby           | #E0115F | ![#E0115F](https://via.placeholder.com/15/E0115F/000000?text=+) | Accent: Secondary buttons, links, important highlights                      |
+| French Rose    | #F14C8A | ![#F14C8A](https://via.placeholder.com/15/F14C8A/000000?text=+) | Accent: Subtle highlights, info, hover states                               |
+| Green (NCS)    | #0C9964 | ![#0C9964](https://via.placeholder.com/15/0C9964/000000?text=+) | Success: Success messages, positive feedback                                |
+| UFO Green      | #11E092 | ![#11E092](https://via.placeholder.com/15/11E092/000000?text=+) | Success accent: Progress bars, secondary success, confirmations             |
+| Bright Mint    | #4CF1B3 | ![#4CF1B3](https://via.placeholder.com/15/4CF1B3/000000?text=+) | Background accent: Info boxes, backgrounds, subtle accents                  |
+
+**Guidelines:**
+
+- Use **Big Dip O'Ruby (#990C41)** for all primary branding, main headers, and primary action buttons.
+- Use **Ruby (#E0115F)** for secondary actions, links, and important highlights.
+- Use **French Rose (#F14C8A)** for subtle highlights, info, and hover states.
+- Use **Green (NCS) (#0C9964)** for success messages and positive feedback.
+- Use **UFO Green (#11E092)** for progress bars and secondary success indicators.
+- Use **Bright Mint (#4CF1B3)** for info boxes, backgrounds, and subtle accent areas.
+
+This palette ensures a vibrant, accessible, and consistent user experience.
+
 ## Local Development Setup
 
 ### Prerequisites
