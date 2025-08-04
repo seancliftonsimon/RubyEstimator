@@ -1407,7 +1407,7 @@ st.markdown("""
          display: none !important;
      }
      
-     /* Comprehensive removal of all anchor/link hover elements - Latest 2024 approach */
+     /* Comprehensive removal of all anchor/link hover elements */
      /* Target all possible heading anchor elements */
      h1::before, h2::before, h3::before, h4::before, h5::before, h6::before,
      h1::after, h2::after, h3::after, h4::after, h5::after, h6::after {
