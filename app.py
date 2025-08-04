@@ -619,10 +619,11 @@ st.markdown("""
         z-index: 1000;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        min-width: 400px;
-        max-width: 500px;
+        min-width: 300px;
+        max-width: 400px;
         text-align: left;
         word-wrap: break-word;
+        pointer-events: none;
     }
     
     .info-icon:hover::before {
@@ -1440,13 +1441,21 @@ st.markdown("""
          content: none !important;
      }
      
-     /* Exception: keep our custom elements */
-     .main-title::after,
-     .info-icon:hover::after,
-     .info-icon:hover::before {
-         content: attr(title) !important;
-         display: block !important;
-     }
+         /* Exception: keep our custom elements */
+    .main-title::after {
+        content: '' !important;
+        display: block !important;
+    }
+    
+    .info-icon:hover::after {
+        content: attr(title) !important;
+        display: block !important;
+    }
+    
+    .info-icon:hover::before {
+        content: '' !important;
+        display: block !important;
+    }
      
      /* Remove all possible anchor link implementations */
      [data-anchor]::before,
@@ -1509,7 +1518,7 @@ with left_col:
     <div class="section-header">
         Vehicle Search & Estimator
         <div class="info-icon-container">
-            <span class="info-icon">ⓘ</span>
+            <span class="info-icon" title="Search for vehicle specifications using AI. The app will automatically detect engine materials (aluminum vs iron) and rim types (aluminum vs steel) when possible. Results are cached in the database to avoid repeated API calls.">ⓘ</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1687,7 +1696,7 @@ with right_col:
     <div class="section-header">
         Cost Estimate Results
         <div class="info-icon-container">
-            <span class="info-icon">ⓘ</span>
+            <span class="info-icon" title="Detailed breakdown of commodity values and costs. Adjust purchase price and tow fees to see how they affect your net profit. All calculations are based on current market prices for automotive recycling commodities.">ⓘ</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1795,8 +1804,27 @@ with right_col:
             with col2:
                 st.metric("Total Costs", format_currency(totals["purchase"] + totals["tow"] + totals["lead"] + totals["nut"]))
             with col3:
-                st.metric("Net Profit", format_currency(totals["net"]), 
-                         delta="Profit" if totals["net"] > 0 else "Loss")
+                # Apply green background to net profit metric
+                if totals["net"] > 0:
+                    st.markdown(f"""
+                    <div style="background: rgba(12, 153, 100, 0.15); padding: 1rem; border-radius: 8px; border: 2px solid #0C9964; margin-bottom: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.875rem; color: #0C9964; font-weight: 600; margin-bottom: 0.5rem;">Net Profit</div>
+                            <div style="font-size: 1.5rem; color: #0C9964; font-weight: 700;">{format_currency(totals["net"])}</div>
+                            <div style="font-size: 0.75rem; color: #0C9964; margin-top: 0.25rem;">✓ Profit</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="background: rgba(224, 17, 95, 0.15); padding: 1rem; border-radius: 8px; border: 2px solid #E0115F; margin-bottom: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.875rem; color: #E0115F; font-weight: 600; margin-bottom: 0.5rem;">Net Profit</div>
+                            <div style="font-size: 1.5rem; color: #E0115F; font-weight: 700;">{format_currency(totals["net"])}</div>
+                            <div style="font-size: 0.75rem; color: #E0115F; margin-top: 0.25rem;">✗ Loss</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
             
             # Purchase Price and Tow Fee Input Fields
             with st.form(key="cost_adjustment_form"):
@@ -1892,7 +1920,6 @@ with right_col:
                             <span class="info-icon-container">
                                 <span class="info-icon" title="Engine weight estimated at 13.9% of curb weight based on typical engine weights: 4-cylinder (300-400 lbs), V6 (400-500 lbs), V8 (500-700 lbs). For unknown engine materials, weight is split 50/50 between aluminum and iron.">ⓘ</span>
                             </span>
-                            Engine weight info
                         </span>
                     </div>
                     """, unsafe_allow_html=True)
