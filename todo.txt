@@ -1,0 +1,112 @@
+# RUBY RECYCLING - SCRAP PRICE ESTIMATOR
+# ======================================
+
+## PROJECT CONTEXT
+==================
+
+You're building an internal Scrap-Price Estimator web app for Ruby Recycling call-center reps. 
+A rep enters a car's year, make, model, and key condition notes; the Streamlit-based app 
+(deployed on Railway) calculates a purchase offer that factors in curb weight, engine material, 
+tire count, tow distance/fees, and catalytic-converter value. Accuracy and traceability are 
+critical so reps can justify quotes and lock them in while on the phone.
+
+## PHASE 1 — AUDIT & DOCUMENT CORE PRICING LOGIC
+===============================================
+
+- [ ] **Export Spreadsheet Logic**
+  - Copy every formula (lead fee, tow fee, per-tire, engine weight, commission, etc.) 
+    into a plain-language spec and note underlying assumptions.
+
+- [ ] **Create "Source-of-Truth" Checklist**
+  - Turn the spec into a checklist of outputs and edge-case expectations 
+    (e.g., heavy-duty trucks, cars with no tires).
+
+- [ ] **Unit-Test Current Code Against Checklist**
+  - Run the app on at least five varied vehicles; record mismatches.
+
+- [ ] **Fix Discrepancies & Re-test**
+  - Update code, rerun tests, and log pass/fail status.
+
+- [ ] **Add Regression Tests**
+  - Automate the five-vehicle suite so future changes flag math breaks.
+
+## PHASE 2 — CATALYTIC-CONVERTER MODULE
+=====================================
+
+- [ ] **Research Converter-Count Data**
+  - Review California Converter Database for make/model mappings.
+  - Collect public lists of converter counts (OEM docs, forums).
+
+- [ ] **Design Matching Strategy**
+  - Decide on direct lookup vs. AI similarity matching for unseen models.
+
+- [ ] **Implement Converter Estimation**
+  - Build a function that returns count and scrap value given Y/M/M.
+
+- [ ] **Accuracy Test vs. Human Estimates**
+  - Compare 10 manual appraisals; target ≤ 5% variance.
+
+## PHASE 3 — ACTIVITY LOG & SESSION CONTROLS
+==========================================
+
+- [ ] **Add "Mark as Sold" Workflow**
+  - Button records final price, tow fee, date/time, and rep ID.
+
+- [ ] **Implement Session History Panel**
+  - List recent cars with Edit / Delete / Redo actions.
+
+- [ ] **Persist History to Disk**
+  - Store in lightweight DB (SQLite or Railway Postgres).
+
+- [ ] **Audit Trail Export**
+  - Allow CSV download of session or daily log.
+
+## PHASE 4 — BASIC ACCOUNT SYSTEM
+===============================
+
+- [ ] **Choose Auth Mechanism**
+  - Simple email + password via Streamlit-Auth or Supabase auth API.
+
+- [ ] **Create User Table & Roles**
+  - Reps (default) and Admin.
+
+- [ ] **Gate Key Screens by Login**
+  - Redirect unauthenticated users to sign-in.
+
+- [ ] **Associate Logs With User ID**
+  - Tie "Mark as Sold" records to the logged-in rep.
+
+## PHASE 5 — MOBILE-FRIENDLY LAYOUT PASS
+======================================
+
+- [ ] **Define Essential Mobile Screens**
+  - Offer entry, result summary, history.
+
+- [ ] **Refactor Layout Using Streamlit Columns & st.experimental_set_query_params**
+  - Ensure controls fit vertically.
+
+- [ ] **Test on iOS Safari & Android Chrome**
+  - Confirm no horizontal scroll and tap targets ≥ 44px.
+
+## PHASE 6 — INTERFACE POLISH
+===========================
+
+- [ ] **Collect Inspiration**
+  - Screenshot 2-3 pricing or quoting apps with clean UI.
+
+- [ ] **Establish Style Guide**
+  - Primary/secondary colors, typography scale, spacing rules.
+
+- [ ] **Apply Visual Pass**
+  - Update Streamlit theme and CSS overrides.
+
+- [ ] **Usability Walk-through**
+  - Run a mock call; capture any friction for next sprint.
+
+## NOTES
+=======
+
+- Use checkboxes [ ] to track completion status
+- Each phase builds upon the previous one
+- Focus on accuracy and traceability throughout development
+- Test thoroughly before moving to next phase
