@@ -355,7 +355,7 @@ st.markdown("""
       }
     
     /* Dataframe styling - Light Mode */
-    .dataframe {
+    .dataframe, [data-testid="stDataFrame"] {
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
@@ -363,17 +363,38 @@ st.markdown("""
         backdrop-filter: blur(10px);
     }
     
-    .dataframe th {
+    .dataframe th, [data-testid="stDataFrame"] th {
         background: rgba(127, 29, 29, 0.9) !important;
         color: #ffffff !important;
         font-weight: 600;
         border-color: rgba(220, 38, 38, 0.5) !important;
     }
     
-    .dataframe td {
+    .dataframe td, [data-testid="stDataFrame"] td {
         background: rgba(255, 255, 255, 0.9) !important;
         color: #1e293b !important;
         border-color: rgba(220, 38, 38, 0.1) !important;
+    }
+    
+    /* Additional Streamlit dataframe styling */
+    [data-testid="stDataFrame"] > div {
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+    
+    [data-testid="stDataFrame"] table {
+        background: rgba(255, 255, 255, 0.95) !important;
+        color: #1e293b !important;
+    }
+    
+    [data-testid="stDataFrame"] table thead tr th {
+        background: rgba(127, 29, 29, 0.9) !important;
+        color: #ffffff !important;
+        font-weight: 600;
+    }
+    
+    [data-testid="stDataFrame"] table tbody tr td {
+        background: rgba(255, 255, 255, 0.9) !important;
+        color: #1e293b !important;
     }
     
     /* Hide scroll bars on dataframes */
@@ -1600,51 +1621,42 @@ with right_col:
             </div>
             """, unsafe_allow_html=True)
             
-            # Group commodities by type for better display
-            weight_based = []
-            count_based = []
-            special_items = []
+            # Create unified commodity display with estimation method
+            commodity_data = []
             
             for commodity in commodities:
                 if commodity.get("is_count_based"):
-                    count_based.append({
+                    commodity_data.append({
                         "Commodity": commodity["label"],
-                        "Count": f"{commodity['weight']:.2f}",  # Count stored in weight field
+                        "Quantity/Weight": f"{commodity['weight']:.2f}",  # Count
+                        "Unit": "count",
                         "Price/Unit": f"${commodity['unit_price']:.2f}",
-                        "Sale Value": f"${commodity['sale_value']:.2f}"
+                        "Sale Value": f"${commodity['sale_value']:.2f}",
+                        "Estimation Method": "Estimated by count"
                     })
                 elif commodity.get("is_special"):
-                    special_items.append({
+                    commodity_data.append({
                         "Commodity": commodity["label"],
-                        "Quantity": f"{commodity['weight']:.0f} tire(s)",  # Car count stored in weight
+                        "Quantity/Weight": f"{commodity['weight']:.0f}",  # Number of tires
+                        "Unit": "tire(s)",
                         "Price/Unit": f"${commodity['unit_price']:.2f}",
-                        "Sale Value": f"${commodity['sale_value']:.2f}"
+                        "Sale Value": f"${commodity['sale_value']:.2f}",
+                        "Estimation Method": "Estimated by count"
                     })
                 else:
-                    weight_based.append({
+                    commodity_data.append({
                         "Commodity": commodity["label"],
-                        "Weight (lb)": f"{commodity['weight']:,.1f}",
-                        "$/lb": f"${commodity['unit_price']:.2f}",
-                        "Sale Value": f"${commodity['sale_value']:.2f}"
+                        "Quantity/Weight": f"{commodity['weight']:,.1f}",
+                        "Unit": "lbs",
+                        "Price/Unit": f"${commodity['unit_price']:.2f}",
+                        "Sale Value": f"${commodity['sale_value']:.2f}",
+                        "Estimation Method": "Estimated by weight"
                     })
             
-            # Display Weight-based commodities
-            if weight_based:
-                st.markdown('<h4 class="subsection-header">Weight-Based Commodities</h4>', unsafe_allow_html=True)
-                weight_df = pd.DataFrame(weight_based)
-                st.table(weight_df)
-            
-            # Display Count-based commodities  
-            if count_based:
-                st.markdown('<h4 class="subsection-header">Count-Based Commodities</h4>', unsafe_allow_html=True)
-                count_df = pd.DataFrame(count_based)
-                st.table(count_df)
-            
-            # Display Special items
-            if special_items:
-                st.markdown('<h4 class="subsection-header">Special Items</h4>', unsafe_allow_html=True)
-                special_df = pd.DataFrame(special_items)
-                st.table(special_df)
+            # Display unified commodity table
+            st.markdown('<h4 class="subsection-header">Commodity Breakdown</h4>', unsafe_allow_html=True)
+            commodity_df = pd.DataFrame(commodity_data)
+            st.dataframe(commodity_df, use_container_width=True)
             
             # Add note about engine weight estimation
             st.markdown("""
