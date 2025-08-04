@@ -30,16 +30,23 @@ FLAT_COSTS = {
     "NUT_PER_LB": 0.015,
 }
 
+# Engine weight as percentage of curb weight (editable config)
+ENGINE_WEIGHT_PERCENT = 0.139
+
+# Battery recovery factor
+BATTERY_RECOVERY_FACTOR = 0.8
+
+# Catalytic converters per car
+CATS_PER_CAR = 1.36
+
 # --- Cost Estimator Functions ---
 def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=None):
     """Compute all commodity weights, prices, and sale values."""
     w = lambda lbs: cars * lbs
     
     # Calculate engine weight as a percentage of curb weight
-    # Engine weight estimate: 13.9% of curb weight
     # Based on typical engine weights: 4-cyl (300-400 lbs), V6 (400-500 lbs), V8 (500-700 lbs)
-    engine_weight_percentage = 0.139
-    total_engine_weight = curb_weight * engine_weight_percentage
+    total_engine_weight = curb_weight * ENGINE_WEIGHT_PERCENT
     
     # Determine engine type based on aluminum_engine parameter
     if aluminum_engine is True:
@@ -55,42 +62,48 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
             {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(total_engine_weight), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
         ]
     else:
-        # Unknown engine type - use default split (50/50)
-        # For unknown engines, use 275 lbs each as the average split
+        # Unknown engine type - split actual engine weight 50/50
+        half_engine_weight = total_engine_weight / 2
         engine_commodities = [
-            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": w(275), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
-            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(275), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
+            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": w(half_engine_weight), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0},
+            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(half_engine_weight), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0},
         ]
     
     # Determine rims type based on aluminum_rims parameter
     if aluminum_rims is True:
-        # All aluminum rims
-        rims_weight = w(4)
-    elif aluminum_rims is False:
-        # Steel rims - no aluminum rims value
-        rims_weight = 0
+        # Aluminum rims - 40 lbs per car
+        rims_weight = w(40)
     else:
-        # Unknown rims type - use default
-        rims_weight = w(2)
+        # Steel/Other rims - no aluminum rims value
+        rims_weight = 0
+    
+    # Calculate battery weight with recovery factor
+    battery_weight = 35 * BATTERY_RECOVERY_FACTOR  # 35 lbs * 0.8 = 28 lbs
     
     list_commodities = engine_commodities + [
         {"key": "HARNESS", "label": "Wiring Harness", "weight": w(23), "unit_price": PRICE_PER_LB["HARNESS"], "sale_value": 0},
-        {"key": "FE_RAD", "label": "Iron Radiator", "weight": w(18), "unit_price": PRICE_PER_LB["FE_RAD"], "sale_value": 0},
-        {"key": "BREAKAGE", "label": "Breakage", "weight": w(15), "unit_price": PRICE_PER_LB["BREAKAGE"], "sale_value": 0},
+        {"key": "FE_RAD", "label": "FE Radiator", "weight": w(20.5), "unit_price": PRICE_PER_LB["FE_RAD"], "sale_value": 0},
+        {"key": "BREAKAGE", "label": "Breakage", "weight": w(5), "unit_price": PRICE_PER_LB["BREAKAGE"], "sale_value": 0},
         {"key": "ALT", "label": "Alternator", "weight": w(12), "unit_price": PRICE_PER_LB["ALT"], "sale_value": 0},
-        {"key": "STARTER", "label": "Starter Motor", "weight": w(8), "unit_price": PRICE_PER_LB["STARTER"], "sale_value": 0},
-        {"key": "AC_COMP", "label": "AC Compressor", "weight": w(7), "unit_price": PRICE_PER_LB["AC_COMP"], "sale_value": 0},
-        {"key": "FUSE_BOX", "label": "Fuse Box", "weight": w(6), "unit_price": PRICE_PER_LB["FUSE_BOX"], "sale_value": 0},
-        {"key": "BATTERY", "label": "Battery", "weight": w(5), "unit_price": PRICE_PER_LB["BATTERY"], "sale_value": 0},
+        {"key": "STARTER", "label": "Starter", "weight": w(5.5), "unit_price": PRICE_PER_LB["STARTER"], "sale_value": 0},
+        {"key": "AC_COMP", "label": "A/C Compressor", "weight": w(13.5), "unit_price": PRICE_PER_LB["AC_COMP"], "sale_value": 0},
+        {"key": "FUSE_BOX", "label": "Fuse Box", "weight": w(3.5), "unit_price": PRICE_PER_LB["FUSE_BOX"], "sale_value": 0},
+        {"key": "BATTERY", "label": "Battery", "weight": w(battery_weight), "unit_price": PRICE_PER_LB["BATTERY"], "sale_value": 0},
         {"key": "AL_RIMS", "label": "Aluminum Rims", "weight": rims_weight, "unit_price": PRICE_PER_LB["AL_RIMS"], "sale_value": 0},
-        {"key": "CATS", "label": "Catalytic Converters", "weight": w(3), "unit_price": PRICE_PER_LB["CATS"], "sale_value": 0},
-        {"key": "ECM", "label": "Engine Control Module", "weight": w(2), "unit_price": PRICE_PER_LB["ECM"], "sale_value": 0},
     ]
 
-    # Calculate ELV weight (curb weight minus engine weights)
-    al_engine_w = engine_commodities[0]["weight"]  # AL_ENGINE weight
-    fe_engine_w = engine_commodities[1]["weight"]  # FE_ENGINE weight
-    elv_weight = curb_weight - al_engine_w - fe_engine_w
+    # Calculate ELV weight per car (curb weight minus engine and all fixed components)
+    # Note: engine weights are already multiplied by cars, so we need per-car values
+    al_engine_per_car = engine_commodities[0]["weight"] / cars if cars > 0 else 0
+    fe_engine_per_car = engine_commodities[1]["weight"] / cars if cars > 0 else 0
+    
+    # Sum of all fixed component weights per car
+    fixed_components_per_car = (23 + 20.5 + 5 + 12 + 5.5 + 13.5 + 3.5 + battery_weight + 
+                              (40 if aluminum_rims is True else 0))
+    
+    # ELV weight per car, then multiply by number of cars
+    elv_per_car = curb_weight - al_engine_per_car - fe_engine_per_car - fixed_components_per_car
+    elv_weight = max(0, elv_per_car * cars)  # Ensure non-negative
 
     # Add ELV at the beginning
     list_commodities.insert(0, {
@@ -101,18 +114,30 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
         "sale_value": 0,
     })
 
-    # Add TIRES at the end (special handling)
+    # Add count-based catalytic converters
+    cats_count = cars * CATS_PER_CAR
+    list_commodities.append({
+        "key": "CATS", 
+        "label": "Catalytic Converters",
+        "weight": cats_count,  # Store count in weight field for display
+        "unit_price": PRICE_PER_LB["CATS"],
+        "sale_value": cats_count * PRICE_PER_LB["CATS"],
+        "is_count_based": True  # Flag to indicate this is count-based
+    })
+    
+    # Add TIRES (special handling - one tire per car at fixed price)
     list_commodities.append({
         "key": "TIRES",
         "label": "Tires",
-        "weight": cars * 25,
+        "weight": cars,  # Store car count for display
         "unit_price": PRICE_PER_LB["TIRES"],
-        "sale_value": cars * PRICE_PER_LB["TIRES"] * 25,  # sale = cars × price × 25
+        "sale_value": cars * PRICE_PER_LB["TIRES"],  # One tire per car
+        "is_special": True  # Flag to indicate special handling
     })
 
-    # Compute sale values for all commodities except TIRES
+    # Compute sale values for weight-based commodities only
     for commodity in list_commodities:
-        if commodity["key"] != "TIRES":
+        if not commodity.get("is_count_based") and not commodity.get("is_special"):
             commodity["sale_value"] = commodity["weight"] * commodity["unit_price"]
 
     return list_commodities
@@ -126,7 +151,7 @@ def calculate_totals(commodities, cars, curb_weight, purchase_price=None, tow_fe
     tow = tow_fee if tow_fee is not None else FLAT_COSTS["TOW"]
     
     lead = cars * FLAT_COSTS["LEAD_PER_CAR"]
-    nut = curb_weight * FLAT_COSTS["NUT_PER_LB"]
+    nut = curb_weight * cars * FLAT_COSTS["NUT_PER_LB"]  # Nut fee per car
     net = total_sale - (purchase + tow + lead + nut)
     
     return {
@@ -1570,29 +1595,56 @@ with right_col:
                 </p>
                 <br>
                 <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
-                    <strong>🔧 Catalytic Converter:</strong> Costs still being factored in. Current figures are not accurate.
+                    <strong>🔧 Note:</strong> Catalytic converters now calculated at 1.36 converters per car as specified.
                 </p>
             </div>
             """, unsafe_allow_html=True)
             
-            # Create DataFrame for better display
-            commodity_data = []
+            # Group commodities by type for better display
+            weight_based = []
+            count_based = []
+            special_items = []
+            
             for commodity in commodities:
-                commodity_data.append({
-                    "Commodity": commodity["label"],
-                    "Weight (lb)": commodity['weight'],
-                    "$/lb": commodity['unit_price'],
-                    "Sale Value": commodity["sale_value"]
-                })
+                if commodity.get("is_count_based"):
+                    count_based.append({
+                        "Commodity": commodity["label"],
+                        "Count": f"{commodity['weight']:.2f}",  # Count stored in weight field
+                        "Price/Unit": f"${commodity['unit_price']:.2f}",
+                        "Sale Value": f"${commodity['sale_value']:.2f}"
+                    })
+                elif commodity.get("is_special"):
+                    special_items.append({
+                        "Commodity": commodity["label"],
+                        "Quantity": f"{commodity['weight']:.0f} tire(s)",  # Car count stored in weight
+                        "Price/Unit": f"${commodity['unit_price']:.2f}",
+                        "Sale Value": f"${commodity['sale_value']:.2f}"
+                    })
+                else:
+                    weight_based.append({
+                        "Commodity": commodity["label"],
+                        "Weight (lb)": f"{commodity['weight']:,.1f}",
+                        "$/lb": f"${commodity['unit_price']:.2f}",
+                        "Sale Value": f"${commodity['sale_value']:.2f}"
+                    })
             
-            commodity_df = pd.DataFrame(commodity_data)
+            # Display Weight-based commodities
+            if weight_based:
+                st.markdown('<h4 class="subsection-header">Weight-Based Commodities</h4>', unsafe_allow_html=True)
+                weight_df = pd.DataFrame(weight_based)
+                st.table(weight_df)
             
-            # Format the commodity dataframe for display
-            commodity_df['Weight (lb)'] = commodity_df['Weight (lb)'].apply(lambda x: f"{x:,.1f}")
-            commodity_df['$/lb'] = commodity_df['$/lb'].apply(lambda x: f"${x:.2f}")
-            commodity_df['Sale Value'] = commodity_df['Sale Value'].apply(lambda x: f"${x:.2f}")
+            # Display Count-based commodities  
+            if count_based:
+                st.markdown('<h4 class="subsection-header">Count-Based Commodities</h4>', unsafe_allow_html=True)
+                count_df = pd.DataFrame(count_based)
+                st.table(count_df)
             
-            st.table(commodity_df)
+            # Display Special items
+            if special_items:
+                st.markdown('<h4 class="subsection-header">Special Items</h4>', unsafe_allow_html=True)
+                special_df = pd.DataFrame(special_items)
+                st.table(special_df)
             
             # Add note about engine weight estimation
             st.markdown("""
@@ -1600,7 +1652,7 @@ with right_col:
                 <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">
                     <strong>Note:</strong> Engine weight estimated at 13.9% of curb weight based on typical engine weights: 
                     4-cylinder (300-400 lbs), V6 (400-500 lbs), V8 (500-700 lbs). 
-                    For unknown engine materials, using conservative estimate of 275 lbs each.
+                    For unknown engine materials, weight is split 50/50 between aluminum and iron.
                 </p>
             </div>
             """, unsafe_allow_html=True)
@@ -1636,7 +1688,7 @@ with right_col:
                 with col1:
                     cars_input = st.text_input("Number of Cars", placeholder="e.g., 1", value="1", key="cars_no_vehicle")
                 with col2:
-                    curb_weight_input = st.text_input("Combined Curb Weight (lb)", placeholder="e.g., 3600", value="3600", key="weight_no_vehicle")
+                    curb_weight_input = st.text_input("Curb Weight per Car (lb)", placeholder="e.g., 3600", value="3600", key="weight_no_vehicle")
                 
                 # Purchase Price and Tow Fee
                 col1, col2 = st.columns(2)
