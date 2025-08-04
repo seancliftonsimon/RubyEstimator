@@ -1848,21 +1848,7 @@ with right_col:
                     except Exception as e:
                         st.error(f"Error during recalculation: {e}")
             
-            # Disclaimer about estimates and accuracy
-            st.markdown("""
-            <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #f59e0b;">
-                <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
-                    <strong>⚠️ Disclaimer:</strong> Information is an estimate from AI search.
-                </p>
-                <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
-                    Double-check numbers that don't look right.
-                </p>
-                <br>
-                <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.4;">
-                    <strong>🔧 Note:</strong> Catalytic converters now calculated at 1.36 converters per car as specified.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+
             
             # Separate commodities by estimation method
             weight_based = []
@@ -2036,6 +2022,21 @@ with right_col:
                     except Exception as e:
                         st.error(f"Error during calculation: {e}")
 
+
+# --- Bottom Left Disclaimer ---
+st.markdown("""
+<div style="position: fixed; bottom: 20px; left: 20px; background: rgba(245, 158, 11, 0.1); padding: 0.75rem; border-radius: 6px; border-left: 3px solid #f59e0b; max-width: 300px; z-index: 1000;">
+    <p style="margin: 0; color: #92400e; font-size: 0.75rem; line-height: 1.3;">
+        <strong>⚠️ Disclaimer:</strong> Information is an estimate from AI search.
+    </p>
+    <p style="margin: 0; color: #92400e; font-size: 0.75rem; line-height: 1.3;">
+        Double-check numbers that don't look right.
+    </p>
+    <p style="margin: 0; color: #92400e; font-size: 0.75rem; line-height: 1.3;">
+        <strong>🔧 Note:</strong> Catalytic converters now calculated at 1.36 converters per car as specified.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # --- Footer ---
 st.markdown("---")
