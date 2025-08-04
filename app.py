@@ -1530,8 +1530,8 @@ with left_col:
         # Display vehicle name
         vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
         st.markdown(f"""
-        <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid #14b8a6; margin-bottom: 1rem;">
-            <h4 style="margin: 0; color: #0f766e;">{vehicle_name}</h4>
+        <div style="background: rgba(153, 12, 65, 0.1); padding: 1rem; border-radius: 8px; border: 2px solid #990C41; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(153, 12, 65, 0.15);">
+            <h4 style="margin: 0; color: #990C41; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(153, 12, 65, 0.1); font-size: 1.25rem;">{vehicle_name}</h4>
         </div>
         """, unsafe_allow_html=True)
         
