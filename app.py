@@ -1407,6 +1407,11 @@ st.markdown("""
          display: none !important;
      }
      
+     /* OFFICIAL STREAMLIT SOLUTION - Remove header action elements (anchor icons) */
+     [data-testid='stHeaderActionElements'] {
+         display: none !important;
+     }
+     
      /* Comprehensive removal of all anchor/link hover elements - Latest 2024 approach */
      /* Target all possible heading anchor elements */
      h1::before, h2::before, h3::before, h4::before, h5::before, h6::before,
@@ -1488,18 +1493,20 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Main title with minimal padding
-st.title("🚗 Ruby GEM", anchor=None)
+st.markdown('<h1 class="main-title">🚗 Ruby GEM</h1>', unsafe_allow_html=True)
 
 # Create two columns for the main layout with spacing
 left_col, spacer, right_col = st.columns([1, 0.1, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
-    st.header("Vehicle Search & Estimator", anchor=None)
     st.markdown("""
-    <div class="info-icon-container">
-        <span class="info-icon" title="Search for vehicle details to get curb weight and specifications, then calculate costs automatically.">ⓘ</span>
-    </div>
+    <h2 class="section-header">
+        Vehicle Search & Estimator
+        <div class="info-icon-container">
+            <span class="info-icon" title="Search for vehicle details to get curb weight and specifications, then calculate costs automatically.">ⓘ</span>
+        </div>
+    </h2>
     """, unsafe_allow_html=True)
 
     # --- Display Current Vehicle Details (if available) ---
@@ -1671,11 +1678,13 @@ with left_col:
 
 # --- Right Column: Cost Estimator Results ---
 with right_col:
-    st.header("Cost Estimate Results", anchor=None)
     st.markdown("""
-    <div class="info-icon-container">
-        <span class="info-icon" title="Automatically calculated commodity weights, sale values, costs, and net profit based on the searched vehicle.">ⓘ</span>
-    </div>
+    <h2 class="section-header">
+        Cost Estimate Results
+        <div class="info-icon-container">
+            <span class="info-icon" title="Automatically calculated commodity weights, sale values, costs, and net profit based on the searched vehicle.">ⓘ</span>
+        </div>
+    </h2>
     """, unsafe_allow_html=True)
     
     # Auto-calculate if vehicle was just searched
@@ -1876,13 +1885,13 @@ with right_col:
             
             # Display weight-based commodities
             if weight_based:
-                st.subheader("Estimated by Weight", anchor=None)
+                st.markdown('<h4 class="subsection-header">Estimated by Weight</h4>', unsafe_allow_html=True)
                 weight_df = pd.DataFrame(weight_based)
                 st.table(weight_df)
             
             # Display count-based commodities  
             if count_based:
-                st.subheader("Estimated by Count", anchor=None)
+                st.markdown('<h4 class="subsection-header">Estimated by Count</h4>', unsafe_allow_html=True)
                 count_df = pd.DataFrame(count_based)
                 st.table(count_df)
             
@@ -1898,7 +1907,7 @@ with right_col:
             """, unsafe_allow_html=True)
             
             # Display detailed cost breakdown
-            st.subheader("Cost Breakdown", anchor=None)
+            st.markdown('<h3 class="subsection-header">Cost Breakdown</h3>', unsafe_allow_html=True)
             
             # Create summary DataFrame with better formatting
             summary_data = [
