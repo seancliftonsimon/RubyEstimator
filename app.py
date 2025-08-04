@@ -204,10 +204,6 @@ st.markdown("""
         margin-top: 1rem;
         color: #990C41;
         text-shadow: 0 4px 8px rgba(153, 12, 65, 0.25);
-        background: linear-gradient(135deg, #990C41 0%, #E0115F 50%, #F14C8A 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
         letter-spacing: 0.05em;
         position: relative;
     }
@@ -1307,6 +1303,47 @@ st.markdown("""
      .dataframe .index_col,
      [data-testid="stDataFrame"] .index,
      [data-testid="stDataFrame"] .index_col {
+         display: none !important;
+     }
+     
+     /* Remove all hover elements, link icons, and chart expansion */
+     /* Hide all link anchor icons */
+     .stMarkdown a[href]::after,
+     .stMarkdown a[href]::before,
+     [data-testid="stMarkdown"] a[href]::after,
+     [data-testid="stMarkdown"] a[href]::before {
+         display: none !important;
+     }
+     
+     /* Remove chart expansion hover elements */
+     [data-testid="stChart"] *:hover,
+     [data-testid="stChart"] *:focus,
+     .stChart *:hover,
+     .stChart *:focus {
+         transform: none !important;
+         scale: none !important;
+         cursor: default !important;
+     }
+     
+     /* Remove all tooltips and hover effects */
+     [title]:hover::after,
+     [title]:hover::before,
+     [data-tooltip]:hover::after,
+     [data-tooltip]:hover::before {
+         display: none !important;
+     }
+     
+     /* Disable all hover effects globally */
+     *:hover {
+         transform: none !important;
+         scale: none !important;
+     }
+     
+     /* Remove any chart expansion buttons or controls */
+     [data-testid="stChart"] button,
+     [data-testid="stChart"] .chart-controls,
+     .stChart button,
+     .stChart .chart-controls {
          display: none !important;
      }
 </style>
