@@ -289,10 +289,6 @@ st.markdown("""
         box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);
     }
     
-<<<<<<< HEAD
-    /* Simplified input field styling - less aggressive */
-    .stTextInput input {
-=======
     /* Enhanced input field styling */
     .stTextInput > div > div > input,
     [data-testid="stTextInput"] > div > div > input,
@@ -323,21 +319,17 @@ st.markdown("""
     [data-testid="column"]:nth-child(1) .stTextInput input,
     [data-testid="column"]:nth-child(3) .stTextInput input,
     [data-testid="column"]:nth-child(5) .stTextInput input {
->>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
         background: #ffffff !important;
         border: 2px solid rgba(153, 12, 65, 0.25) !important;
         border-radius: 6px !important;
         padding: 0.75rem !important;
         color: #1e293b !important;
-<<<<<<< HEAD
-=======
         box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
         caret-color: #1e293b !important;
         cursor: text !important;
         display: block !important;
         width: 100% !important;
         box-sizing: border-box !important;
->>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
     }
     
     .stNumberInput > div > div > input {
@@ -361,10 +353,6 @@ st.markdown("""
         background: #990C41 !important;
     }
     
-<<<<<<< HEAD
-    /* Simplified focus styling */
-    .stTextInput input:focus {
-=======
     .stTextInput > div > div > input:focus,
     [data-testid="stTextInput"] > div > div > input:focus,
     .stTextInput input:focus,
@@ -391,7 +379,6 @@ st.markdown("""
     [data-testid="column"]:nth-child(1) .stTextInput input:focus,
     [data-testid="column"]:nth-child(3) .stTextInput input:focus,
     [data-testid="column"]:nth-child(5) .stTextInput input:focus {
->>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
         border-color: #990C41 !important;
         outline: none !important;
     }
@@ -1513,9 +1500,6 @@ st.markdown("""
          display: none !important;
      }
      
-<<<<<<< HEAD
-
-=======
          /* Force proper input field rendering for all columns */
     .stTextInput,
     [data-testid="stTextInput"] {
@@ -1554,7 +1538,6 @@ st.markdown("""
         width: 100% !important;
         min-width: 150px !important;
     }
->>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
 
     /* Comprehensive removal of all anchor/link hover elements */
     /* Target all possible heading anchor elements */
@@ -1819,8 +1802,6 @@ with left_col:
                 """, unsafe_allow_html=True)
 
     # --- Main Form ---
-    
-<<<<<<< HEAD
     with st.form(key="vehicle_form"):
         # Add small gaps between columns to prevent rendering issues
         col1, gap1, col2, gap2, col3 = st.columns([3, 0.2, 3, 0.2, 3])
