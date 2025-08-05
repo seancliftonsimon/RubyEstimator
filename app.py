@@ -1456,7 +1456,21 @@ st.markdown("""
          display: none !important;
      }
      
-     /* Remove chart fullscreen buttons and controls */
+     /* Remove chart fullscreen buttons and controls - Comprehensive approach */
+     /* Modern Streamlit fullscreen button selectors */
+     button[title="View fullscreen"],
+     button[title="View Fullscreen"],
+     button[aria-label="View fullscreen"],
+     button[aria-label="View Fullscreen"],
+     [data-testid="stChart"] button[title="View fullscreen"],
+     [data-testid="stChart"] button[title="View Fullscreen"],
+     [data-testid="stChart"] button[aria-label="View fullscreen"],
+     [data-testid="stChart"] button[aria-label="View Fullscreen"],
+     .stChart button[title="View fullscreen"],
+     .stChart button[title="View Fullscreen"],
+     .stChart button[aria-label="View fullscreen"],
+     .stChart button[aria-label="View Fullscreen"],
+     /* Legacy selectors for backward compatibility */
      [data-testid="stChart"] [data-testid="baseButton-secondary"],
      [data-testid="stChart"] [data-testid="baseButton-primary"],
      [data-testid="stChart"] button[aria-label*="fullscreen"],
@@ -1468,8 +1482,47 @@ st.markdown("""
      .stChart button[aria-label*="fullscreen"],
      .stChart button[aria-label*="Fullscreen"],
      .stChart button[title*="fullscreen"],
-     .stChart button[title*="Fullscreen"] {
+     .stChart button[title*="Fullscreen"],
+     /* Additional Plotly-specific fullscreen selectors */
+     .plotly .modebar-btn[data-title*="fullscreen"],
+     .plotly .modebar-btn[data-title*="Fullscreen"],
+     .plotly .modebar-btn[title*="fullscreen"],
+     .plotly .modebar-btn[title*="Fullscreen"],
+     /* Streamlit's overlay button approach */
+     .element-container .overlayBtn,
+     .element-container button[title*="fullscreen"],
+     .element-container button[title*="Fullscreen"] {
          display: none !important;
+         visibility: hidden !important;
+         opacity: 0 !important;
+         pointer-events: none !important;
+     }
+     
+     /* Comprehensive fullscreen button removal for all chart containers */
+     /* Target all possible chart containers and their fullscreen buttons */
+     [data-testid="stChart"] .overlayBtn,
+     [data-testid="stChart"] .element-container .overlayBtn,
+     .stChart .overlayBtn,
+     .stChart .element-container .overlayBtn,
+     /* Target any button with fullscreen-related attributes */
+     button[data-title*="fullscreen"],
+     button[data-title*="Fullscreen"],
+     button[title*="fullscreen"],
+     button[title*="Fullscreen"],
+     button[aria-label*="fullscreen"],
+     button[aria-label*="Fullscreen"],
+     /* Target Streamlit's specific fullscreen implementation */
+     .stApp [data-testid="stChart"] button[title*="fullscreen"],
+     .stApp [data-testid="stChart"] button[title*="Fullscreen"],
+     .stApp .stChart button[title*="fullscreen"],
+     .stApp .stChart button[title*="Fullscreen"] {
+         display: none !important;
+         visibility: hidden !important;
+         opacity: 0 !important;
+         pointer-events: none !important;
+         position: absolute !important;
+         left: -9999px !important;
+         top: -9999px !important;
      }
      
      /* Remove any Plotly chart controls */
