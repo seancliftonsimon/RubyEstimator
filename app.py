@@ -1826,6 +1826,7 @@ with left_col:
         </div>
         """, unsafe_allow_html=True)
         
+        '''
         # --- Purchase Price and Tow Fee Input Fields (Below Vehicle Info) ---
         with st.form(key="cost_adjustment_form_left"):
             col1, col2 = st.columns(2)
@@ -1876,6 +1877,7 @@ with left_col:
                 except Exception as e:
                     st.error(f"Error during recalculation: {e}")
         
+        '''
         # Display curb weight, engine, and rims info in four side-by-side boxes
         col1, col2, col3, col4 = st.columns(4)
         
@@ -2236,6 +2238,44 @@ with right_col:
                         "is_engine": commodity.get("is_engine", False)
                     })
             
+            # --- Purchase Price and Tow Fee Adjustment ---
+            with st.form(key="cost_adjustment_form_right"):
+                col1_r, col2_r = st.columns(2)
+                with col1_r:
+                    purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(st.session_state.get('calculation_results', {}).get('purchase_price', FLAT_COSTS["PURCHASE"]))), key="purchase_adjustment_right")
+                with col2_r:
+                    tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(st.session_state.get('calculation_results', {}).get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment_right")
+                recalculate_button_r = st.form_submit_button("🔄 Update Costs", use_container_width=True)
+                if recalculate_button_r:
+                    try:
+                        purchase_price_float = float(purchase_price_input.strip())
+                        tow_fee_float = float(tow_fee_input.strip())
+                        if purchase_price_float < 0 or tow_fee_float < 0:
+                            st.error("Purchase price and tow fee must be non-negative values.")
+                        else:
+                            results = st.session_state.get('calculation_results', {})
+                            if results:
+                                commodities = compute_commodities(results['cars'], results['curb_weight'],
+                                                                st.session_state.get('last_aluminum_engine'),
+                                                                st.session_state.get('last_aluminum_rims'),
+                                                                st.session_state.get('last_catalytic_converters'))
+                                totals = calculate_totals(commodities, results['cars'], results['curb_weight'],
+                                                        purchase_price_float, tow_fee_float)
+                                st.session_state['calculation_results'] = {
+                                    'commodities': commodities,
+                                    'totals': totals,
+                                    'cars': results['cars'],
+                                    'curb_weight': results['curb_weight'],
+                                    'purchase_price': purchase_price_float,
+                                    'tow_fee': tow_fee_float
+                                }
+                                st.success("Costs updated and recalculated!")
+                                st.rerun()
+                    except ValueError:
+                        st.error("Please enter valid numbers for purchase price and tow fee.")
+                    except Exception as e:
+                        st.error(f"Error during recalculation: {e}")
+
             # Display weight-based commodities
             if weight_based:
                 st.markdown('<div class="subsection-header">Estimated by Weight</div>', unsafe_allow_html=True)
