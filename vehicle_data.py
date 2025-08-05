@@ -142,24 +142,22 @@ def update_vehicle_data_in_db(year, make, model, weight, aluminum_engine=None, a
         print(f"Error updating vehicle data in database: {e}")
 
 def mark_vehicle_as_not_found(year, make, model):
-    """Marks a vehicle as not found in the database to prevent repeated validation attempts."""
-    try:
-        engine = create_database_engine()
-        with engine.connect() as conn:
-            conn.execute(text("""
-                INSERT INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims, catalytic_converters)
-                VALUES (:year, :make, :model, -1, NULL, NULL, NULL)
-                ON CONFLICT (year, make, model) DO UPDATE SET 
-                    curb_weight_lbs = -1
-            """), {
-                "year": year, 
-                "make": make, 
-                "model": model
-            })
-            conn.commit()
-            print(f"✅ Marked vehicle as not found in database: {year} {make} {model}")
-    except Exception as e:
-        print(f"Error marking vehicle as not found in database: {e}")
+    """Stores fake/not found vehicles in session state to prevent repeated validation attempts during the session."""
+    # Instead of storing in database, we'll use session state or in-memory cache
+    if 'fake_vehicles' not in st.session_state:
+        st.session_state['fake_vehicles'] = set()
+    
+    vehicle_key = f"{year}_{make}_{model}"
+    st.session_state['fake_vehicles'].add(vehicle_key)
+    print(f"✅ Marked vehicle as not found in session: {year} {make} {model}")
+
+def is_vehicle_marked_as_fake(year, make, model):
+    """Checks if a vehicle was previously marked as fake in this session."""
+    if 'fake_vehicles' not in st.session_state:
+        return False
+    
+    vehicle_key = f"{year}_{make}_{model}"
+    return vehicle_key in st.session_state['fake_vehicles']
 
 def get_last_ten_entries():
     """Fetches the last 10 vehicle entries from the database."""
@@ -467,13 +465,13 @@ def process_vehicle(year, make, model):
     """
     print(f"Processing: {year} {make} {model}")
     
-    # Check database first to avoid unnecessary API calls for known vehicles
-    vehicle_data = get_vehicle_data_from_db(year, make, model)
-    
-    # Check if this vehicle was previously marked as not found
-    if vehicle_data and vehicle_data['curb_weight_lbs'] == -1:
-        print(f"  -> Vehicle previously marked as not found in DB: {year} {make} {model}")
+    # Check if this vehicle was previously marked as fake in this session
+    if is_vehicle_marked_as_fake(year, make, model):
+        print(f"  -> Vehicle previously marked as fake in session: {year} {make} {model}")
         return None
+    
+    # Check database for legitimate vehicle data
+    vehicle_data = get_vehicle_data_from_db(year, make, model)
     
     if vehicle_data and vehicle_data['curb_weight_lbs'] is not None and vehicle_data['curb_weight_lbs'] > 0:
         print(f"  -> Found in DB: {vehicle_data['curb_weight_lbs']} lbs, Cats: {vehicle_data['catalytic_converters']}")
