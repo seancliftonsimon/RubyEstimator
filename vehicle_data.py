@@ -100,38 +100,41 @@ def get_vehicle_data_from_db(year, make, model):
         engine = create_database_engine()
         with engine.connect() as conn:
             result = conn.execute(text(
-                "SELECT curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles WHERE year = :year AND make = :make AND model = :model"
+                "SELECT curb_weight_lbs, aluminum_engine, aluminum_rims, catalytic_converters FROM vehicles WHERE year = :year AND make = :make AND model = :model"
             ), {"year": year, "make": make, "model": model})
             row = result.fetchone()
             if row:
                 return {
                     'curb_weight_lbs': row[0],
                     'aluminum_engine': row[1],
-                    'aluminum_rims': row[2]
+                    'aluminum_rims': row[2],
+                    'catalytic_converters': row[3]
                 }
     except Exception as e:
         print(f"Error getting vehicle data from database: {e}")
     return None
 
-def update_vehicle_data_in_db(year, make, model, weight, aluminum_engine=None, aluminum_rims=None):
+def update_vehicle_data_in_db(year, make, model, weight, aluminum_engine=None, aluminum_rims=None, catalytic_converters=None):
     """Inserts or updates the vehicle data in the database."""
     try:
         engine = create_database_engine()
         with engine.connect() as conn:
             conn.execute(text("""
-                INSERT INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims)
-                VALUES (:year, :make, :model, :weight, :aluminum_engine, :aluminum_rims)
+                INSERT INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims, catalytic_converters)
+                VALUES (:year, :make, :model, :weight, :aluminum_engine, :aluminum_rims, :catalytic_converters)
                 ON CONFLICT (year, make, model) DO UPDATE SET 
                     curb_weight_lbs = EXCLUDED.curb_weight_lbs,
                     aluminum_engine = EXCLUDED.aluminum_engine,
-                    aluminum_rims = EXCLUDED.aluminum_rims
+                    aluminum_rims = EXCLUDED.aluminum_rims,
+                    catalytic_converters = EXCLUDED.catalytic_converters
             """), {
                 "year": year, 
                 "make": make, 
                 "model": model, 
                 "weight": weight, 
                 "aluminum_engine": aluminum_engine, 
-                "aluminum_rims": aluminum_rims
+                "aluminum_rims": aluminum_rims,
+                "catalytic_converters": catalytic_converters
             })
             conn.commit()
             print(f"✅ Vehicle data updated in PostgreSQL database: {year} {make} {model}")
@@ -142,7 +145,7 @@ def get_last_ten_entries():
     """Fetches the last 10 vehicle entries from the database."""
     try:
         engine = create_database_engine()
-        query = text("SELECT year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims FROM vehicles ORDER BY id DESC LIMIT 10")
+        query = text("SELECT year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims, catalytic_converters FROM vehicles ORDER BY id DESC LIMIT 10")
         df = pd.read_sql_query(query, engine)
         return df
     except Exception as e:
@@ -304,10 +307,73 @@ def get_curb_weight_from_api(year: int, make: str, model: str):
         print(f"An error occurred during the Gemini API call: {e}")
         return None
 
+def heuristic_rule(year, make, model):
+    """Fallback heuristic for catalytic converter count."""
+    return 1 # Default to 1 if no other data is available
+
+def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
+    """
+    Estimates the number of catalytic converters for a vehicle using Gemini API.
+    """
+    if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
+        print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
+        return None
+
+    if SHARED_GEMINI_MODEL is None:
+        print("Gemini model not initialized. Please check your API key.")
+        return None
+
+    query_templates = {
+        "walker":  f"{year} {make} {model} catalytic converter site:walkerexhaust.com \\"Bank\\"",
+        "magna":   f"{year} {make} {model} catalytic converter site:magnaflow.com \\"Bank\\"",
+        "ap":      f"{year} {make} {model} catalytic converter site:apemissions.com \\"Bank\\"",
+    }
+
+    schema = {
+      "type":"function",
+      "function":{
+          "name":"set_result",
+          "parameters":{
+              "converter_count":{"type":"integer"}
+          },
+          "required":["converter_count"]
+      }
+    }
+
+    for catalog, query in query_templates.items():
+        try:
+            prompt = f"""
+            Return ONLY set_result() with converter_count.
+            Rule: Count unique ‘Bank’, ‘Manifold’, or ‘Rear’ positions you see in the
+            search snippets for **{year} {make} {model}** on {catalog}.
+            If nothing matches, return -1.
+            """
+            response = SHARED_GEMINI_MODEL.generate_content(
+                prompt,
+                tools=[schema],
+                tool_config={'function_calling_config': 'ANY'},
+                generation_config={"temperature": 0}
+            )
+
+            # Extract the function call response
+            function_call = response.candidates[0].content.parts[0].function_call
+            if function_call.name == "set_result":
+                count = function_call.args["converter_count"]
+                if count > 0:
+                    return count
+
+        except Exception as e:
+            print(f"An error occurred during the {catalog} API call: {e}")
+            continue
+
+    return heuristic_rule(year, make, model)
+
+
+
 
 def process_vehicle(year, make, model):
     """
-    Main logic to get vehicle data (curb weight, aluminum engine, aluminum rims).
+    Main logic to get vehicle data (curb weight, aluminum engine, aluminum rims, and catalytic converters).
     It first checks the local database, and if not found, queries the Gemini API.
     """
     print(f"Processing: {year} {make} {model}")
@@ -316,7 +382,7 @@ def process_vehicle(year, make, model):
     vehicle_data = get_vehicle_data_from_db(year, make, model)
     
     if vehicle_data and vehicle_data['curb_weight_lbs'] is not None:
-        print(f"  -> Found in DB: {vehicle_data['curb_weight_lbs']} lbs")
+        print(f"  -> Found in DB: {vehicle_data['curb_weight_lbs']} lbs, Cats: {vehicle_data['catalytic_converters']}")
         return vehicle_data
     else:
         print("  -> Not in DB or missing data. Querying APIs...")
@@ -335,14 +401,20 @@ def process_vehicle(year, make, model):
         aluminum_rims = get_aluminum_rims_from_api(year, make, model)
         if aluminum_rims is not None:
             print(f"  -> Found aluminum rims info via API: {aluminum_rims}")
+
+        # Get catalytic converter count
+        catalytic_converters = get_catalytic_converter_count_from_api(year, make, model)
+        if catalytic_converters is not None:
+            print(f"  -> Found catalytic converter count via API: {catalytic_converters}")
         
         # Update database with all data
-        update_vehicle_data_in_db(year, make, model, weight, aluminum_engine, aluminum_rims)
+        update_vehicle_data_in_db(year, make, model, weight, aluminum_engine, aluminum_rims, catalytic_converters)
         
         return {
             'curb_weight_lbs': weight,
             'aluminum_engine': aluminum_engine,
-            'aluminum_rims': aluminum_rims
+            'aluminum_rims': aluminum_rims,
+            'catalytic_converters': catalytic_converters
         }
 
 
@@ -377,7 +449,7 @@ if __name__ == "__main__":
         print("-" * 20)
 
     print("\nAdding a vehicle with known data directly to the DB:")
-    update_vehicle_data_in_db(2021, "Tesla", "Model 3", 3582, True, True)
+    update_vehicle_data_in_db(2021, "Tesla", "Model 3", 3582, True, True, 1)
     result = process_vehicle(2021, "Tesla", "Model 3")
 
     print("\nDone.")

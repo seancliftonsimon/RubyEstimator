@@ -47,10 +47,16 @@ def create_tables():
                 curb_weight_lbs INTEGER,
                 aluminum_engine BOOLEAN,
                 aluminum_rims BOOLEAN,
+                catalytic_converters INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(year, make, model)
             )
         """))
+        try:
+            conn.execute(text("ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS catalytic_converters INTEGER"))
+        except Exception as e:
+            print(f"Warning: Could not add catalytic_converters column. It might already exist. Error: {e}")
+
         conn.commit()
     
     print("✅ Database tables created successfully")

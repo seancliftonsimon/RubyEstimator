@@ -40,7 +40,7 @@ BATTERY_RECOVERY_FACTOR = 0.8
 CATS_PER_CAR = 1.36
 
 # --- Cost Estimator Functions ---
-def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=None):
+def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=None, catalytic_converters=None):
     """Compute all commodity weights, prices, and sale values."""
     w = lambda lbs: cars * lbs
     
@@ -112,7 +112,7 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
     })
 
     # Add count-based catalytic converters
-    cats_count = cars * CATS_PER_CAR
+    cats_count = cars * (catalytic_converters if catalytic_converters is not None else CATS_PER_CAR)
     list_commodities.append({
         "key": "CATS", 
         "label": "Catalytic Converters",
@@ -1853,7 +1853,8 @@ with left_col:
                             # Perform the calculation with new values
                             commodities = compute_commodities(results['cars'], results['curb_weight'], 
                                                             st.session_state.get('last_aluminum_engine'), 
-                                                            st.session_state.get('last_aluminum_rims'))
+                                                            st.session_state.get('last_aluminum_rims'),
+                                                            st.session_state.get('last_catalytic_converters'))
                             totals = calculate_totals(commodities, results['cars'], results['curb_weight'], 
                                                     purchase_price_float, tow_fee_float)
                         
@@ -1875,8 +1876,8 @@ with left_col:
                 except Exception as e:
                     st.error(f"Error during recalculation: {e}")
         
-        # Display curb weight, engine, and rims info in three side-by-side boxes
-        col1, col2, col3 = st.columns(3)
+        # Display curb weight, engine, and rims info in four side-by-side boxes
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
             st.markdown(f"""
@@ -1914,6 +1915,21 @@ with left_col:
                 st.markdown("""
                 <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
                     <strong>Rims:</strong> <span style="color: #6b7280;">Unknown</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+        with col4:
+            if vehicle_info.get('catalytic_converters') is not None:
+                cats_count = vehicle_info['catalytic_converters']
+                st.markdown(f"""
+                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #22c55e;">
+                    <strong>Cats:</strong> <span style="color: #22c55e; font-weight: 600;">{cats_count}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
+                    <strong>Cats:</strong> <span style="color: #6b7280;">Unknown</span>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1967,13 +1983,15 @@ with left_col:
                             'model': model_input,
                             'weight': vehicle_data['curb_weight_lbs'],
                             'aluminum_engine': vehicle_data['aluminum_engine'],
-                            'aluminum_rims': vehicle_data['aluminum_rims']
+                            'aluminum_rims': vehicle_data['aluminum_rims'],
+                            'catalytic_converters': vehicle_data['catalytic_converters']
                         }
                         
                         # Store the data in session state for the cost estimator
                         st.session_state['last_curb_weight'] = vehicle_data['curb_weight_lbs']
                         st.session_state['last_aluminum_engine'] = vehicle_data['aluminum_engine']
                         st.session_state['last_aluminum_rims'] = vehicle_data['aluminum_rims']
+                        st.session_state['last_catalytic_converters'] = vehicle_data['catalytic_converters']
                         st.session_state['last_vehicle_info'] = f"{year_int} {make_input} {model_input}"
                         
                         # Auto-populate and calculate the cost estimator
@@ -2014,15 +2032,17 @@ with left_col:
                 display_df['E'] = display_df['aluminum_engine'].apply(format_aluminum)
                 display_df['W'] = display_df['aluminum_rims'].apply(format_aluminum)
                 
+                display_df['C'] = display_df['catalytic_converters'].apply(lambda x: x if pd.notna(x) else "?")
+
                 # Select and rename columns for display (more compact)
-                display_df = display_df[['year', 'make', 'model', 'curb_weight_lbs', 'E', 'W']]
-                display_df.columns = ['Year', 'Make', 'Model', 'Weight', 'E', 'W']
+                display_df = display_df[['year', 'make', 'model', 'curb_weight_lbs', 'E', 'W', 'C']]
+                display_df.columns = ['Year', 'Make', 'Model', 'Weight', 'E', 'W', 'C']
                 
                 # Format the dataframe for display
                 display_df['Weight'] = display_df['Weight'].apply(lambda x: f"{x:,.0f}")
                 
                 st.table(display_df)
-                st.caption("E = Engine (Al=Aluminum, Fe=Iron), W = Wheels (Al=Aluminum, St=Steel)")
+                st.caption("E = Engine (Al=Aluminum, Fe=Iron), W = Wheels (Al=Aluminum, St=Steel), C = Catalytic Converters")
             else:
                 st.info("No vehicles searched yet.")
         except Exception as e:
@@ -2064,13 +2084,15 @@ with right_col:
             elif last_aluminum_rims is False or last_aluminum_rims == 0:
                 aluminum_rims = False
             
+            catalytic_converters = st.session_state.get('last_catalytic_converters')
+
             # Get stored purchase price and tow fee, or use defaults
             stored_results = st.session_state.get('calculation_results', {})
             purchase_price = stored_results.get('purchase_price', FLAT_COSTS["PURCHASE"])
             tow_fee = stored_results.get('tow_fee', FLAT_COSTS["TOW"])
             
             # Perform the calculation
-            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters)
             totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price, tow_fee)
             
             # Store results in session state
@@ -2109,12 +2131,14 @@ with right_col:
                     elif last_aluminum_rims is False or last_aluminum_rims == 0:
                         aluminum_rims = False
                     
+                    catalytic_converters = st.session_state.get('last_catalytic_converters')
+
                     # Use default purchase price and tow fee for initial calculation
                     purchase_price = FLAT_COSTS["PURCHASE"]
                     tow_fee = FLAT_COSTS["TOW"]
                     
                     # Perform the calculation
-                    commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+                    commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters)
                     totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price, tow_fee)
                     
                     # Store results in session state
@@ -2346,6 +2370,7 @@ with right_col:
                             st.session_state['last_curb_weight'] = curb_weight_int
                             st.session_state['last_aluminum_engine'] = aluminum_engine
                             st.session_state['last_aluminum_rims'] = aluminum_rims
+                            st.session_state['last_catalytic_converters'] = 1 # Default for manual entry
                             st.session_state['last_vehicle_info'] = f"Manual Entry ({curb_weight_int} lbs)"
                             
                             # Create detailed vehicle info for display
@@ -2355,7 +2380,8 @@ with right_col:
                                 'model': f'{curb_weight_int} lbs',
                                 'weight': curb_weight_int,
                                 'aluminum_engine': aluminum_engine,
-                                'aluminum_rims': aluminum_rims
+                                'aluminum_rims': aluminum_rims,
+                                'catalytic_converters': 1
                             }
                             
                             st.success("Manual estimate calculated!")
@@ -2403,6 +2429,8 @@ if 'last_aluminum_engine' not in st.session_state:
     st.session_state['last_aluminum_engine'] = None
 if 'last_aluminum_rims' not in st.session_state:
     st.session_state['last_aluminum_rims'] = None
+if 'last_catalytic_converters' not in st.session_state:
+    st.session_state['last_catalytic_converters'] = None
 if 'last_vehicle_info' not in st.session_state:
     st.session_state['last_vehicle_info'] = None
 if 'auto_calculate' not in st.session_state:
