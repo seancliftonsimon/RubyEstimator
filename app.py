@@ -1839,7 +1839,7 @@ with left_col:
         
         with col2:
             if vehicle_info['aluminum_engine'] is not None:
-                engine_status = "Aluminum" if vehicle_info['aluminum_engine'] else "Iron"
+                engine_status = "Al" if vehicle_info['aluminum_engine'] else "Fe"
                 engine_color = "#22c55e" if vehicle_info['aluminum_engine'] else "#f59e0b"
                 st.markdown(f"""
                 <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color};">
@@ -1855,7 +1855,7 @@ with left_col:
         
         with col3:
             if vehicle_info['aluminum_rims'] is not None:
-                rims_status = "Aluminum" if vehicle_info['aluminum_rims'] else "Steel"
+                rims_status = "Al" if vehicle_info['aluminum_rims'] else "Fe"
                 rims_color = "#22c55e" if vehicle_info['aluminum_rims'] else "#f59e0b"
                 st.markdown(f"""
                 <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color};">
@@ -2193,9 +2193,9 @@ with right_col:
             with st.form(key="cost_adjustment_form_right"):
                 col1_r, col2_r = st.columns(2)
                 with col1_r:
-                    purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(st.session_state.get('calculation_results', {}).get('purchase_price', FLAT_COSTS["PURCHASE"]))), key="purchase_adjustment_right")
+                    purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(FLAT_COSTS["PURCHASE"])), key="purchase_adjustment_right")
                 with col2_r:
-                    tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(st.session_state.get('calculation_results', {}).get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment_right")
+                    tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(FLAT_COSTS["TOW"])), key="tow_adjustment_right")
                 recalculate_button_r = st.form_submit_button("🔄 Update Costs", use_container_width=True)
                 if recalculate_button_r:
                     try:

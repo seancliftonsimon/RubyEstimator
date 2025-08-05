@@ -71,7 +71,7 @@ def setup_password_protection():
     if "password_correct" not in st.session_state or not st.session_state["password_correct"]:
         st.markdown("""
         <div style="text-align: center; padding: 2rem;">
-            <h1>🔒 RubyEstimator</h1>
+            <h1>🔒 Ruby GEM</h1>
             <p>Please enter the password to access the application.</p>
         </div>
         """, unsafe_allow_html=True)
