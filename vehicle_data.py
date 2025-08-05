@@ -141,6 +141,26 @@ def update_vehicle_data_in_db(year, make, model, weight, aluminum_engine=None, a
     except Exception as e:
         print(f"Error updating vehicle data in database: {e}")
 
+def mark_vehicle_as_not_found(year, make, model):
+    """Marks a vehicle as not found in the database to prevent repeated validation attempts."""
+    try:
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims, catalytic_converters)
+                VALUES (:year, :make, :model, -1, NULL, NULL, NULL)
+                ON CONFLICT (year, make, model) DO UPDATE SET 
+                    curb_weight_lbs = -1
+            """), {
+                "year": year, 
+                "make": make, 
+                "model": model
+            })
+            conn.commit()
+            print(f"✅ Marked vehicle as not found in database: {year} {make} {model}")
+    except Exception as e:
+        print(f"Error marking vehicle as not found in database: {e}")
+
 def get_last_ten_entries():
     """Fetches the last 10 vehicle entries from the database."""
     try:
@@ -151,6 +171,51 @@ def get_last_ten_entries():
     except Exception as e:
         print(f"Database error: {e}")
         return pd.DataFrame()  # Return empty DataFrame on error
+
+
+def validate_vehicle_existence(year: int, make: str, model: str):
+    """
+    Validates if a vehicle actually exists using Gemini API grounded with Google Search.
+    Returns True if vehicle exists, False if fake/non-existent, or None for inconclusive.
+    """
+    if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
+        print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
+        return None
+
+    if SHARED_GEMINI_MODEL is None:
+        print("Gemini model not initialized. Please check your API key.")
+        return None
+
+    try:
+        prompt = (
+            f"Search the web to verify if the {year} {make} {model} is a real vehicle that was actually manufactured. "
+            "Look for official manufacturer information, automotive databases like Edmunds, KBB, or manufacturer websites, reviews, or dealership listings. "
+            f"Specifically check if '{make}' is a legitimate automotive manufacturer and if the model '{model}' was actually produced in {year}. "
+            "Be strict - if the manufacturer doesn't exist (like 'FakeMake') or if the model was never made in that year, return 'fake'. "
+            "Return ONLY one of these exact values: 'exists', 'fake', or 'inconclusive'. "
+            "Do not include any other text or explanation."
+        )
+        
+        response = SHARED_GEMINI_MODEL.generate_content(
+            prompt,
+            tools=[{"google_search_retrieval": {}}],
+            generation_config={"temperature": 0, "max_output_tokens": 16}
+        )
+        
+        text_response = response.text.strip().lower()
+        
+        if text_response == 'exists':
+            return True
+        elif text_response == 'fake':
+            return False
+        elif text_response == 'inconclusive':
+            return None
+        else:
+            return None
+
+    except Exception as e:
+        print(f"An error occurred during the vehicle validation API call: {e}")
+        return None
 
 
 def get_aluminum_engine_from_api(year: int, make: str, model: str):
@@ -398,14 +463,19 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
 def process_vehicle(year, make, model):
     """
     Main logic to get vehicle data (curb weight, aluminum engine, aluminum rims, and catalytic converters).
-    It first checks the local database, and if not found, queries the Gemini API.
+    It first validates the vehicle exists, then checks the local database, and if not found, queries the Gemini API.
     """
     print(f"Processing: {year} {make} {model}")
     
-    # Check database first
+    # Check database first to avoid unnecessary API calls for known vehicles
     vehicle_data = get_vehicle_data_from_db(year, make, model)
     
-    if vehicle_data and vehicle_data['curb_weight_lbs'] is not None:
+    # Check if this vehicle was previously marked as not found
+    if vehicle_data and vehicle_data['curb_weight_lbs'] == -1:
+        print(f"  -> Vehicle previously marked as not found in DB: {year} {make} {model}")
+        return None
+    
+    if vehicle_data and vehicle_data['curb_weight_lbs'] is not None and vehicle_data['curb_weight_lbs'] > 0:
         print(f"  -> Found in DB: {vehicle_data['curb_weight_lbs']} lbs, Cats: {vehicle_data['catalytic_converters']}")
         
         # If catalytic converter data is missing, get it and update the record
@@ -426,12 +496,34 @@ def process_vehicle(year, make, model):
         
         return vehicle_data
     else:
-        print("  -> Not in DB or missing data. Querying APIs...")
+        print("  -> Not in DB or missing data. Validating vehicle existence first...")
+        
+        # Validate vehicle existence before making expensive API calls
+        vehicle_exists = validate_vehicle_existence(year, make, model)
+        
+        if vehicle_exists is False:
+            print(f"  -> Vehicle validation failed: {year} {make} {model} does not exist")
+            mark_vehicle_as_not_found(year, make, model)
+            return None  # Return None to indicate vehicle not found
+        elif vehicle_exists is None:
+            print(f"  -> Vehicle validation inconclusive for: {year} {make} {model}")
+            # Continue with processing but be aware it might be invalid
+        else:
+            print(f"  -> Vehicle validation passed: {year} {make} {model} exists")
+        
+        print("  -> Proceeding with API queries...")
         
         # Get curb weight
         weight = get_curb_weight_from_api(year, make, model)
         if weight:
             print(f"  -> Found curb weight via API: {weight} lbs")
+        
+        # Additional validation: if no weight found and vehicle existence was inconclusive, 
+        # it's likely a fake vehicle
+        if not weight and vehicle_exists is None:
+            print(f"  -> No weight found and vehicle existence inconclusive - likely fake vehicle")
+            mark_vehicle_as_not_found(year, make, model)
+            return None
         
         # Get aluminum engine info
         aluminum_engine = get_aluminum_engine_from_api(year, make, model)
@@ -492,5 +584,9 @@ if __name__ == "__main__":
     print("\nAdding a vehicle with known data directly to the DB:")
     update_vehicle_data_in_db(2021, "Tesla", "Model 3", 3582, True, True, 1)
     result = process_vehicle(2021, "Tesla", "Model 3")
+
+    print("\nTesting fake vehicle validation:")
+    fake_result = process_vehicle(2006, "FakeMake", "WrongModel")
+    print(f"Fake vehicle result: {fake_result}")
 
     print("\nDone.")

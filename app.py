@@ -1935,7 +1935,14 @@ with left_col:
                             'catalytic_converters': st.session_state.get('last_catalytic_converters')
                         }
                     
-                    if vehicle_data and vehicle_data['curb_weight_lbs']:
+                    if vehicle_data is None:
+                        # Vehicle validation failed - it's fake or doesn't exist
+                        st.markdown(f"""
+                        <div class="error-message">
+                            <strong>Vehicle Not Found:</strong> {year_int} {make_input} {model_input} does not appear to be a real vehicle or was not manufactured in this year. Please check your input.
+                        </div>
+                        """, unsafe_allow_html=True)
+                    elif vehicle_data and vehicle_data['curb_weight_lbs']:
                         # Display simple success message
                         st.markdown(f"""
                         <div class="success-message">
