@@ -318,7 +318,23 @@ st.markdown("""
     .stColumn:nth-child(5) .stTextInput input,
     [data-testid="column"]:nth-child(1) .stTextInput input,
     [data-testid="column"]:nth-child(3) .stTextInput input,
-    [data-testid="column"]:nth-child(5) .stTextInput input {
+    [data-testid="column"]:nth-child(5) .stTextInput input,
+    /* Additional specific selectors for the third column model input */
+    .stHorizontalBlock [data-testid="column"]:nth-child(5) .stTextInput input,
+    .stHorizontalBlock [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] input,
+    /* Target any input in the third column specifically */
+    [data-testid="column"]:nth-child(5) input[type="text"],
+    [data-testid="column"]:nth-child(5) input[placeholder],
+    /* Force styling on the model input specifically */
+    [data-testid="column"]:nth-child(5) .stTextInput > div > div > input,
+    [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] > div > div > input,
+    /* Additional comprehensive selectors for all possible input structures */
+    [data-testid="column"]:nth-child(5) .stTextInput > div > div > div > input,
+    [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] > div > div > div > input,
+    [data-testid="column"]:nth-child(5) .stTextInput > div > div > div > div > input,
+    [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] > div > div > div > div > input,
+    [data-testid="column"]:nth-child(5) .stTextInput > div > div > div > div > div > input,
+    [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] > div > div > div > div > div > input {
         background: #ffffff !important;
         border: 2px solid rgba(153, 12, 65, 0.25) !important;
         border-radius: 6px !important;
@@ -378,7 +394,23 @@ st.markdown("""
     .stColumn:nth-child(5) .stTextInput input:focus,
     [data-testid="column"]:nth-child(1) .stTextInput input:focus,
     [data-testid="column"]:nth-child(3) .stTextInput input:focus,
-    [data-testid="column"]:nth-child(5) .stTextInput input:focus {
+    [data-testid="column"]:nth-child(5) .stTextInput input:focus,
+    /* Additional specific focus selectors for the third column model input */
+    .stHorizontalBlock [data-testid="column"]:nth-child(5) .stTextInput input:focus,
+    .stHorizontalBlock [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] input:focus,
+    /* Target any input in the third column specifically */
+    [data-testid="column"]:nth-child(5) input[type="text"]:focus,
+    [data-testid="column"]:nth-child(5) input[placeholder]:focus,
+    /* Force focus styling on the model input specifically */
+    [data-testid="column"]:nth-child(5) .stTextInput > div > div > input:focus,
+    [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] > div > div > input:focus,
+    /* Additional comprehensive focus selectors for all possible input structures */
+    [data-testid="column"]:nth-child(5) .stTextInput > div > div > div > input:focus,
+    [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] > div > div > div > input:focus,
+    [data-testid="column"]:nth-child(5) .stTextInput > div > div > div > div > input:focus,
+    [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] > div > div > div > div > input:focus,
+    [data-testid="column"]:nth-child(5) .stTextInput > div > div > div > div > div > input:focus,
+    [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] > div > div > div > div > div > input:focus {
         border-color: #990C41 !important;
         outline: none !important;
     }
@@ -1689,6 +1721,37 @@ st.markdown("""
      div[data-testid="StyledLinkIconContainer"],
      div[data-testid="StyledLinkIconContainer"] * {
          display: none !important;
+     }
+     
+     /* Force styling for the model input specifically */
+     /* Target the model input by its key attribute and ensure it gets the outline */
+     [data-testid="stTextInput"]:has(input[placeholder*="Camry"]) input,
+     [data-testid="stTextInput"]:has(input[placeholder*="Model"]) input,
+     /* Additional fallback selectors for the model input */
+     .stTextInput:has(input[placeholder*="Camry"]) input,
+     .stTextInput:has(input[placeholder*="Model"]) input,
+     /* Force outline on any input that might be the model field */
+     [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] input,
+     [data-testid="column"]:nth-child(5) .stTextInput input {
+         background: #ffffff !important;
+         border: 2px solid rgba(153, 12, 65, 0.25) !important;
+         border-radius: 6px !important;
+         padding: 0.75rem !important;
+         color: #1e293b !important;
+         box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
+         caret-color: #1e293b !important;
+         cursor: text !important;
+         display: block !important;
+         width: 100% !important;
+         box-sizing: border-box !important;
+     }
+     
+     /* Force focus styling for the model input */
+     [data-testid="column"]:nth-child(5) [data-testid="stTextInput"] input:focus,
+     [data-testid="column"]:nth-child(5) .stTextInput input:focus {
+         border-color: #990C41 !important;
+         outline: none !important;
+         box-shadow: 0 0 0 3px rgba(153, 12, 65, 0.3) !important;
      }
      
      /* Responsive design for smaller screens */
