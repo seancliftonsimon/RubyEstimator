@@ -1826,14 +1826,17 @@ with left_col:
         </div>
         """, unsafe_allow_html=True)
         
-        '''
         # --- Purchase Price and Tow Fee Input Fields (Below Vehicle Info) ---
         with st.form(key="cost_adjustment_form_left"):
             col1, col2 = st.columns(2)
             with col1:
-                purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(st.session_state.get('calculation_results', {}).get('purchase_price', FLAT_COSTS["PURCHASE"]))), key="purchase_adjustment_left")
+                purchase_price_input = st.text_input("Purchase Price ($)", 
+                    value=str(int(st.session_state.get('calculation_results', {}).get('purchase_price', FLAT_COSTS["PURCHASE"]))), 
+                    key="purchase_adjustment_left")
             with col2:
-                tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(st.session_state.get('calculation_results', {}).get('tow_fee', FLAT_COSTS["TOW"]))), key="tow_adjustment_left")
+                tow_fee_input = st.text_input("Tow Fee ($)", 
+                    value=str(int(st.session_state.get('calculation_results', {}).get('tow_fee', FLAT_COSTS["TOW"]))), 
+                    key="tow_adjustment_left")
             
             recalculate_button = st.form_submit_button("🔄 Update Costs", use_container_width=True)
             
@@ -1876,8 +1879,6 @@ with left_col:
                     st.error("Please enter valid numbers for purchase price and tow fee.")
                 except Exception as e:
                     st.error(f"Error during recalculation: {e}")
-        
-        '''
         # Display curb weight, engine, and rims info in four side-by-side boxes
         col1, col2, col3, col4 = st.columns(4)
         
