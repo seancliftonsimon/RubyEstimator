@@ -289,46 +289,13 @@ st.markdown("""
         box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);
     }
     
-    /* Enhanced input field styling */
-    .stTextInput > div > div > input,
-    [data-testid="stTextInput"] > div > div > input,
-    .stTextInput input,
-    [data-testid="stTextInput"] input,
-    input[type="text"],
-    input[placeholder],
-    .stTextInput > div > div > div > input,
-    [data-testid="stTextInput"] > div > div > div > input,
-    /* Additional selectors for all possible text input variations */
-    .stTextInput > div > div > div > div > input,
-    [data-testid="stTextInput"] > div > div > div > div > input,
-    .stTextInput > div > div > div > div > div > input,
-    [data-testid="stTextInput"] > div > div > div > div > div > input,
-    /* Target any input within stTextInput containers */
-    .stTextInput input[type="text"],
-    [data-testid="stTextInput"] input[type="text"],
-    /* Universal text input styling */
-    input[type="text"],
-    input[placeholder],
-    /* Streamlit specific text input selectors */
-    [data-testid="stTextInput"] input,
-    .stTextInput input,
-    /* Force styling on all columns including third column */
-    .stColumn:nth-child(3) .stTextInput input,
-    .stColumn:nth-child(5) .stTextInput input,
-    [data-testid="column"]:nth-child(3) .stTextInput input,
-    [data-testid="column"]:nth-child(5) .stTextInput input {
+    /* Simplified input field styling - less aggressive */
+    .stTextInput input {
         background: #ffffff !important;
         border: 2px solid rgba(153, 12, 65, 0.25) !important;
         border-radius: 6px !important;
         padding: 0.75rem !important;
-        transition: all 0.2s ease !important;
         color: #1e293b !important;
-        box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
-        caret-color: #1e293b !important;
-        cursor: text !important;
-        display: block !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
     }
     
     .stNumberInput > div > div > input {
@@ -352,36 +319,10 @@ st.markdown("""
         background: #990C41 !important;
     }
     
-    .stTextInput > div > div > input:focus,
-    [data-testid="stTextInput"] > div > div > input:focus,
-    .stTextInput input:focus,
-    [data-testid="stTextInput"] input:focus,
-    input[type="text"]:focus,
-    input[placeholder]:focus,
-    /* Additional focus selectors for all possible text input variations */
-    .stTextInput > div > div > div > input:focus,
-    [data-testid="stTextInput"] > div > div > div > input:focus,
-    .stTextInput > div > div > div > div > input:focus,
-    [data-testid="stTextInput"] > div > div > div > div > input:focus,
-    .stTextInput > div > div > div > div > div > input:focus,
-    [data-testid="stTextInput"] > div > div > div > div > div > input:focus,
-    /* Target any input within stTextInput containers */
-    .stTextInput input[type="text"]:focus,
-    [data-testid="stTextInput"] input[type="text"]:focus,
-    /* Streamlit specific text input focus selectors */
-    [data-testid="stTextInput"] input:focus,
-    .stTextInput input:focus,
-    /* Force focus styling on all columns including third column */
-    .stColumn:nth-child(3) .stTextInput input:focus,
-    .stColumn:nth-child(5) .stTextInput input:focus,
-    [data-testid="column"]:nth-child(3) .stTextInput input:focus,
-    [data-testid="column"]:nth-child(5) .stTextInput input:focus {
+    /* Simplified focus styling */
+    .stTextInput input:focus {
         border-color: #990C41 !important;
-        box-shadow: 0 0 0 3px rgba(153, 12, 65, 0.2) !important;
         outline: none !important;
-        background: #ffffff !important;
-        caret-color: #1e293b !important;
-        cursor: text !important;
     }
     
     .stNumberInput > div > div > input:focus {
@@ -1501,28 +1442,7 @@ st.markdown("""
          display: none !important;
      }
      
-         /* Force proper input field rendering for all columns */
-    .stTextInput,
-    [data-testid="stTextInput"] {
-        min-height: 50px !important;
-        width: 100% !important;
-    }
-    
-    /* Ensure all text inputs within forms are properly styled */
-    .stForm .stTextInput input,
-    .stForm [data-testid="stTextInput"] input {
-        display: block !important;
-        width: 100% !important;
-        min-width: 0 !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* Prevent text inputs from collapsing in narrow columns */
-    [data-testid="column"] .stTextInput,
-    [data-testid="column"] [data-testid="stTextInput"] {
-        width: 100% !important;
-        min-width: 150px !important;
-    }
+
 
     /* Comprehensive removal of all anchor/link hover elements */
     /* Target all possible heading anchor elements */
@@ -1691,7 +1611,7 @@ with left_col:
         vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
         st.markdown(f"""
         <div style="background: rgba(76, 241, 179, 0.15); padding: 1rem; border-radius: 8px; border: 2px solid #0C9964; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(76, 241, 179, 0.2);">
-            <h4 style="margin: 0; color: #0C9964; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(12, 153, 100, 0.1); font-size: 1.25rem;">{vehicle_name}</h4>
+            <div style="margin: 0; color: #0C9964; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(12, 153, 100, 0.1); font-size: 1.25rem;">{vehicle_name}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1788,20 +1708,18 @@ with left_col:
 
     # --- Main Form ---
     
-    with st.form(key="vehicle_form"):
-        # Use columns with explicit gap parameter
-        col1, col2, col3 = st.columns(3, gap="large")
-        
-        with col1:
-            year_input = st.text_input("Year", placeholder="e.g., 2013", key="year_input_main")
-        
-        with col2:
-            make_input = st.text_input("Make", placeholder="e.g., Toyota", key="make_input_main")
-        
-        with col3:
-            model_input = st.text_input("Model", placeholder="e.g., Camry", key="model_input_main")
-
-        submit_button = st.form_submit_button(label="Search Vehicle & Calculate", use_container_width=True)
+    # Alternative: No form approach with columns
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013", key="year_main")
+    with col2:
+        make_input = st.text_input("Make", placeholder="e.g., Toyota", value="Toyota", key="make_main")
+    with col3:
+        model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry", key="model_main")
+    
+    # Button outside the form
+    submit_button = st.button("Search Vehicle & Calculate", type="primary", use_container_width=True)
 
     # --- Processing and Output ---
     if submit_button:
@@ -2240,20 +2158,7 @@ with right_col:
                         st.error(f"Error during calculation: {e}")
 
 
-# --- Bottom Left Disclaimer ---
-st.markdown("""
-<div style="position: fixed; bottom: 20px; left: 20px; background: rgba(245, 158, 11, 0.15); padding: 1rem; border-radius: 8px; border-left: 4px solid #f59e0b; max-width: 320px; z-index: 1000; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
-    <p style="margin: 0 0 0.5rem 0; color: #92400e; font-size: 0.8rem; line-height: 1.4; font-weight: 600;">
-        ⚠️ Disclaimer: Information is an estimate from AI search.
-    </p>
-    <p style="margin: 0 0 0.5rem 0; color: #92400e; font-size: 0.8rem; line-height: 1.4;">
-        Double-check numbers that don't look right.
-    </p>
-    <p style="margin: 0; color: #92400e; font-size: 0.8rem; line-height: 1.4;">
-        🔧 Note: Catalytic converters calculated at 1.36 per car.
-    </p>
-</div>
-""", unsafe_allow_html=True)
+
 
 # --- Footer ---
 st.markdown("---")
