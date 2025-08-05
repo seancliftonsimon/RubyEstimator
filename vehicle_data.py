@@ -352,33 +352,18 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
     for catalog, query in query_templates.items():
         print(f"     {catalog}: {query}")
 
-    schema = {
-        "name": "set_result",
-        "description": "Sets the number of catalytic converters found",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "converter_count": {
-                    "type": "integer",
-                    "description": "The number of catalytic converters found"
-                }
-            },
-            "required": ["converter_count"]
-        }
-    }
-
     for catalog, query in query_templates.items():
         try:
             prompt = f"""
-            Analyze the search results for {year} {make} {model} catalytic converters.
+            Search the web for information about {year} {make} {model} catalytic converters, focusing on: {query}
             
-            Count UNIQUE catalytic converter positions:
+            Analyze the search results and count UNIQUE catalytic converter positions:
             1. Look for terms like: Bank 1, Bank 2, Left Bank, Right Bank, Front, Rear, Manifold
             2. For dual exhaust systems, typically there are 2 cats per bank (pre-cat near engine, main cat further down)
             3. V6/V8 engines often have 2 banks (left/right) with 2 cats each
             4. Performance/sports models often have dual exhaust with 4 total cats
             
-            Return ONLY set_result() with converter_count.
+            Based on your findings, return ONLY a number (1, 2, 3, 4, etc.) representing the total count of catalytic converters.
             - If you find clear evidence of multiple cats, sum them
             - If you see "dual exhaust" or "twin exhaust", assume at least 2 cats
             - If you see "Bank 1" and "Bank 2", assume at least 2 cats
@@ -388,29 +373,38 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
             - "Bank 1 and Bank 2 catalytic converters" = 2-4 cats
             - "Pre-catalyst and main catalyst" = 2 cats per bank
             - "Dual exhaust with 4 catalytic converters" = 4 cats
+            
+            Return ONLY the number, no other text.
             """
             print(f"\n  -> Analyzing {catalog} results...")
+            
             response = SHARED_GEMINI_MODEL.generate_content(
                 prompt,
-                tools=[schema],
-                tool_config={'function_calling_config': 'ANY'},
-                generation_config={"temperature": 0}
+                tools=[{"google_search_retrieval": {}}],
+                generation_config={"temperature": 0, "max_output_tokens": 8}
             )
 
-            # Extract and analyze the function call response
-            function_call = response.candidates[0].content.parts[0].function_call
-            if function_call.name == "set_result":
-                count = function_call.args["converter_count"]
+            # Extract the count from the response
+            response_text = response.text.strip()
+            print(f"     API response: '{response_text}'")
+            
+            # Parse the numeric response
+            count_match = re.search(r'^(-?\d+)', response_text)
+            if count_match:
+                count = int(count_match.group(1))
                 if count > 0:
                     print(f"     Found {count} catalytic converters in {catalog} data")
                     return count
                 else:
                     print(f"     No definitive converter count found in {catalog} data")
+            else:
+                print(f"     Could not parse count from response: {response_text}")
 
         except Exception as e:
             print(f"An error occurred during the {catalog} API call: {e}")
             continue
 
+    print("  -> All API calls failed, falling back to heuristic")
     return heuristic_rule(year, make, model)
 
 
