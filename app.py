@@ -1947,8 +1947,7 @@ with left_col:
                         
                         # Auto-populate and calculate the cost estimator
                         st.session_state['auto_calculate'] = True
-                        # Force a rerun to show the vehicle details immediately
-                        st.rerun()
+                        # Note: Removed st.rerun() to prevent duplicate processing
                     else:
                         st.markdown("""
                         <div class="error-message">

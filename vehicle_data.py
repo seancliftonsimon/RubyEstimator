@@ -342,17 +342,7 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
         print("Gemini model not initialized. Please check your API key.")
         return None
 
-    query_templates = {
-        "walker":  f'{year} {make} {model} catalytic converter site:walkerexhaust.com',
-        "magna":   f'{year} {make} {model} catalytic converter site:magnaflow.com',
-        "ap":      f'{year} {make} {model} catalytic converter site:apemissions.com',
-    }
-    
-    print("  -> Searching catalogs with queries:")
-    for catalog, query in query_templates.items():
-        print(f"     {catalog}: {query}")
-
-    # Try a single consolidated search instead of multiple catalogs
+    # Single consolidated search approach
     try:
         prompt = f"""
         Search the web for information about {year} {make} {model} catalytic converter count and configuration.
