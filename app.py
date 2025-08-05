@@ -2353,7 +2353,7 @@ with right_col:
                                 aluminum_rims = False
                             
                             # Perform the calculation
-                            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims)
+                            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=1) # Default to 1 for manual entry
                             totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price_float, tow_fee_float)
                         
                             # Store results in session state
