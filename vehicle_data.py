@@ -352,57 +352,52 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
     for catalog, query in query_templates.items():
         print(f"     {catalog}: {query}")
 
-    for catalog, query in query_templates.items():
-        try:
-            prompt = f"""
-            Search the web for information about {year} {make} {model} catalytic converters, focusing on: {query}
-            
-            Analyze the search results and count UNIQUE catalytic converter positions:
-            1. Look for terms like: Bank 1, Bank 2, Left Bank, Right Bank, Front, Rear, Manifold
-            2. For dual exhaust systems, typically there are 2 cats per bank (pre-cat near engine, main cat further down)
-            3. V6/V8 engines often have 2 banks (left/right) with 2 cats each
-            4. Performance/sports models often have dual exhaust with 4 total cats
-            
-            Based on your findings, return ONLY a number (1, 2, 3, 4, etc.) representing the total count of catalytic converters.
-            - If you find clear evidence of multiple cats, sum them
-            - If you see "dual exhaust" or "twin exhaust", assume at least 2 cats
-            - If you see "Bank 1" and "Bank 2", assume at least 2 cats
-            - If nothing definitive is found, return -1
-            
-            Example indicators:
-            - "Bank 1 and Bank 2 catalytic converters" = 2-4 cats
-            - "Pre-catalyst and main catalyst" = 2 cats per bank
-            - "Dual exhaust with 4 catalytic converters" = 4 cats
-            
-            Return ONLY the number, no other text.
-            """
-            print(f"\n  -> Analyzing {catalog} results...")
-            
-            response = SHARED_GEMINI_MODEL.generate_content(
-                prompt,
-                tools=[{"google_search_retrieval": {}}],
-                generation_config={"temperature": 0, "max_output_tokens": 8}
-            )
-
-            # Extract the count from the response
-            response_text = response.text.strip()
-            print(f"     API response: '{response_text}'")
-            
-            # Parse the numeric response
-            count_match = re.search(r'^(-?\d+)', response_text)
-            if count_match:
-                count = int(count_match.group(1))
-                if count > 0:
-                    print(f"     Found {count} catalytic converters in {catalog} data")
-                    return count
-                else:
-                    print(f"     No definitive converter count found in {catalog} data")
+    # Try a single consolidated search instead of multiple catalogs
+    try:
+        prompt = f"""
+        Search the web for information about {year} {make} {model} catalytic converter count and configuration.
+        Look for parts catalog information, exhaust system diagrams, and technical specifications.
+        
+        Count UNIQUE catalytic converter positions and return ONLY a number:
+        1. Look for terms like: Bank 1, Bank 2, Left Bank, Right Bank, Front, Rear, Manifold
+        2. For dual exhaust systems, typically there are 2 cats per bank (pre-cat near engine, main cat further down)
+        3. V6/V8 engines often have 2 banks (left/right) with 2 cats each
+        4. Performance/sports models often have dual exhaust with 4 total cats
+        
+        Return ONLY a number (1, 2, 3, 4, etc.) representing the total count of catalytic converters.
+        If nothing definitive is found, return -1.
+        
+        Return ONLY the number, no other text.
+        """
+        print(f"\n  -> Searching for catalytic converter count...")
+        
+        response = SHARED_GEMINI_MODEL.generate_content(
+            prompt,
+            tools=[{"google_search_retrieval": {}}],
+            generation_config={"temperature": 0, "max_output_tokens": 8}
+        )
+        
+        # Extract the count from the response
+        response_text = response.text.strip()
+        print(f"     API response: '{response_text}'")
+        
+        # Parse the numeric response
+        count_match = re.search(r'^(-?\d+)', response_text)
+        if count_match:
+            count = int(count_match.group(1))
+            if count > 0:
+                print(f"     Found {count} catalytic converters via API")
+                return count
             else:
-                print(f"     Could not parse count from response: {response_text}")
+                print(f"     No definitive converter count found via API")
+        else:
+            print(f"     Could not parse count from response: {response_text}")
 
-        except Exception as e:
-            print(f"An error occurred during the {catalog} API call: {e}")
-            continue
+    except Exception as e:
+        print(f"An error occurred during the API call: {e}")
+        print(f"Exception type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
 
     print("  -> All API calls failed, falling back to heuristic")
     return heuristic_rule(year, make, model)
