@@ -324,9 +324,9 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
         return None
 
     query_templates = {
-        "walker":  f"{year} {make} {model} catalytic converter site:walkerexhaust.com \\"Bank\\"",
-        "magna":   f"{year} {make} {model} catalytic converter site:magnaflow.com \\"Bank\\"",
-        "ap":      f"{year} {make} {model} catalytic converter site:apemissions.com \\"Bank\\"",
+        "walker":  f'{year} {make} {model} catalytic converter site:walkerexhaust.com "Bank"',
+        "magna":   f'{year} {make} {model} catalytic converter site:magnaflow.com "Bank"',
+        "ap":      f'{year} {make} {model} catalytic converter site:apemissions.com "Bank"',
     }
 
     schema = {
