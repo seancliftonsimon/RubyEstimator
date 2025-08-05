@@ -353,14 +353,18 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
         print(f"     {catalog}: {query}")
 
     schema = {
-      "type":"function",
-      "function":{
-          "name":"set_result",
-          "parameters":{
-              "converter_count":{"type":"integer"}
-          },
-          "required":["converter_count"]
-      }
+        "name": "set_result",
+        "description": "Sets the number of catalytic converters found",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "converter_count": {
+                    "type": "integer",
+                    "description": "The number of catalytic converters found"
+                }
+            },
+            "required": ["converter_count"]
+        }
     }
 
     for catalog, query in query_templates.items():
@@ -424,6 +428,23 @@ def process_vehicle(year, make, model):
     
     if vehicle_data and vehicle_data['curb_weight_lbs'] is not None:
         print(f"  -> Found in DB: {vehicle_data['curb_weight_lbs']} lbs, Cats: {vehicle_data['catalytic_converters']}")
+        
+        # If catalytic converter data is missing, get it and update the record
+        if vehicle_data['catalytic_converters'] is None:
+            print("  -> Missing catalytic converter data, querying API...")
+            catalytic_converters = get_catalytic_converter_count_from_api(year, make, model)
+            if catalytic_converters is not None:
+                print(f"  -> Found catalytic converter count via API: {catalytic_converters}")
+                # Update just the catalytic converter count in the database
+                update_vehicle_data_in_db(
+                    year, make, model,
+                    vehicle_data['curb_weight_lbs'],
+                    vehicle_data['aluminum_engine'],
+                    vehicle_data['aluminum_rims'],
+                    catalytic_converters
+                )
+                vehicle_data['catalytic_converters'] = catalytic_converters
+        
         return vehicle_data
     else:
         print("  -> Not in DB or missing data. Querying APIs...")
