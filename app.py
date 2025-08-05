@@ -1916,8 +1916,24 @@ with left_col:
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    with st.spinner(f"Searching for {year_int} {make_input} {model_input}..."):
-                        vehicle_data = process_vehicle(year_int, make_input.strip(), model_input.strip())
+                    # Create a unique identifier for this vehicle search
+                    vehicle_id = f"{year_int}_{make_input.strip()}_{model_input.strip()}"
+                    
+                    # Check if we've already processed this vehicle in this session
+                    if st.session_state.get('last_processed_vehicle') != vehicle_id:
+                        with st.spinner(f"Searching for {year_int} {make_input} {model_input}..."):
+                            vehicle_data = process_vehicle(year_int, make_input.strip(), model_input.strip())
+                        
+                        # Mark this vehicle as processed to prevent duplicate processing
+                        st.session_state['last_processed_vehicle'] = vehicle_id
+                    else:
+                        # Use the existing vehicle data from session state
+                        vehicle_data = {
+                            'curb_weight_lbs': st.session_state.get('last_curb_weight'),
+                            'aluminum_engine': st.session_state.get('last_aluminum_engine'),
+                            'aluminum_rims': st.session_state.get('last_aluminum_rims'),
+                            'catalytic_converters': st.session_state.get('last_catalytic_converters')
+                        }
                     
                     if vehicle_data and vehicle_data['curb_weight_lbs']:
                         # Display simple success message
@@ -1947,7 +1963,8 @@ with left_col:
                         
                         # Auto-populate and calculate the cost estimator
                         st.session_state['auto_calculate'] = True
-                        # Note: Removed st.rerun() to prevent duplicate processing
+                        # Refresh the page to show the updated vehicle details and cost estimate
+                        st.rerun()
                     else:
                         st.markdown("""
                         <div class="error-message">
