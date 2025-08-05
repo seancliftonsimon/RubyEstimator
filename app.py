@@ -289,13 +289,53 @@ st.markdown("""
         box-shadow: 0 4px 16px rgba(153, 12, 65, 0.08);
     }
     
+<<<<<<< HEAD
     /* Simplified input field styling - less aggressive */
     .stTextInput input {
+=======
+    /* Enhanced input field styling */
+    .stTextInput > div > div > input,
+    [data-testid="stTextInput"] > div > div > input,
+    .stTextInput input,
+    [data-testid="stTextInput"] input,
+    input[type="text"],
+    input[placeholder],
+    .stTextInput > div > div > div > input,
+    [data-testid="stTextInput"] > div > div > div > input,
+    /* Additional selectors for all possible text input variations */
+    .stTextInput > div > div > div > div > input,
+    [data-testid="stTextInput"] > div > div > div > div > input,
+    .stTextInput > div > div > div > div > div > input,
+    [data-testid="stTextInput"] > div > div > div > div > div > input,
+    /* Target any input within stTextInput containers */
+    .stTextInput input[type="text"],
+    [data-testid="stTextInput"] input[type="text"],
+    /* Universal text input styling */
+    input[type="text"],
+    input[placeholder],
+    /* Streamlit specific text input selectors */
+    [data-testid="stTextInput"] input,
+    .stTextInput input,
+    /* Force styling on all columns including third column */
+    .stColumn:nth-child(3) .stTextInput input,
+    .stColumn:nth-child(5) .stTextInput input,
+    [data-testid="column"]:nth-child(3) .stTextInput input,
+    [data-testid="column"]:nth-child(5) .stTextInput input {
+>>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
         background: #ffffff !important;
         border: 2px solid rgba(153, 12, 65, 0.25) !important;
         border-radius: 6px !important;
         padding: 0.75rem !important;
         color: #1e293b !important;
+<<<<<<< HEAD
+=======
+        box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
+        caret-color: #1e293b !important;
+        cursor: text !important;
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+>>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
     }
     
     .stNumberInput > div > div > input {
@@ -319,8 +359,35 @@ st.markdown("""
         background: #990C41 !important;
     }
     
+<<<<<<< HEAD
     /* Simplified focus styling */
     .stTextInput input:focus {
+=======
+    .stTextInput > div > div > input:focus,
+    [data-testid="stTextInput"] > div > div > input:focus,
+    .stTextInput input:focus,
+    [data-testid="stTextInput"] input:focus,
+    input[type="text"]:focus,
+    input[placeholder]:focus,
+    /* Additional focus selectors for all possible text input variations */
+    .stTextInput > div > div > div > input:focus,
+    [data-testid="stTextInput"] > div > div > div > input:focus,
+    .stTextInput > div > div > div > div > input:focus,
+    [data-testid="stTextInput"] > div > div > div > div > input:focus,
+    .stTextInput > div > div > div > div > div > input:focus,
+    [data-testid="stTextInput"] > div > div > div > div > div > input:focus,
+    /* Target any input within stTextInput containers */
+    .stTextInput input[type="text"]:focus,
+    [data-testid="stTextInput"] input[type="text"]:focus,
+    /* Streamlit specific text input focus selectors */
+    [data-testid="stTextInput"] input:focus,
+    .stTextInput input:focus,
+    /* Force focus styling on all columns including third column */
+    .stColumn:nth-child(3) .stTextInput input:focus,
+    .stColumn:nth-child(5) .stTextInput input:focus,
+    [data-testid="column"]:nth-child(3) .stTextInput input:focus,
+    [data-testid="column"]:nth-child(5) .stTextInput input:focus {
+>>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
         border-color: #990C41 !important;
         outline: none !important;
     }
@@ -1442,7 +1509,32 @@ st.markdown("""
          display: none !important;
      }
      
+<<<<<<< HEAD
 
+=======
+         /* Force proper input field rendering for all columns */
+    .stTextInput,
+    [data-testid="stTextInput"] {
+        min-height: 50px !important;
+        width: 100% !important;
+    }
+    
+    /* Ensure all text inputs within forms are properly styled */
+    .stForm .stTextInput input,
+    .stForm [data-testid="stTextInput"] input {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* Prevent text inputs from collapsing in narrow columns */
+    [data-testid="column"] .stTextInput,
+    [data-testid="column"] [data-testid="stTextInput"] {
+        width: 100% !important;
+        min-width: 150px !important;
+    }
+>>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
 
     /* Comprehensive removal of all anchor/link hover elements */
     /* Target all possible heading anchor elements */
@@ -1708,6 +1800,7 @@ with left_col:
 
     # --- Main Form ---
     
+<<<<<<< HEAD
     # Alternative: No form approach with columns
     col1, col2, col3 = st.columns(3)
     
@@ -1720,6 +1813,19 @@ with left_col:
     
     # Button outside the form
     submit_button = st.button("Search Vehicle & Calculate", type="primary", use_container_width=True)
+=======
+    with st.form(key="vehicle_form"):
+        # Add small gaps between columns to prevent rendering issues
+        col1, gap1, col2, gap2, col3 = st.columns([3, 0.2, 3, 0.2, 3])
+        with col1:
+            year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013", key="year_input_main")
+        with col2:
+            make_input = st.text_input("Make", placeholder="e.g., Toyota", value="Toyota", key="make_input_main")
+        with col3:
+            model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry", key="model_input_main")
+
+        submit_button = st.form_submit_button(label="Search Vehicle & Calculate", use_container_width=True)
+>>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
 
     # --- Processing and Output ---
     if submit_button:
