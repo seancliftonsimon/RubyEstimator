@@ -317,8 +317,10 @@ st.markdown("""
     [data-testid="stTextInput"] input,
     .stTextInput input,
     /* Force styling on all columns including third column */
+    .stColumn:nth-child(1) .stTextInput input,
     .stColumn:nth-child(3) .stTextInput input,
     .stColumn:nth-child(5) .stTextInput input,
+    [data-testid="column"]:nth-child(1) .stTextInput input,
     [data-testid="column"]:nth-child(3) .stTextInput input,
     [data-testid="column"]:nth-child(5) .stTextInput input {
 >>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
@@ -383,8 +385,10 @@ st.markdown("""
     [data-testid="stTextInput"] input:focus,
     .stTextInput input:focus,
     /* Force focus styling on all columns including third column */
+    .stColumn:nth-child(1) .stTextInput input:focus,
     .stColumn:nth-child(3) .stTextInput input:focus,
     .stColumn:nth-child(5) .stTextInput input:focus,
+    [data-testid="column"]:nth-child(1) .stTextInput input:focus,
     [data-testid="column"]:nth-child(3) .stTextInput input:focus,
     [data-testid="column"]:nth-child(5) .stTextInput input:focus {
 >>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
@@ -1526,6 +1530,22 @@ st.markdown("""
         width: 100% !important;
         min-width: 0 !important;
         box-sizing: border-box !important;
+        background: #ffffff !important;
+        border: 2px solid rgba(153, 12, 65, 0.25) !important;
+        border-radius: 6px !important;
+        padding: 0.75rem !important;
+        color: #1e293b !important;
+        box-shadow: 0 2px 4px rgba(153, 12, 65, 0.1) !important;
+        caret-color: #1e293b !important;
+        cursor: text !important;
+    }
+    
+    /* Ensure form text inputs get focus styling */
+    .stForm .stTextInput input:focus,
+    .stForm [data-testid="stTextInput"] input:focus {
+        border-color: #990C41 !important;
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(153, 12, 65, 0.3) !important;
     }
     
     /* Prevent text inputs from collapsing in narrow columns */
@@ -1801,19 +1821,6 @@ with left_col:
     # --- Main Form ---
     
 <<<<<<< HEAD
-    # Alternative: No form approach with columns
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013", key="year_main")
-    with col2:
-        make_input = st.text_input("Make", placeholder="e.g., Toyota", value="Toyota", key="make_main")
-    with col3:
-        model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry", key="model_main")
-    
-    # Button outside the form
-    submit_button = st.button("Search Vehicle & Calculate", type="primary", use_container_width=True)
-=======
     with st.form(key="vehicle_form"):
         # Add small gaps between columns to prevent rendering issues
         col1, gap1, col2, gap2, col3 = st.columns([3, 0.2, 3, 0.2, 3])
@@ -1825,7 +1832,6 @@ with left_col:
             model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry", key="model_input_main")
 
         submit_button = st.form_submit_button(label="Search Vehicle & Calculate", use_container_width=True)
->>>>>>> b46ab5674e808581d7251c6cde07354d27387cfc
 
     # --- Processing and Output ---
     if submit_button:
