@@ -17,8 +17,6 @@ import pandas as pd
 from vehicle_data import process_vehicle, get_last_ten_entries
 from auth import setup_password_protection
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
-
-"""Config loading and admin UI helpers (defined before use)."""
 from typing import Dict, Any
 import os
 
@@ -101,57 +99,72 @@ def render_admin_ui():
     cfg = get_config()
 
     with st.expander("Admin Settings", expanded=True):
+        # Hide +/- buttons on number inputs while in admin UI
+        st.markdown(
+            """
+            <style>
+            [data-testid="stNumberInput"] button { display: none !important; }
+            [data-testid="stNumberInput"] input { padding-right: 0.5rem !important; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
         with st.form("admin_settings_form"):
             st.markdown("Adjust values and click Save. These set the defaults used in estimates.")
 
-            # Prices per lb
-            st.subheader("Commodity Prices ($/lb)")
-            price_df = pd.DataFrame(
-                [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
-            ).sort_values("key").reset_index(drop=True)
-            price_df = st.data_editor(price_df, use_container_width=True, num_rows="fixed")
+            tab_prices, tab_costs, tab_weights, tab_assumptions, tab_heuristics = st.tabs(
+                ["Prices", "Costs", "Weights", "Assumptions", "Heuristics"]
+            )
 
-            # Flat costs
-            st.subheader("Flat Costs")
-            col_fc1, col_fc2, col_fc3, col_fc4 = st.columns(4)
-            purchase = col_fc1.number_input("PURCHASE ($)", value=float(cfg["flat_costs"]["PURCHASE"]))
-            tow = col_fc2.number_input("TOW ($)", value=float(cfg["flat_costs"]["TOW"]))
-            lead = col_fc3.number_input("LEAD_PER_CAR ($)", value=float(cfg["flat_costs"]["LEAD_PER_CAR"]))
-            nut = col_fc4.number_input("NUT_PER_LB ($/lb)", value=float(cfg["flat_costs"]["NUT_PER_LB"]))
+            with tab_prices:
+                st.subheader("Commodity Prices ($/lb)")
+                price_df = pd.DataFrame(
+                    [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
+                ).sort_values("key").reset_index(drop=True)
+                price_df = st.data_editor(price_df, use_container_width=True, num_rows="fixed")
 
-            # Fixed weights
-            st.subheader("Component Weights (lb per car)")
-            wf = cfg["weights_fixed"]
-            c1, c2, c3, c4 = st.columns(4)
-            rims_al = c1.number_input("Aluminum Rims Weight", value=float(wf["rims_aluminum_weight_lbs"]))
-            battery_baseline = c2.number_input("Battery Baseline", value=float(wf["battery_baseline_weight_lbs"]))
-            harness_w = c3.number_input("Wiring Harness", value=float(wf["harness_weight_lbs"]))
-            fe_rad = c4.number_input("FE Radiator", value=float(wf["fe_radiator_weight_lbs"]))
-            c5, c6, c7, c8, c9 = st.columns(5)
-            breakage_w = c5.number_input("Breakage", value=float(wf["breakage_weight_lbs"]))
-            alt_w = c6.number_input("Alternator", value=float(wf["alternator_weight_lbs"]))
-            starter_w = c7.number_input("Starter", value=float(wf["starter_weight_lbs"]))
-            ac_comp_w = c8.number_input("A/C Compressor", value=float(wf["ac_compressor_weight_lbs"]))
-            fuse_box_w = c9.number_input("Fuse Box", value=float(wf["fuse_box_weight_lbs"]))
+            with tab_costs:
+                st.subheader("Flat Costs")
+                col_fc1, col_fc2, col_fc3, col_fc4 = st.columns(4)
+                purchase = col_fc1.number_input("PURCHASE ($)", value=float(cfg["flat_costs"]["PURCHASE"]))
+                tow = col_fc2.number_input("TOW ($)", value=float(cfg["flat_costs"]["TOW"]))
+                lead = col_fc3.number_input("LEAD_PER_CAR ($)", value=float(cfg["flat_costs"]["LEAD_PER_CAR"]))
+                nut = col_fc4.number_input("NUT_PER_LB ($/lb)", value=float(cfg["flat_costs"]["NUT_PER_LB"]))
 
-            # Assumptions
-            st.subheader("Assumptions / Factors")
-            a = cfg["assumptions"]
-            a1, a2, a3, a4 = st.columns(4)
-            engine_pct = a1.number_input("Engine % of curb (0-1)", value=float(a["engine_weight_percent_of_curb"]))
-            battery_recov = a2.number_input("Battery Recovery (0-1)", value=float(a["battery_recovery_factor"]))
-            cats_avg = a3.number_input("Default Cats per Car", value=float(a["cats_per_car_default_average"]))
-            unknown_split = a4.number_input("Unknown Engine Al Split (0-1)", value=float(a["unknown_engine_split_aluminum_percent"]))
+            with tab_weights:
+                st.subheader("Component Weights (lb per car)")
+                wf = cfg["weights_fixed"]
+                c1, c2, c3, c4 = st.columns(4)
+                rims_al = c1.number_input("Aluminum Rims Weight", value=float(wf["rims_aluminum_weight_lbs"]))
+                battery_baseline = c2.number_input("Battery Baseline", value=float(wf["battery_baseline_weight_lbs"]))
+                harness_w = c3.number_input("Wiring Harness", value=float(wf["harness_weight_lbs"]))
+                fe_rad = c4.number_input("FE Radiator", value=float(wf["fe_radiator_weight_lbs"]))
+                c5, c6, c7, c8, c9 = st.columns(5)
+                breakage_w = c5.number_input("Breakage", value=float(wf["breakage_weight_lbs"]))
+                alt_w = c6.number_input("Alternator", value=float(wf["alternator_weight_lbs"]))
+                starter_w = c7.number_input("Starter", value=float(wf["starter_weight_lbs"]))
+                ac_comp_w = c8.number_input("A/C Compressor", value=float(wf["ac_compressor_weight_lbs"]))
+                fuse_box_w = c9.number_input("Fuse Box", value=float(wf["fuse_box_weight_lbs"]))
 
-            # Heuristics (optional)
-            st.subheader("Heuristics (optional)")
-            h = cfg["heuristics"]
-            perf_txt = "\n".join(h.get("performance_indicators", []))
-            v8_txt = "\n".join(h.get("v8_keywords", []))
-            h1, h2, h3 = st.columns([2,2,1])
-            perf_txt = h1.text_area("Performance Indicators (one per line)", value=perf_txt)
-            v8_txt = h2.text_area("V8 Keywords (one per line)", value=v8_txt)
-            cats_fallback = h3.number_input("Fallback Cats", value=int(h.get("fallback_cats_default_if_no_match", 1)))
+            with tab_assumptions:
+                st.subheader("Assumptions / Factors")
+                a = cfg["assumptions"]
+                a1, a2, a3, a4 = st.columns(4)
+                engine_pct = a1.number_input("Engine % of curb (0-1)", value=float(a["engine_weight_percent_of_curb"]))
+                battery_recov = a2.number_input("Battery Recovery (0-1)", value=float(a["battery_recovery_factor"]))
+                cats_avg = a3.number_input("Default Cats per Car", value=float(a["cats_per_car_default_average"]))
+                unknown_split = a4.number_input("Unknown Engine Al Split (0-1)", value=float(a["unknown_engine_split_aluminum_percent"]))
+
+            with tab_heuristics:
+                st.subheader("Heuristics (optional)")
+                h = cfg["heuristics"]
+                perf_txt = "\n".join(h.get("performance_indicators", []))
+                v8_txt = "\n".join(h.get("v8_keywords", []))
+                h1, h2, h3 = st.columns([2, 2, 1])
+                perf_txt = h1.text_area("Performance Indicators (one per line)", value=perf_txt)
+                v8_txt = h2.text_area("V8 Keywords (one per line)", value=v8_txt)
+                cats_fallback = h3.number_input("Fallback Cats", value=int(h.get("fallback_cats_default_if_no_match", 1)))
 
             save = st.form_submit_button("Save Settings")
             if save:
@@ -1975,14 +1988,12 @@ st.markdown("""
 # Main title with minimal padding
 st.markdown('<div class="main-title">🚗 Ruby GEM</div>', unsafe_allow_html=True)
 
-# Minimal Admin button
+# Admin toggle (small control in sidebar)
 if 'admin_mode' not in st.session_state:
     st.session_state['admin_mode'] = False
 
-admin_cols = st.columns([6, 1])
-with admin_cols[1]:
-    if st.button("Admin Settings", use_container_width=True, key="admin_toggle_btn"):
-        st.session_state['admin_mode'] = not st.session_state['admin_mode']
+with st.sidebar:
+    st.checkbox("Admin Mode", key="admin_mode")
 
 if st.session_state['admin_mode']:
     render_admin_ui()
