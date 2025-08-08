@@ -2,10 +2,14 @@ import streamlit as st
 import pandas as pd
 from vehicle_data import process_vehicle, get_last_ten_entries
 from auth import setup_password_protection
-from database_config import test_database_connection, get_database_info
+from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
 
-# --- Cost Estimator Constants ---
-PRICE_PER_LB = {
+"""Config loading and admin UI helpers (defined before use)."""
+from typing import Dict, Any
+import os
+
+# Default configuration values (used when DB has no overrides)
+DEFAULT_PRICE_PER_LB: Dict[str, float] = {
     "ELV": 0.118,
     "AL_ENGINE": 0.3525,
     "FE_ENGINE": 0.2325,
@@ -19,25 +23,193 @@ PRICE_PER_LB = {
     "BATTERY": 0.36,
     "AL_RIMS": 1.24,
     "CATS": 92.25,
-    "TIRES": 4.5,     # special handling
+    "TIRES": 4.5,
     "ECM": 1.32,
 }
 
-FLAT_COSTS = {
-    "PURCHASE": 475,
-    "TOW": 90,
+DEFAULT_FLAT_COSTS: Dict[str, float] = {
+    "PURCHASE": 475.0,
+    "TOW": 90.0,
     "LEAD_PER_CAR": 107.5,
     "NUT_PER_LB": 0.015,
 }
 
-# Engine weight as percentage of curb weight (editable config)
-ENGINE_WEIGHT_PERCENT = 0.139
+DEFAULT_WEIGHTS_FIXED: Dict[str, float] = {
+    "rims_aluminum_weight_lbs": 40.0,
+    "battery_baseline_weight_lbs": 35.0,
+    "harness_weight_lbs": 23.0,
+    "fe_radiator_weight_lbs": 20.5,
+    "breakage_weight_lbs": 5.0,
+    "alternator_weight_lbs": 12.0,
+    "starter_weight_lbs": 5.5,
+    "ac_compressor_weight_lbs": 13.5,
+    "fuse_box_weight_lbs": 3.5,
+}
 
-# Battery recovery factor
-BATTERY_RECOVERY_FACTOR = 0.8
+DEFAULT_ASSUMPTIONS: Dict[str, float] = {
+    "engine_weight_percent_of_curb": 0.139,
+    "battery_recovery_factor": 0.8,
+    "cats_per_car_default_average": 1.36,
+    "unknown_engine_split_aluminum_percent": 0.5,
+}
 
-# Catalytic converters per car
-CATS_PER_CAR = 1.36
+DEFAULT_HEURISTICS: Dict[str, Any] = {
+    "performance_indicators": ["gt", "rs", "ss", "amg", "type r", "m3", "m4", "m5", "v8"],
+    "v8_keywords": ["v8", "5.0", "6.2"],
+    "fallback_cats_default_if_no_match": 1,
+}
+
+def _merge_dicts(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(base)
+    for k, v in (override or {}).items():
+        # Shallow merge is sufficient for flat dicts
+        merged[k] = v
+    return merged
+
+@st.cache_data(show_spinner=False)
+def load_db_config() -> Dict[str, Any]:
+    return get_app_config() or {}
+
+def get_config() -> Dict[str, Any]:
+    db_cfg = load_db_config()
+    return {
+        "price_per_lb": _merge_dicts(DEFAULT_PRICE_PER_LB, db_cfg.get("price_per_lb", {})),
+        "flat_costs": _merge_dicts(DEFAULT_FLAT_COSTS, db_cfg.get("flat_costs", {})),
+        "weights_fixed": _merge_dicts(DEFAULT_WEIGHTS_FIXED, db_cfg.get("weights_fixed", {})),
+        "assumptions": _merge_dicts(DEFAULT_ASSUMPTIONS, db_cfg.get("assumptions", {})),
+        "heuristics": _merge_dicts(DEFAULT_HEURISTICS, db_cfg.get("heuristics", {})),
+    }
+
+def refresh_config_cache():
+    load_db_config.clear()
+
+def render_admin_ui():
+    cfg = get_config()
+
+    with st.expander("Admin Settings", expanded=True):
+        with st.form("admin_settings_form"):
+            st.markdown("Adjust values and click Save. These set the defaults used in estimates.")
+
+            # Prices per lb
+            st.subheader("Commodity Prices ($/lb)")
+            price_df = pd.DataFrame(
+                [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
+            ).sort_values("key").reset_index(drop=True)
+            price_df = st.data_editor(price_df, use_container_width=True, num_rows="fixed")
+
+            # Flat costs
+            st.subheader("Flat Costs")
+            col_fc1, col_fc2, col_fc3, col_fc4 = st.columns(4)
+            purchase = col_fc1.number_input("PURCHASE ($)", value=float(cfg["flat_costs"]["PURCHASE"]))
+            tow = col_fc2.number_input("TOW ($)", value=float(cfg["flat_costs"]["TOW"]))
+            lead = col_fc3.number_input("LEAD_PER_CAR ($)", value=float(cfg["flat_costs"]["LEAD_PER_CAR"]))
+            nut = col_fc4.number_input("NUT_PER_LB ($/lb)", value=float(cfg["flat_costs"]["NUT_PER_LB"]))
+
+            # Fixed weights
+            st.subheader("Component Weights (lb per car)")
+            wf = cfg["weights_fixed"]
+            c1, c2, c3, c4 = st.columns(4)
+            rims_al = c1.number_input("Aluminum Rims Weight", value=float(wf["rims_aluminum_weight_lbs"]))
+            battery_baseline = c2.number_input("Battery Baseline", value=float(wf["battery_baseline_weight_lbs"]))
+            harness_w = c3.number_input("Wiring Harness", value=float(wf["harness_weight_lbs"]))
+            fe_rad = c4.number_input("FE Radiator", value=float(wf["fe_radiator_weight_lbs"]))
+            c5, c6, c7, c8, c9 = st.columns(5)
+            breakage_w = c5.number_input("Breakage", value=float(wf["breakage_weight_lbs"]))
+            alt_w = c6.number_input("Alternator", value=float(wf["alternator_weight_lbs"]))
+            starter_w = c7.number_input("Starter", value=float(wf["starter_weight_lbs"]))
+            ac_comp_w = c8.number_input("A/C Compressor", value=float(wf["ac_compressor_weight_lbs"]))
+            fuse_box_w = c9.number_input("Fuse Box", value=float(wf["fuse_box_weight_lbs"]))
+
+            # Assumptions
+            st.subheader("Assumptions / Factors")
+            a = cfg["assumptions"]
+            a1, a2, a3, a4 = st.columns(4)
+            engine_pct = a1.number_input("Engine % of curb (0-1)", value=float(a["engine_weight_percent_of_curb"]))
+            battery_recov = a2.number_input("Battery Recovery (0-1)", value=float(a["battery_recovery_factor"]))
+            cats_avg = a3.number_input("Default Cats per Car", value=float(a["cats_per_car_default_average"]))
+            unknown_split = a4.number_input("Unknown Engine Al Split (0-1)", value=float(a["unknown_engine_split_aluminum_percent"]))
+
+            # Heuristics (optional)
+            st.subheader("Heuristics (optional)")
+            h = cfg["heuristics"]
+            perf_txt = "\n".join(h.get("performance_indicators", []))
+            v8_txt = "\n".join(h.get("v8_keywords", []))
+            h1, h2, h3 = st.columns([2,2,1])
+            perf_txt = h1.text_area("Performance Indicators (one per line)", value=perf_txt)
+            v8_txt = h2.text_area("V8 Keywords (one per line)", value=v8_txt)
+            cats_fallback = h3.number_input("Fallback Cats", value=int(h.get("fallback_cats_default_if_no_match", 1)))
+
+            save = st.form_submit_button("Save Settings")
+            if save:
+                # Gather updates
+                new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
+                new_flat = {
+                    "PURCHASE": float(purchase),
+                    "TOW": float(tow),
+                    "LEAD_PER_CAR": float(lead),
+                    "NUT_PER_LB": float(nut),
+                }
+                new_weights = {
+                    "rims_aluminum_weight_lbs": float(rims_al),
+                    "battery_baseline_weight_lbs": float(battery_baseline),
+                    "harness_weight_lbs": float(harness_w),
+                    "fe_radiator_weight_lbs": float(fe_rad),
+                    "breakage_weight_lbs": float(breakage_w),
+                    "alternator_weight_lbs": float(alt_w),
+                    "starter_weight_lbs": float(starter_w),
+                    "ac_compressor_weight_lbs": float(ac_comp_w),
+                    "fuse_box_weight_lbs": float(fuse_box_w),
+                }
+                new_assumptions = {
+                    "engine_weight_percent_of_curb": float(engine_pct),
+                    "battery_recovery_factor": float(battery_recov),
+                    "cats_per_car_default_average": float(cats_avg),
+                    "unknown_engine_split_aluminum_percent": float(unknown_split),
+                }
+                new_heuristics = {
+                    "performance_indicators": [s.strip() for s in perf_txt.splitlines() if s.strip()],
+                    "v8_keywords": [s.strip() for s in v8_txt.splitlines() if s.strip()],
+                    "fallback_cats_default_if_no_match": int(cats_fallback),
+                }
+
+                # Persist
+                updated_by = os.getenv("USER") or os.getenv("USERNAME") or "admin"
+                ok = True
+                ok &= upsert_app_config("price_per_lb", new_prices, "$/lb commodity prices", updated_by)
+                ok &= upsert_app_config("flat_costs", new_flat, "Flat costs", updated_by)
+                ok &= upsert_app_config("weights_fixed", new_weights, "Fixed component weights", updated_by)
+                ok &= upsert_app_config("assumptions", new_assumptions, "Estimator assumptions", updated_by)
+                ok &= upsert_app_config("heuristics", new_heuristics, "Cat count heuristics", updated_by)
+
+                if ok:
+                    refresh_config_cache()
+                    st.success("Settings saved. Reloading…")
+                    st.rerun()
+                else:
+                    st.error("Failed to save one or more groups.")
+
+# Load current config (fallback to defaults)
+CONFIG = get_config()
+
+# Make module-level variables for existing functions to use
+PRICE_PER_LB = CONFIG["price_per_lb"]
+FLAT_COSTS = CONFIG["flat_costs"]
+
+ENGINE_WEIGHT_PERCENT = float(CONFIG["assumptions"]["engine_weight_percent_of_curb"])  # fraction
+BATTERY_RECOVERY_FACTOR = float(CONFIG["assumptions"]["battery_recovery_factor"])      # fraction
+CATS_PER_CAR = float(CONFIG["assumptions"]["cats_per_car_default_average"])            # count avg
+UNKNOWN_ENGINE_SPLIT_AL_PCT = float(CONFIG["assumptions"]["unknown_engine_split_aluminum_percent"])  # fraction
+
+WEIGHTS = CONFIG["weights_fixed"]
+RIMS_AL_WEIGHT_LBS = float(WEIGHTS["rims_aluminum_weight_lbs"]) 
+BATTERY_BASELINE_WEIGHT_LBS = float(WEIGHTS["battery_baseline_weight_lbs"]) 
+HARNESS_WEIGHT_LBS = float(WEIGHTS["harness_weight_lbs"]) 
+FE_RADIATOR_WEIGHT_LBS = float(WEIGHTS["fe_radiator_weight_lbs"]) 
+BREAKAGE_WEIGHT_LBS = float(WEIGHTS["breakage_weight_lbs"]) 
+ALTERNATOR_WEIGHT_LBS = float(WEIGHTS["alternator_weight_lbs"]) 
+STARTER_WEIGHT_LBS = float(WEIGHTS["starter_weight_lbs"]) 
+AC_COMPRESSOR_WEIGHT_LBS = float(WEIGHTS["ac_compressor_weight_lbs"]) 
+FUSE_BOX_WEIGHT_LBS = float(WEIGHTS["fuse_box_weight_lbs"]) 
 
 # --- Cost Estimator Functions ---
 def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=None, catalytic_converters=None):
@@ -60,32 +232,31 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
             {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(total_engine_weight), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0, "is_engine": True},
         ]
     else:
-        # Unknown engine type - split actual engine weight 50/50
-        half_engine_weight = total_engine_weight / 2
+        # Unknown engine type - split per configured percentage
+        aluminum_share = UNKNOWN_ENGINE_SPLIT_AL_PCT
+        iron_share = max(0.0, 1.0 - aluminum_share)
         engine_commodities = [
-            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": w(half_engine_weight), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0, "is_engine": True},
-            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(half_engine_weight), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0, "is_engine": True},
+            {"key": "AL_ENGINE", "label": "Aluminum Engine Block", "weight": w(total_engine_weight * aluminum_share), "unit_price": PRICE_PER_LB["AL_ENGINE"], "sale_value": 0, "is_engine": True},
+            {"key": "FE_ENGINE", "label": "Iron Engine Block", "weight": w(total_engine_weight * iron_share), "unit_price": PRICE_PER_LB["FE_ENGINE"], "sale_value": 0, "is_engine": True},
         ]
     
     # Determine rims type based on aluminum_rims parameter
     if aluminum_rims is True:
-        # Aluminum rims - 40 lbs per car
-        rims_weight = w(40)
+        rims_weight = w(RIMS_AL_WEIGHT_LBS)
     else:
-        # Steel/Other rims - no aluminum rims value
         rims_weight = 0
     
     # Calculate battery weight with recovery factor
-    battery_weight = 35 * BATTERY_RECOVERY_FACTOR  # 35 lbs * 0.8 = 28 lbs
+    battery_weight = BATTERY_BASELINE_WEIGHT_LBS * BATTERY_RECOVERY_FACTOR
     
     list_commodities = engine_commodities + [
-        {"key": "HARNESS", "label": "Wiring Harness", "weight": w(23), "unit_price": PRICE_PER_LB["HARNESS"], "sale_value": 0},
-        {"key": "FE_RAD", "label": "FE Radiator", "weight": w(20.5), "unit_price": PRICE_PER_LB["FE_RAD"], "sale_value": 0},
-        {"key": "BREAKAGE", "label": "Breakage", "weight": w(5), "unit_price": PRICE_PER_LB["BREAKAGE"], "sale_value": 0},
-        {"key": "ALT", "label": "Alternator", "weight": w(12), "unit_price": PRICE_PER_LB["ALT"], "sale_value": 0},
-        {"key": "STARTER", "label": "Starter", "weight": w(5.5), "unit_price": PRICE_PER_LB["STARTER"], "sale_value": 0},
-        {"key": "AC_COMP", "label": "A/C Compressor", "weight": w(13.5), "unit_price": PRICE_PER_LB["AC_COMP"], "sale_value": 0},
-        {"key": "FUSE_BOX", "label": "Fuse Box", "weight": w(3.5), "unit_price": PRICE_PER_LB["FUSE_BOX"], "sale_value": 0},
+        {"key": "HARNESS", "label": "Wiring Harness", "weight": w(HARNESS_WEIGHT_LBS), "unit_price": PRICE_PER_LB["HARNESS"], "sale_value": 0},
+        {"key": "FE_RAD", "label": "FE Radiator", "weight": w(FE_RADIATOR_WEIGHT_LBS), "unit_price": PRICE_PER_LB["FE_RAD"], "sale_value": 0},
+        {"key": "BREAKAGE", "label": "Breakage", "weight": w(BREAKAGE_WEIGHT_LBS), "unit_price": PRICE_PER_LB["BREAKAGE"], "sale_value": 0},
+        {"key": "ALT", "label": "Alternator", "weight": w(ALTERNATOR_WEIGHT_LBS), "unit_price": PRICE_PER_LB["ALT"], "sale_value": 0},
+        {"key": "STARTER", "label": "Starter", "weight": w(STARTER_WEIGHT_LBS), "unit_price": PRICE_PER_LB["STARTER"], "sale_value": 0},
+        {"key": "AC_COMP", "label": "A/C Compressor", "weight": w(AC_COMPRESSOR_WEIGHT_LBS), "unit_price": PRICE_PER_LB["AC_COMP"], "sale_value": 0},
+        {"key": "FUSE_BOX", "label": "Fuse Box", "weight": w(FUSE_BOX_WEIGHT_LBS), "unit_price": PRICE_PER_LB["FUSE_BOX"], "sale_value": 0},
         {"key": "BATTERY", "label": "Battery", "weight": w(battery_weight), "unit_price": PRICE_PER_LB["BATTERY"], "sale_value": 0},
         {"key": "AL_RIMS", "label": "Aluminum Rims", "weight": rims_weight, "unit_price": PRICE_PER_LB["AL_RIMS"], "sale_value": 0},
     ]
@@ -95,8 +266,11 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
     total_engine_weight_per_car = sum(commodity["weight"] for commodity in engine_commodities) / cars if cars > 0 else 0
     
     # Sum of all fixed component weights per car
-    fixed_components_per_car = (23 + 20.5 + 5 + 12 + 5.5 + 13.5 + 3.5 + battery_weight + 
-                              (40 if aluminum_rims is True else 0))
+    fixed_components_per_car = (
+        HARNESS_WEIGHT_LBS + FE_RADIATOR_WEIGHT_LBS + BREAKAGE_WEIGHT_LBS +
+        ALTERNATOR_WEIGHT_LBS + STARTER_WEIGHT_LBS + AC_COMPRESSOR_WEIGHT_LBS +
+        FUSE_BOX_WEIGHT_LBS + battery_weight + (RIMS_AL_WEIGHT_LBS if aluminum_rims is True else 0)
+    )
     
     # ELV weight per car, then multiply by number of cars
     elv_per_car = curb_weight - total_engine_weight_per_car - fixed_components_per_car
@@ -1800,6 +1974,18 @@ st.markdown("""
 # Main title with minimal padding
 st.markdown('<div class="main-title">🚗 Ruby GEM</div>', unsafe_allow_html=True)
 
+# Minimal Admin button
+if 'admin_mode' not in st.session_state:
+    st.session_state['admin_mode'] = False
+
+admin_cols = st.columns([6, 1])
+with admin_cols[1]:
+    if st.button("Admin Settings", use_container_width=True, key="admin_toggle_btn"):
+        st.session_state['admin_mode'] = not st.session_state['admin_mode']
+
+if st.session_state['admin_mode']:
+    render_admin_ui()
+
 # Create two columns for the main layout with better spacing
 left_col, spacer, right_col = st.columns([1, 0.2, 1])
 
@@ -2266,11 +2452,15 @@ with right_col:
                 # Check if there are engine commodities and add a small note below the chart
                 engine_commodities = [item for item in weight_based if item.get('is_engine')]
                 if engine_commodities:
-                    st.markdown("""
+                    info_text = (
+                        f"Engine weight estimated at {ENGINE_WEIGHT_PERCENT*100:.1f}% of curb weight based on typical engine weights. "
+                        f"For unknown engine materials, weight is split {UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Al / {100-UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Fe."
+                    )
+                    st.markdown(f"""
                     <div style="margin-top: 0.5rem; text-align: right;">
                         <span style="color: #6b7280; font-size: 0.875rem;">
                             <span class="info-icon-container">
-                                <span class="info-icon" title="Engine weight estimated at 13.9% of curb weight based on typical engine weights: 4-cylinder (300-400 lbs), V6 (400-500 lbs), V8 (500-700 lbs). For unknown engine materials, weight is split 50/50 between aluminum and iron.">ⓘ</span>
+                                <span class="info-icon" title="{info_text}">ⓘ</span>
                             </span>
                         </span>
                     </div>
