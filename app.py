@@ -1025,6 +1025,38 @@ st.markdown("""
         background: #ffffff !important;
     }
     
+    /* Sidebar styling - enforce light palette and readability */
+    [data-testid="stSidebar"] {
+        background: #ffffff !important;
+        color: #1e293b !important;
+        border-right: 1px solid rgba(153, 12, 65, 0.18) !important;
+    }
+    [data-testid="stSidebar"] * {
+        color: #1e293b !important;
+    }
+    [data-testid="stSidebar"] .stCheckbox label,
+    [data-testid="stSidebar"] label {
+        color: #475569 !important;
+        font-weight: 600 !important;
+    }
+    /* Inputs in sidebar should remain light */
+    [data-testid="stSidebar"] .stNumberInput > div > div > input,
+    [data-testid="stSidebar"] .stTextInput input,
+    [data-testid="stSidebar"] [data-testid="stTextInput"] input,
+    [data-testid="stSidebar"] .stSelectbox > div > div > div {
+        background: #ffffff !important;
+        color: #1e293b !important;
+        border: 2px solid rgba(153, 12, 65, 0.25) !important;
+        border-radius: 6px !important;
+        box-shadow: 0 2px 4px rgba(153, 12, 65, 0.08) !important;
+    }
+    [data-testid="stSidebar"] .stNumberInput > div > div > div > button,
+    [data-testid="stSidebar"] .stSelectbox > div > div > div > div {
+        background: #ffffff !important;
+        color: #1e293b !important;
+        border-color: rgba(153, 12, 65, 0.25) !important;
+    }
+    
     /* Add subtle spacing to form elements */
     .stForm > div {
         margin-bottom: 0.5rem;
