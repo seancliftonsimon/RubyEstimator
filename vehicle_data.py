@@ -475,22 +475,11 @@ def process_vehicle(year, make, model):
     
     if vehicle_data and vehicle_data['curb_weight_lbs'] is not None and vehicle_data['curb_weight_lbs'] > 0:
         print(f"  -> Found in DB: {vehicle_data['curb_weight_lbs']} lbs, Cats: {vehicle_data['catalytic_converters']}")
-        
-        # If catalytic converter data is missing, get it and update the record
-        if vehicle_data['catalytic_converters'] is None:
-            print("  -> Missing catalytic converter data, querying API...")
-            catalytic_converters = get_catalytic_converter_count_from_api(year, make, model)
-            if catalytic_converters is not None:
-                print(f"  -> Found catalytic converter count via API: {catalytic_converters}")
-                # Update just the catalytic converter count in the database
-                update_vehicle_data_in_db(
-                    year, make, model,
-                    vehicle_data['curb_weight_lbs'],
-                    vehicle_data['aluminum_engine'],
-                    vehicle_data['aluminum_rims'],
-                    catalytic_converters
-                )
-                vehicle_data['catalytic_converters'] = catalytic_converters
+
+        # NOTE: Catalytic converter count estimation is temporarily disabled.
+        # TODO: Revisit approach for more accuracy (e.g., OEM diagrams, VIN decoding, engine/bank heuristics).
+        # Leaving DB value as-is if present; otherwise calculations will use the default average in app (CATS_PER_CAR).
+        # (Previously: would query API and update DB when missing.)
         
         return vehicle_data
     else:
@@ -533,14 +522,13 @@ def process_vehicle(year, make, model):
         if aluminum_rims is not None:
             print(f"  -> Found aluminum rims info via API: {aluminum_rims}")
 
-        # Get catalytic converter count
-        catalytic_converters = get_catalytic_converter_count_from_api(year, make, model)
-        if catalytic_converters is not None:
-            print(f"  -> Found catalytic converter count via API: {catalytic_converters}")
-        
-        # Update database with all data
+        # NOTE: Catalytic converter count estimation is temporarily disabled.
+        # TODO: Revisit approach for more accuracy (see note above). Use default average in calculations.
+        catalytic_converters = None
+
+        # Update database with all data (store None for catalytic_converters for now)
         update_vehicle_data_in_db(year, make, model, weight, aluminum_engine, aluminum_rims, catalytic_converters)
-        
+
         return {
             'curb_weight_lbs': weight,
             'aluminum_engine': aluminum_engine,

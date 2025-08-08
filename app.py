@@ -2060,6 +2060,7 @@ with right_col:
             elif last_aluminum_rims is False or last_aluminum_rims == 0:
                 aluminum_rims = False
             
+            # Use stored count if available; otherwise rely on default average (CATS_PER_CAR) in compute_commodities
             catalytic_converters = st.session_state.get('last_catalytic_converters')
 
             # Get stored purchase price and tow fee, or use defaults
@@ -2067,8 +2068,8 @@ with right_col:
             purchase_price = stored_results.get('purchase_price', FLAT_COSTS["PURCHASE"])
             tow_fee = stored_results.get('tow_fee', FLAT_COSTS["TOW"])
             
-            # Perform the calculation
-            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters)
+            # Perform the calculation (always use default average cats)
+            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=None)
             totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price, tow_fee)
             
             # Store results in session state
@@ -2107,14 +2108,15 @@ with right_col:
                     elif last_aluminum_rims is False or last_aluminum_rims == 0:
                         aluminum_rims = False
                     
+                    # Use stored count if available; otherwise rely on default average (CATS_PER_CAR)
                     catalytic_converters = st.session_state.get('last_catalytic_converters')
 
                     # Use default purchase price and tow fee for initial calculation
                     purchase_price = FLAT_COSTS["PURCHASE"]
                     tow_fee = FLAT_COSTS["TOW"]
                     
-                    # Perform the calculation
-                    commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters)
+                    # Perform the calculation (always use default average cats)
+                    commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=None)
                     totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price, tow_fee)
                     
                     # Store results in session state
@@ -2232,7 +2234,7 @@ with right_col:
                                 commodities = compute_commodities(results['cars'], results['curb_weight'],
                                                                 st.session_state.get('last_aluminum_engine'),
                                                                 st.session_state.get('last_aluminum_rims'),
-                                                                st.session_state.get('last_catalytic_converters'))
+                                                                catalytic_converters=None)
                                 totals = calculate_totals(commodities, results['cars'], results['curb_weight'],
                                                         purchase_price_float, tow_fee_float)
                                 st.session_state['calculation_results'] = {
@@ -2366,8 +2368,8 @@ with right_col:
                             elif rims_type == "Steel":
                                 aluminum_rims = False
                             
-                            # Perform the calculation
-                            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=1) # Default to 1 for manual entry
+                            # Perform the calculation (use default average cats when not provided)
+                            commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=None)
                             totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price_float, tow_fee_float)
                         
                             # Store results in session state
@@ -2384,7 +2386,8 @@ with right_col:
                             st.session_state['last_curb_weight'] = curb_weight_int
                             st.session_state['last_aluminum_engine'] = aluminum_engine
                             st.session_state['last_aluminum_rims'] = aluminum_rims
-                            st.session_state['last_catalytic_converters'] = 1 # Default for manual entry
+                            # Leave converter count unset so default average is used in calculations
+                            st.session_state['last_catalytic_converters'] = None
                             st.session_state['last_vehicle_info'] = f"Manual Entry ({curb_weight_int} lbs)"
                             
                             # Create detailed vehicle info for display
@@ -2395,7 +2398,7 @@ with right_col:
                                 'weight': curb_weight_int,
                                 'aluminum_engine': aluminum_engine,
                                 'aluminum_rims': aluminum_rims,
-                                'catalytic_converters': 1
+                                'catalytic_converters': None
                             }
                             
                             st.success("Manual estimate calculated!")
