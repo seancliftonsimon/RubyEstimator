@@ -8,6 +8,19 @@ from database_config import test_database_connection, get_database_info, get_app
 from typing import Dict, Any
 import os
 
+# Configure page with light mode styling (must be first Streamlit command)
+st.set_page_config(
+    page_title="Ruby GEM - Vehicle Weight & Cost Calculator",
+    page_icon="🚗",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': "Ruby GEM - Vehicle Weight & Cost Calculator"
+    }
+)
+
 # Default configuration values (used when DB has no overrides)
 DEFAULT_PRICE_PER_LB: Dict[str, float] = {
     "ELV": 0.118,
@@ -339,19 +352,6 @@ def format_currency(amount):
     return f"${round(amount, 2):,.2f}"
 
 # --- Streamlit App ---
-
-# Configure page with light mode styling
-st.set_page_config(
-    page_title="Ruby GEM - Vehicle Weight & Cost Calculator",
-    page_icon="🚗",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-    menu_items={
-        'Get Help': None,
-        'Report a bug': None,
-        'About': "Ruby GEM - Vehicle Weight & Cost Calculator"
-    }
-)
 
 # Check password protection
 if not setup_password_protection():
