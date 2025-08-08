@@ -1,12 +1,4 @@
 import streamlit as st
-import pandas as pd
-from vehicle_data import process_vehicle, get_last_ten_entries
-from auth import setup_password_protection
-from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
-
-"""Config loading and admin UI helpers (defined before use)."""
-from typing import Dict, Any
-import os
 
 # Configure page with light mode styling (must be first Streamlit command)
 st.set_page_config(
@@ -20,6 +12,15 @@ st.set_page_config(
         'About': "Ruby GEM - Vehicle Weight & Cost Calculator"
     }
 )
+
+import pandas as pd
+from vehicle_data import process_vehicle, get_last_ten_entries
+from auth import setup_password_protection
+from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
+
+"""Config loading and admin UI helpers (defined before use)."""
+from typing import Dict, Any
+import os
 
 # Default configuration values (used when DB has no overrides)
 DEFAULT_PRICE_PER_LB: Dict[str, float] = {
