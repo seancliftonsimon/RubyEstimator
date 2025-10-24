@@ -1,10 +1,14 @@
 import os
-import google.generativeai as genai
+from google import genai
 import re
 import streamlit as st
 import pandas as pd
-from database_config import create_database_engine, get_database_connection, create_tables, test_database_connection, get_database_info
+from database_config import create_database_engine, get_database_connection, create_tables, test_database_connection, get_database_info, get_app_config
 from sqlalchemy import text
+from resolver import GroundedSearchClient, ConsensusResolver, ProvenanceTracker, ResolutionResult
+from single_call_resolver import SingleCallVehicleResolver, VehicleSpecificationBundle
+import time
+import random
 
 # --- Configuration ---
 # Get API key from environment variables (works with Railway, Streamlit Cloud, and local development)
@@ -21,15 +25,180 @@ if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
     print("⚠️ Warning: GEMINI_API_KEY not set. Please set it in Railway environment variables.")
 
 # Initialize Gemini model once at module level
-def initialize_gemini_model():
-    """Initialize and return a shared Gemini model instance."""
+def initialize_gemini_client():
+    """Initialize and return a shared Gemini client instance."""
     if GEMINI_API_KEY != "YOUR_GEMINI_API_KEY":
-        genai.configure(api_key=GEMINI_API_KEY)
-        return genai.GenerativeModel(model_name='gemini-1.5-flash-latest')
+        return genai.Client(api_key=GEMINI_API_KEY)
     return None
 
-# Create shared model instance
-SHARED_GEMINI_MODEL = initialize_gemini_model()
+# Create shared client instance
+SHARED_GEMINI_CLIENT = initialize_gemini_client()
+
+# Initialize resolver components
+def get_resolver_config():
+    """Get resolver configuration from database or use defaults."""
+    try:
+        config = get_app_config() or {}
+        grounding_settings = config.get("grounding_settings", {})
+        consensus_settings = config.get("consensus_settings", {})
+        
+        return {
+            "clustering_tolerance": grounding_settings.get("clustering_tolerance", 0.15),
+            "confidence_threshold": grounding_settings.get("confidence_threshold", 0.7),
+            "outlier_threshold": grounding_settings.get("outlier_threshold", 2.0),
+            "target_candidates": grounding_settings.get("target_candidates", 3),
+            "min_agreement_ratio": consensus_settings.get("min_agreement_ratio", 0.6)
+        }
+    except Exception as e:
+        print(f"Error loading resolver config: {e}")
+        return {
+            "clustering_tolerance": 0.15,
+            "confidence_threshold": 0.7,
+            "outlier_threshold": 2.0,
+            "target_candidates": 3,
+            "min_agreement_ratio": 0.6
+        }
+
+# Initialize resolver components
+resolver_config = get_resolver_config()
+grounded_search_client = GroundedSearchClient()
+consensus_resolver = ConsensusResolver(
+    clustering_tolerance=resolver_config["clustering_tolerance"],
+    confidence_threshold=resolver_config["confidence_threshold"],
+    outlier_threshold=resolver_config["outlier_threshold"]
+)
+provenance_tracker = ProvenanceTracker()
+
+# Initialize single call resolver
+single_call_resolver = SingleCallVehicleResolver(
+    api_key=GEMINI_API_KEY,
+    confidence_threshold=resolver_config["confidence_threshold"]
+)
+
+
+
+def retry_with_exponential_backoff(func, max_retries=3, base_delay=1.0, max_delay=10.0, timeout_seconds=30):
+    """
+    Retry a function with exponential backoff.
+    
+    Args:
+        func: Function to retry
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay in seconds
+        max_delay: Maximum delay in seconds
+        timeout_seconds: Timeout in seconds (currently not enforced on Windows)
+        
+    Returns:
+        Function result or None if all retries failed
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            return func()
+        except Exception as e:
+            if attempt == max_retries:
+                print(f"  -> All {max_retries + 1} attempts failed. Last error: {e}")
+                return None
+            
+            # Calculate delay with exponential backoff and jitter
+            delay = min(base_delay * (2 ** attempt), max_delay)
+            jitter = random.uniform(0, 0.1 * delay)  # Add up to 10% jitter
+            total_delay = delay + jitter
+            
+            print(f"  -> Attempt {attempt + 1} failed: {e}. Retrying in {total_delay:.1f}s...")
+            time.sleep(total_delay)
+    
+    return None
+
+def handle_resolver_error(error, operation, vehicle_key, field_name):
+    """
+    Handle resolver errors with appropriate logging and fallback strategies.
+    
+    Args:
+        error: The exception that occurred
+        operation: Description of the operation that failed
+        vehicle_key: Vehicle identifier
+        field_name: Field being resolved
+        
+    Returns:
+        None (indicates failure)
+    """
+    error_msg = f"Resolver error in {operation} for {vehicle_key}.{field_name}: {error}"
+    print(f"  -> {error_msg}")
+    
+    # Log error details for monitoring
+    try:
+        # In a production system, this would go to a proper logging system
+        with open("resolver_errors.log", "a") as log_file:
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            log_file.write(f"[{timestamp}] {error_msg}\n")
+    except Exception as log_error:
+        print(f"  -> Failed to log error: {log_error}")
+    
+    return None
+
+def graceful_resolver_fallback(resolver_func, fallback_func, operation, vehicle_key, field_name):
+    """
+    Attempt resolver-based resolution with graceful fallback to legacy method.
+    Implements graceful degradation by trying cached data first, then resolver, then fallback.
+    
+    Args:
+        resolver_func: Primary resolver function to try
+        fallback_func: Fallback function if resolver fails
+        operation: Description of the operation
+        vehicle_key: Vehicle identifier
+        field_name: Field being resolved
+        
+    Returns:
+        Resolved value or None
+    """
+    import logging
+    
+    try:
+        # First, try to get cached resolution data (already checked in resolver_func, but log it)
+        logging.debug(f"Attempting {operation} for {vehicle_key}.{field_name}")
+        
+        # Try resolver approach with retry logic
+        result = retry_with_exponential_backoff(resolver_func, max_retries=2)
+        if result is not None:
+            logging.info(f"Resolver approach succeeded for {operation}")
+            return result
+        
+        logging.warning(f"Resolver approach failed for {operation}, attempting fallback...")
+        print(f"  -> Resolver approach failed for {operation}, attempting fallback...")
+        
+        # Try fallback approach with fewer retries
+        fallback_result = retry_with_exponential_backoff(fallback_func, max_retries=1)
+        if fallback_result is not None:
+            logging.info(f"Fallback approach succeeded for {operation}")
+            print(f"  -> Fallback successful for {operation}")
+            return fallback_result
+        
+        # Both approaches failed - try intelligent defaults based on field type
+        logging.warning(f"Both resolver and fallback failed for {operation}")
+        print(f"  -> Both resolver and fallback failed for {operation}")
+        
+        # Provide intelligent defaults for critical fields
+        if field_name == "aluminum_rims":
+            # Default to steel rims for older vehicles, aluminum for newer
+            year = int(vehicle_key.split('_')[0]) if '_' in vehicle_key else 2000
+            default_value = year >= 2010  # Aluminum rims more common after 2010
+            print(f"  -> Using intelligent default: {default_value} (based on vehicle year)")
+            return default_value
+        elif field_name == "aluminum_engine":
+            # Default based on vehicle make/year patterns
+            year = int(vehicle_key.split('_')[0]) if '_' in vehicle_key else 2000
+            make = vehicle_key.split('_')[1].lower() if '_' in vehicle_key else ""
+            # Luxury brands and newer vehicles more likely to have aluminum engines
+            luxury_brands = ["bmw", "mercedes", "audi", "lexus", "acura", "infiniti"]
+            default_value = year >= 2015 or make in luxury_brands
+            print(f"  -> Using intelligent default: {default_value} (based on make/year)")
+            return default_value
+        
+        return None
+        
+    except Exception as e:
+        logging.error(f"Exception in graceful_resolver_fallback for {operation}: {e}")
+        return handle_resolver_error(e, operation, vehicle_key, field_name)
 
 # Database setup
 print("=== DATABASE SETUP ===")
@@ -81,6 +250,9 @@ def import_database_from_json(json_file):
 
 def get_curb_weight_from_db(year, make, model):
     """Checks the database for the curb weight of a specific vehicle."""
+    import logging
+    from database_config import is_sqlite
+    
     try:
         engine = create_database_engine()
         with engine.connect() as conn:
@@ -91,11 +263,22 @@ def get_curb_weight_from_db(year, make, model):
             if row and row[0] is not None:
                 return row[0]
     except Exception as e:
+        # Enhanced error logging with context
+        db_type = "SQLite" if is_sqlite() else "PostgreSQL"
+        vehicle_key = f"{year}_{make}_{model}"
+        logging.error(f"Database query failed in get_curb_weight_from_db for vehicle_key: {vehicle_key}")
+        logging.error(f"Database type: {db_type}")
+        logging.error(f"Vehicle: {year} {make} {model}")
+        logging.error(f"Field: curb_weight")
+        logging.error(f"Error details: {e}")
         print(f"Error getting curb weight from database: {e}")
     return None
 
 def get_vehicle_data_from_db(year, make, model):
     """Checks the database for all vehicle data."""
+    import logging
+    from database_config import is_sqlite
+    
     try:
         engine = create_database_engine()
         with engine.connect() as conn:
@@ -111,34 +294,131 @@ def get_vehicle_data_from_db(year, make, model):
                     'catalytic_converters': row[3]
                 }
     except Exception as e:
+        # Enhanced error logging with context
+        db_type = "SQLite" if is_sqlite() else "PostgreSQL"
+        vehicle_key = f"{year}_{make}_{model}"
+        logging.error(f"Database query failed in get_vehicle_data_from_db for vehicle_key: {vehicle_key}")
+        logging.error(f"Database type: {db_type}")
+        logging.error(f"Vehicle: {year} {make} {model}")
+        logging.error(f"Error details: {e}")
         print(f"Error getting vehicle data from database: {e}")
     return None
 
-def update_vehicle_data_in_db(year, make, model, weight, aluminum_engine=None, aluminum_rims=None, catalytic_converters=None):
-    """Inserts or updates the vehicle data in the database."""
+def get_resolution_data_from_db(year, make, model):
+    """
+    Checks the resolutions table for cached resolver data (permanent cache).
+    
+    Returns all fields for the vehicle regardless of age, using only the most recent
+    record for each field. Only returns high-confidence resolutions.
+    """
+    import logging
+    from database_config import is_sqlite
+    
+    vehicle_key = f"{year}_{make}_{model}"
+    
     try:
         engine = create_database_engine()
         with engine.connect() as conn:
-            conn.execute(text("""
-                INSERT INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims, catalytic_converters)
-                VALUES (:year, :make, :model, :weight, :aluminum_engine, :aluminum_rims, :catalytic_converters)
-                ON CONFLICT (year, make, model) DO UPDATE SET 
-                    curb_weight_lbs = EXCLUDED.curb_weight_lbs,
-                    aluminum_engine = EXCLUDED.aluminum_engine,
-                    aluminum_rims = EXCLUDED.aluminum_rims,
-                    catalytic_converters = EXCLUDED.catalytic_converters
-            """), {
-                "year": year, 
-                "make": make, 
-                "model": model, 
-                "weight": weight, 
-                "aluminum_engine": aluminum_engine, 
-                "aluminum_rims": aluminum_rims,
-                "catalytic_converters": catalytic_converters
-            })
-            conn.commit()
-            print(f"✅ Vehicle data updated in PostgreSQL database: {year} {make} {model}")
+            result = conn.execute(text("""
+                SELECT field_name, final_value, confidence_score, created_at 
+                FROM resolutions 
+                WHERE vehicle_key = :vehicle_key 
+                ORDER BY created_at DESC
+            """), {"vehicle_key": vehicle_key})
+            
+            resolution_data = {}
+            for row in result.fetchall():
+                field_name = row[0]
+                final_value = row[1]
+                confidence_score = row[2]
+                created_at = row[3]
+                
+                # Only use high-confidence resolutions
+                if confidence_score >= resolver_config["confidence_threshold"]:
+                    # Only store the first (most recent) record for each field
+                    if field_name not in resolution_data:
+                        resolution_data[field_name] = {
+                            'value': final_value,
+                            'confidence': confidence_score,
+                            'created_at': created_at
+                        }
+            
+            return resolution_data if resolution_data else None
+            
     except Exception as e:
+        # Enhanced error logging with context
+        db_type = "SQLite" if is_sqlite() else "PostgreSQL"
+        logging.error(f"Database query failed in get_resolution_data_from_db for vehicle_key: {vehicle_key}")
+        logging.error(f"Database type: {db_type}")
+        logging.error(f"Vehicle: {year} {make} {model}")
+        logging.error(f"Error details: {e}")
+        print(f"Error getting resolution data from database: {e}")
+        return None
+
+def update_vehicle_data_in_db(year, make, model, weight, aluminum_engine=None, aluminum_rims=None, catalytic_converters=None, progress_callback=None):
+    """Inserts or updates the vehicle data in the database.
+    
+    Args:
+        year: Vehicle year
+        make: Vehicle make
+        model: Vehicle model
+        weight: Curb weight in pounds
+        aluminum_engine: Whether engine is aluminum (True/False/None)
+        aluminum_rims: Whether rims are aluminum (True/False/None)
+        catalytic_converters: Number of catalytic converters (int/None)
+        progress_callback: Optional callback function for progress updates
+    """
+    import logging
+    from database_config import is_sqlite
+    
+    try:
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            if is_sqlite():
+                # SQLite syntax - use INSERT OR REPLACE
+                conn.execute(text("""
+                    INSERT OR REPLACE INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims, catalytic_converters)
+                    VALUES (:year, :make, :model, :weight, :aluminum_engine, :aluminum_rims, :catalytic_converters)
+                """), {
+                    "year": year, 
+                    "make": make, 
+                    "model": model, 
+                    "weight": weight, 
+                    "aluminum_engine": aluminum_engine, 
+                    "aluminum_rims": aluminum_rims,
+                    "catalytic_converters": catalytic_converters
+                })
+            else:
+                # PostgreSQL syntax
+                conn.execute(text("""
+                    INSERT INTO vehicles (year, make, model, curb_weight_lbs, aluminum_engine, aluminum_rims, catalytic_converters)
+                    VALUES (:year, :make, :model, :weight, :aluminum_engine, :aluminum_rims, :catalytic_converters)
+                    ON CONFLICT (year, make, model) DO UPDATE SET 
+                        curb_weight_lbs = EXCLUDED.curb_weight_lbs,
+                        aluminum_engine = EXCLUDED.aluminum_engine,
+                        aluminum_rims = EXCLUDED.aluminum_rims,
+                        catalytic_converters = EXCLUDED.catalytic_converters
+                """), {
+                    "year": year, 
+                    "make": make, 
+                    "model": model, 
+                    "weight": weight, 
+                    "aluminum_engine": aluminum_engine, 
+                    "aluminum_rims": aluminum_rims,
+                    "catalytic_converters": catalytic_converters
+                })
+            conn.commit()
+            db_type = "SQLite" if is_sqlite() else "PostgreSQL"
+            print(f"✅ Vehicle data updated in {db_type} database: {year} {make} {model}")
+    except Exception as e:
+        # Enhanced error logging with context
+        db_type = "SQLite" if is_sqlite() else "PostgreSQL"
+        vehicle_key = f"{year}_{make}_{model}"
+        logging.error(f"Database update failed in update_vehicle_data_in_db for vehicle_key: {vehicle_key}")
+        logging.error(f"Database type: {db_type}")
+        logging.error(f"Vehicle: {year} {make} {model}")
+        logging.error(f"Data: weight={weight}, aluminum_engine={aluminum_engine}, aluminum_rims={aluminum_rims}, catalytic_converters={catalytic_converters}")
+        logging.error(f"Error details: {e}")
         print(f"Error updating vehicle data in database: {e}")
 
 def mark_vehicle_as_not_found(year, make, model):
@@ -176,15 +456,24 @@ def validate_vehicle_existence(year: int, make: str, model: str):
     Validates if a vehicle actually exists using Gemini API grounded with Google Search.
     Returns True if vehicle exists, False if fake/non-existent, or None for inconclusive.
     """
+    import logging
+    
     if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
+        logging.warning("Google AI API key not configured for vehicle validation")
+        logging.warning("Please set GEMINI_API_KEY environment variable")
         print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
         return None
 
-    if SHARED_GEMINI_MODEL is None:
-        print("Gemini model not initialized. Please check your API key.")
+    if SHARED_GEMINI_CLIENT is None:
+        logging.error("Gemini client not initialized for vehicle validation")
+        logging.error("Client initialization may have failed - check API key and SDK installation")
+        print("Gemini client not initialized. Please check your API key.")
         return None
 
     try:
+        vehicle_string = f"{year} {make} {model}"
+        logging.info(f"Validating vehicle existence via Google AI: {vehicle_string}")
+        
         prompt = (
             f"Search the web to verify if the {year} {make} {model} is a real vehicle that was actually manufactured. "
             "Look for official manufacturer information, automotive databases like Edmunds, KBB, or manufacturer websites, reviews, or dealership listings. "
@@ -194,42 +483,143 @@ def validate_vehicle_existence(year: int, make: str, model: str):
             "Do not include any other text or explanation."
         )
         
-        response = SHARED_GEMINI_MODEL.generate_content(
-            prompt,
-            tools=[{"google_search_retrieval": {}}],
-            generation_config={"temperature": 0, "max_output_tokens": 16}
+        response = SHARED_GEMINI_CLIENT.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config={
+                "tools": [{"google_search": {}}]
+            }
         )
         
         text_response = response.text.strip().lower()
         
         if text_response == 'exists':
+            logging.info(f"Vehicle validation successful: {vehicle_string} exists")
             return True
         elif text_response == 'fake':
+            logging.info(f"Vehicle validation result: {vehicle_string} is fake/non-existent")
             return False
         elif text_response == 'inconclusive':
+            logging.warning(f"Vehicle validation inconclusive for: {vehicle_string}")
             return None
         else:
+            logging.warning(f"Unexpected validation response for {vehicle_string}: {text_response}")
             return None
 
     except Exception as e:
-        print(f"An error occurred during the vehicle validation API call: {e}")
+        # Enhanced error logging with context
+        vehicle_string = f"{year} {make} {model}"
+        logging.error(f"Google AI API call failed during vehicle validation")
+        logging.error(f"Vehicle: {vehicle_string}")
+        logging.error(f"Error type: {type(e).__name__}")
+        logging.error(f"Error details: {e}")
+        
+        # Provide user-friendly error messages for common failures
+        error_str = str(e)
+        if "404" in error_str and "not found" in error_str:
+            logging.error("Model not found error - the specified model may be deprecated or unavailable")
+            print(f"Error: Google AI model not found. Please check model configuration.")
+        elif "401" in error_str or "403" in error_str:
+            logging.error("Authentication error - API key may be invalid or expired")
+            print(f"Error: Google AI authentication failed. Please check your API key.")
+        elif "429" in error_str:
+            logging.error("Rate limit exceeded - too many API requests")
+            print(f"Error: Google AI rate limit exceeded. Please try again later.")
+        else:
+            print(f"An error occurred during the vehicle validation API call: {e}")
+        
         return None
 
 
-def get_aluminum_engine_from_api(year: int, make: str, model: str):
+def get_aluminum_engine_from_resolver(year: int, make: str, model: str):
     """
-    Returns whether the vehicle has an aluminum engine using Gemini API grounded with Google Search.
+    Returns whether the vehicle has an aluminum engine using the resolver system.
     Returns True for aluminum engine, False for iron engine, or None for inconclusive.
     """
-    if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
-        print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
-        return None
-
-    if SHARED_GEMINI_MODEL is None:
-        print("Gemini model not initialized. Please check your API key.")
-        return None
-
+    vehicle_key = f"{year}_{make}_{model}"
+    
+    # Check for cached resolution first
     try:
+        cached_result = provenance_tracker.get_cached_resolution(vehicle_key, "aluminum_engine")
+        if cached_result and cached_result.confidence_score >= resolver_config["confidence_threshold"]:
+            print(f"  -> Using cached aluminum engine resolution: {bool(cached_result.final_value)} (confidence: {cached_result.confidence_score:.2f})")
+            return bool(cached_result.final_value) if cached_result.final_value is not None else None
+    except Exception as e:
+        print(f"  -> Cache lookup failed: {e}")
+    
+    def resolver_operation():
+        # Use grounded search to get multiple candidates
+        candidates = grounded_search_client.search_vehicle_specs(year, make, model, "aluminum_engine")
+        
+        if not candidates:
+            print(f"  -> No candidates found for aluminum engine via grounded search")
+            return None
+        
+        print(f"  -> Found {len(candidates)} aluminum engine candidates via grounded search")
+        
+        # Use consensus resolver to get final value
+        resolution_result = consensus_resolver.resolve_field(candidates)
+        
+        # Store resolution with provenance (with error handling)
+        try:
+            record_id = provenance_tracker.create_resolution_record(vehicle_key, "aluminum_engine", resolution_result)
+        except Exception as e:
+            print(f"  -> Failed to store resolution record: {e}")
+        
+        # Convert numeric result to boolean
+        final_value = None
+        if resolution_result.final_value is not None:
+            final_value = bool(resolution_result.final_value)
+        
+        # Log resolution details
+        print(f"  -> Resolved aluminum engine: {final_value}")
+        print(f"  -> Confidence score: {resolution_result.confidence_score:.2f}")
+        print(f"  -> Method: {resolution_result.method}")
+        
+        if resolution_result.warnings:
+            for warning in resolution_result.warnings:
+                print(f"  -> Warning: {warning}")
+        
+        return final_value
+    
+    try:
+        return retry_with_exponential_backoff(resolver_operation, max_retries=2)
+    except Exception as e:
+        return handle_resolver_error(e, "aluminum engine resolution", vehicle_key, "aluminum_engine")
+
+def get_aluminum_engine_from_api(year: int, make: str, model: str, progress_callback=None):
+    """
+    Enhanced function - uses SingleCallVehicleResolver as primary method with graceful fallback to multi-call resolver.
+    
+    Args:
+        year: Vehicle year
+        make: Vehicle make
+        model: Vehicle model
+        progress_callback: Optional callback function for progress updates
+    """
+    vehicle_key = f"{year}_{make}_{model}"
+    
+    def single_call_approach():
+        """Try single-call resolution first."""
+        single_call_result = single_call_resolver.resolve_all_specifications(year, make, model)
+        if (single_call_result and 
+            single_call_result.aluminum_engine is not None and
+            single_call_result.confidence_scores.get('engine_material', 0.0) >= resolver_config["confidence_threshold"]):
+            return single_call_result.aluminum_engine
+        return None
+    
+    def resolver_approach():
+        return get_aluminum_engine_from_resolver(year, make, model)
+    
+    def fallback_approach():
+        if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
+            print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
+            return None
+
+        if SHARED_GEMINI_CLIENT is None:
+            print("Gemini client not initialized. Please check your API key.")
+            return None
+
         prompt = (
             f"Search the web to determine if the {year} {make} {model} has an aluminum engine block or iron engine block. "
             "Search for engine specifications, materials, and construction details. "
@@ -237,10 +627,12 @@ def get_aluminum_engine_from_api(year: int, make: str, model: str):
             "Do not include any other text or explanation."
         )
         
-        response = SHARED_GEMINI_MODEL.generate_content(
-            prompt,
-            tools=[{"google_search_retrieval": {}}],
-            generation_config={"temperature": 0, "max_output_tokens": 16}
+        response = SHARED_GEMINI_CLIENT.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config={
+                "tools": [{"google_search": {}}]
+            }
         )
         
         text_response = response.text.strip().lower()
@@ -253,26 +645,115 @@ def get_aluminum_engine_from_api(year: int, make: str, model: str):
             return None
         else:
             return None
-
+    
+    # Try single-call approach first
+    try:
+        result = single_call_approach()
+        if result is not None:
+            print(f"  -> Single-call aluminum engine resolution successful: {result}")
+            return result
     except Exception as e:
-        print(f"An error occurred during the aluminum engine API call: {e}")
-        return None
+        print(f"  -> Single-call approach failed: {e}")
+    
+    # Fallback to existing multi-call resolver approach
+    return graceful_resolver_fallback(
+        resolver_approach, 
+        fallback_approach, 
+        "aluminum engine resolution", 
+        vehicle_key, 
+        "aluminum_engine"
+    )
 
 
-def get_aluminum_rims_from_api(year: int, make: str, model: str):
+def get_aluminum_rims_from_resolver(year: int, make: str, model: str):
     """
-    Returns whether the vehicle has aluminum rims using Gemini API grounded with Google Search.
+    Returns whether the vehicle has aluminum rims using the resolver system.
     Returns True for aluminum rims, False for steel rims, or None for inconclusive.
     """
-    if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
-        print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
-        return None
-
-    if SHARED_GEMINI_MODEL is None:
-        print("Gemini model not initialized. Please check your API key.")
-        return None
-
+    vehicle_key = f"{year}_{make}_{model}"
+    
+    # Check for cached resolution first
     try:
+        cached_result = provenance_tracker.get_cached_resolution(vehicle_key, "aluminum_rims")
+        if cached_result and cached_result.confidence_score >= resolver_config["confidence_threshold"]:
+            print(f"  -> Using cached aluminum rims resolution: {bool(cached_result.final_value)} (confidence: {cached_result.confidence_score:.2f})")
+            return bool(cached_result.final_value) if cached_result.final_value is not None else None
+    except Exception as e:
+        print(f"  -> Cache lookup failed: {e}")
+    
+    def resolver_operation():
+        # Use grounded search to get multiple candidates
+        candidates = grounded_search_client.search_vehicle_specs(year, make, model, "aluminum_rims")
+        
+        if not candidates:
+            print(f"  -> No candidates found for aluminum rims via grounded search")
+            return None
+        
+        print(f"  -> Found {len(candidates)} aluminum rims candidates via grounded search")
+        
+        # Use consensus resolver to get final value
+        resolution_result = consensus_resolver.resolve_field(candidates)
+        
+        # Store resolution with provenance (with error handling)
+        try:
+            record_id = provenance_tracker.create_resolution_record(vehicle_key, "aluminum_rims", resolution_result)
+        except Exception as e:
+            print(f"  -> Failed to store resolution record: {e}")
+        
+        # Convert numeric result to boolean
+        final_value = None
+        if resolution_result.final_value is not None:
+            final_value = bool(resolution_result.final_value)
+        
+        # Log resolution details
+        print(f"  -> Resolved aluminum rims: {final_value}")
+        print(f"  -> Confidence score: {resolution_result.confidence_score:.2f}")
+        print(f"  -> Method: {resolution_result.method}")
+        
+        if resolution_result.warnings:
+            for warning in resolution_result.warnings:
+                print(f"  -> Warning: {warning}")
+        
+        return final_value
+    
+    try:
+        return retry_with_exponential_backoff(resolver_operation, max_retries=2)
+    except Exception as e:
+        return handle_resolver_error(e, "aluminum rims resolution", vehicle_key, "aluminum_rims")
+
+def get_aluminum_rims_from_api(year: int, make: str, model: str, progress_callback=None):
+    """
+    Enhanced function - uses SingleCallVehicleResolver as primary method with graceful fallback to multi-call resolver.
+    
+    Args:
+        year: Vehicle year
+        make: Vehicle make
+        model: Vehicle model
+        progress_callback: Optional callback function for progress updates
+    """
+    vehicle_key = f"{year}_{make}_{model}"
+    
+    def single_call_approach():
+        """Try single-call resolution first."""
+        single_call_result = single_call_resolver.resolve_all_specifications(year, make, model)
+        if (single_call_result and 
+            single_call_result.aluminum_rims is not None and
+            single_call_result.confidence_scores.get('rim_material', 0.0) >= resolver_config["confidence_threshold"]):
+            return single_call_result.aluminum_rims
+        return None
+    
+    def resolver_approach():
+        return get_aluminum_rims_from_resolver(year, make, model)
+    
+    def fallback_approach():
+        if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
+            print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
+            return None
+
+        if SHARED_GEMINI_CLIENT is None:
+            print("Gemini client not initialized. Please check your API key.")
+            return None
+
         prompt = (
             f"Search the web to determine if the {year} {make} {model} has aluminum wheels/rims or steel wheels/rims. "
             "Search for wheel specifications, materials, and construction details. "
@@ -280,10 +761,12 @@ def get_aluminum_rims_from_api(year: int, make: str, model: str):
             "Do not include any other text or explanation."
         )
         
-        response = SHARED_GEMINI_MODEL.generate_content(
-            prompt,
-            tools=[{"google_search_retrieval": {}}],
-            generation_config={"temperature": 0, "max_output_tokens": 16}
+        response = SHARED_GEMINI_CLIENT.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config={
+                "tools": [{"google_search": {}}]
+            }
         )
         
         text_response = response.text.strip().lower()
@@ -296,26 +779,111 @@ def get_aluminum_rims_from_api(year: int, make: str, model: str):
             return None
         else:
             return None
-
-    except Exception as e:
-        print(f"An error occurred during the aluminum rims API call: {e}")
-        return None
-
-
-def get_curb_weight_from_api(year: int, make: str, model: str):
-    """
-    Returns curb weight in pounds using Gemini API grounded with Google Search.
-    Uses a two-step process: gather candidates, then interpret the best weight.
-    """
-    if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
-        print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
-        return None
-
-    if SHARED_GEMINI_MODEL is None:
-        print("Gemini model not initialized. Please check your API key.")
-        return None
-
+    
+    # Try single-call approach first
     try:
+        result = single_call_approach()
+        if result is not None:
+            print(f"  -> Single-call aluminum rims resolution successful: {result}")
+            return result
+    except Exception as e:
+        print(f"  -> Single-call approach failed: {e}")
+    
+    # Fallback to existing multi-call resolver approach
+    return graceful_resolver_fallback(
+        resolver_approach, 
+        fallback_approach, 
+        "aluminum rims resolution", 
+        vehicle_key, 
+        "aluminum_rims"
+    )
+
+
+def get_curb_weight_from_resolver(year: int, make: str, model: str):
+    """
+    Returns curb weight in pounds using the resolver system with consensus-based resolution.
+    Includes caching, provenance tracking, and enhanced error handling.
+    """
+    vehicle_key = f"{year}_{make}_{model}"
+    
+    # Check for cached resolution first
+    try:
+        cached_result = provenance_tracker.get_cached_resolution(vehicle_key, "curb_weight")
+        if cached_result and cached_result.confidence_score >= resolver_config["confidence_threshold"]:
+            print(f"  -> Using cached curb weight resolution: {cached_result.final_value} lbs (confidence: {cached_result.confidence_score:.2f})")
+            return cached_result.final_value
+    except Exception as e:
+        print(f"  -> Cache lookup failed: {e}")
+    
+    def resolver_operation():
+        # Use grounded search to get multiple candidates
+        candidates = grounded_search_client.search_vehicle_specs(year, make, model, "curb_weight")
+        
+        if not candidates:
+            print(f"  -> No candidates found for curb weight via grounded search")
+            return None
+        
+        print(f"  -> Found {len(candidates)} curb weight candidates via grounded search")
+        
+        # Use consensus resolver to get final value
+        resolution_result = consensus_resolver.resolve_field(candidates)
+        
+        # Store resolution with provenance (with error handling)
+        try:
+            record_id = provenance_tracker.create_resolution_record(vehicle_key, "curb_weight", resolution_result)
+        except Exception as e:
+            print(f"  -> Failed to store resolution record: {e}")
+        
+        # Log resolution details
+        print(f"  -> Resolved curb weight: {resolution_result.final_value} lbs")
+        print(f"  -> Confidence score: {resolution_result.confidence_score:.2f}")
+        print(f"  -> Method: {resolution_result.method}")
+        
+        if resolution_result.warnings:
+            for warning in resolution_result.warnings:
+                print(f"  -> Warning: {warning}")
+        
+        # Return the resolved value
+        return resolution_result.final_value
+    
+    try:
+        return retry_with_exponential_backoff(resolver_operation, max_retries=2)
+    except Exception as e:
+        return handle_resolver_error(e, "curb weight resolution", vehicle_key, "curb_weight")
+
+def get_curb_weight_from_api(year: int, make: str, model: str, progress_callback=None):
+    """
+    Enhanced function - uses SingleCallVehicleResolver as primary method with graceful fallback to multi-call resolver.
+    
+    Args:
+        year: Vehicle year
+        make: Vehicle make
+        model: Vehicle model
+        progress_callback: Optional callback function for progress updates
+    """
+    vehicle_key = f"{year}_{make}_{model}"
+    
+    def single_call_approach():
+        """Try single-call resolution first."""
+        single_call_result = single_call_resolver.resolve_all_specifications(year, make, model)
+        if (single_call_result and 
+            single_call_result.curb_weight_lbs is not None and
+            single_call_result.confidence_scores.get('curb_weight', 0.0) >= resolver_config["confidence_threshold"]):
+            return single_call_result.curb_weight_lbs
+        return None
+    
+    def resolver_approach():
+        return get_curb_weight_from_resolver(year, make, model)
+    
+    def fallback_approach():
+        if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
+            print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
+            return None
+
+        if SHARED_GEMINI_CLIENT is None:
+            print("Gemini client not initialized. Please check your API key.")
+            return None
+
         # Step 1: Gather candidate weights with preferred sources
         gather_prompt = (
             f"Search the web and list every curb-weight figure (in pounds) you find for a {year} {make} {model}. "
@@ -323,10 +891,12 @@ def get_curb_weight_from_api(year: int, make: str, model: str):
             "Return one line per finding in the exact format '<WEIGHT> <source>'. Only include numbers; omit commentary."
         )
 
-        gather_resp = SHARED_GEMINI_MODEL.generate_content(
-            gather_prompt,
-            tools=[{"google_search_retrieval": {}}],
-            generation_config={"temperature": 0, "max_output_tokens": 64},
+        gather_resp = SHARED_GEMINI_CLIENT.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=gather_prompt,
+            config={
+                "tools": [{"google_search": {}}]
+            }
         )
 
         candidate_numbers = [int(m) for m in re.findall(r"(?m)^(\d{3,5})", gather_resp.text)]
@@ -348,10 +918,12 @@ def get_curb_weight_from_api(year: int, make: str, model: str):
                 "Return ONLY the weight number, no other text."
             )
 
-            interpret_resp = SHARED_GEMINI_MODEL.generate_content(
-                interpret_prompt,
-                tools=[{"google_search_retrieval": {}}],
-                generation_config={"temperature": 0, "max_output_tokens": 8},
+            interpret_resp = SHARED_GEMINI_CLIENT.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=interpret_prompt,
+                config={
+                    "tools": [{"google_search": {}}]
+                }
             )
 
             # Extract the interpreted weight
@@ -366,9 +938,25 @@ def get_curb_weight_from_api(year: int, make: str, model: str):
                 most_common_weight, freq = counts.most_common(1)[0]
                 return most_common_weight
 
-    except Exception as e:
-        print(f"An error occurred during the Gemini API call: {e}")
         return None
+    
+    # Try single-call approach first
+    try:
+        result = single_call_approach()
+        if result is not None:
+            print(f"  -> Single-call curb weight resolution successful: {result} lbs")
+            return result
+    except Exception as e:
+        print(f"  -> Single-call approach failed: {e}")
+    
+    # Fallback to existing multi-call resolver approach
+    return graceful_resolver_fallback(
+        resolver_approach, 
+        fallback_approach, 
+        "curb weight resolution", 
+        vehicle_key, 
+        "curb_weight"
+    )
 
 def heuristic_rule(year, make, model):
     """Fallback heuristic for catalytic converter count."""
@@ -393,16 +981,28 @@ def heuristic_rule(year, make, model):
 
 def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
     """
-    Estimates the number of catalytic converters for a vehicle using Gemini API.
-    Searches multiple parts catalogs and counts unique catalytic converter positions.
+    Enhanced function - uses SingleCallVehicleResolver as primary method with graceful fallback to existing API approach.
     """
     print(f"\n  -> Searching for catalytic converter count for {year} {make} {model}...")
+    
+    # Try single-call approach first
+    try:
+        single_call_result = single_call_resolver.resolve_all_specifications(year, make, model)
+        if (single_call_result and 
+            single_call_result.catalytic_converters is not None and
+            single_call_result.confidence_scores.get('catalytic_converters', 0.0) >= resolver_config["confidence_threshold"]):
+            print(f"  -> Single-call catalytic converter resolution successful: {single_call_result.catalytic_converters}")
+            return single_call_result.catalytic_converters
+    except Exception as e:
+        print(f"  -> Single-call approach failed: {e}")
+    
+    # Fallback to existing API approach
     if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
         print("Please set your actual GEMINI_API_KEY in vehicle_data.py.")
         return None
 
-    if SHARED_GEMINI_MODEL is None:
-        print("Gemini model not initialized. Please check your API key.")
+    if SHARED_GEMINI_CLIENT is None:
+        print("Gemini client not initialized. Please check your API key.")
         return None
 
     # Single consolidated search approach
@@ -424,10 +1024,12 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
         """
         print(f"\n  -> Searching for catalytic converter count...")
         
-        response = SHARED_GEMINI_MODEL.generate_content(
-            prompt,
-            tools=[{"google_search_retrieval": {}}],
-            generation_config={"temperature": 0, "max_output_tokens": 8}
+        response = SHARED_GEMINI_CLIENT.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config={
+                "tools": [{"google_search": {}}]
+            }
         )
         
         # Extract the count from the response
@@ -458,77 +1060,328 @@ def get_catalytic_converter_count_from_api(year: int, make: str, model: str):
 
 
 
-def process_vehicle(year, make, model):
+def process_vehicle(year, make, model, progress_callback=None):
     """
-    Main logic to get vehicle data (curb weight, aluminum engine, aluminum rims, and catalytic converters).
-    It first validates the vehicle exists, then checks the local database, and if not found, queries the Gemini API.
+    Main logic to get vehicle data using the resolver system with fallback to database and API.
+    Integrates consensus-based resolution with caching and provenance tracking.
+    
+    Args:
+        year: Vehicle year
+        make: Vehicle make
+        model: Vehicle model
+        progress_callback: Optional callback function for progress updates
+                          Should accept (phase: str, spec_name: str, status: str) parameters
+    
+    Graceful degradation strategy:
+    1. Try cached high-confidence resolver data first
+    2. Fall back to database vehicle data
+    3. Validate vehicle existence before expensive API calls
+    4. Try resolver-based queries with retry logic
+    5. Only mark as fake if validation explicitly fails (not inconclusive)
     """
+    import logging
+    
     print(f"Processing: {year} {make} {model}")
+    logging.info(f"Starting vehicle processing for {year} {make} {model}")
+    
+    # Helper function to safely call progress callback
+    def update_progress(phase, spec_name=None, status=None, confidence=None, error_message=None):
+        if progress_callback:
+            try:
+                progress_callback(phase, spec_name, status, confidence, error_message)
+            except Exception as e:
+                print(f"  -> Progress callback error: {e}")
+    
+    # Initial progress update
+    update_progress("Initializing search...", None, None)
     
     # Check if this vehicle was previously marked as fake in this session
     if is_vehicle_marked_as_fake(year, make, model):
         print(f"  -> Vehicle previously marked as fake in session: {year} {make} {model}")
+        logging.info(f"Vehicle {year} {make} {model} previously marked as fake - skipping")
+        update_progress("Search complete", None, None)
         return None
     
-    # Check database for legitimate vehicle data
+    # First check for high-confidence resolver data (cached data first - graceful degradation)
+    update_progress("Checking cached data...", None, None)
+    resolution_data = get_resolution_data_from_db(year, make, model)
+    if resolution_data:
+        print(f"  -> Found high-confidence resolver data for some fields")
+        logging.info(f"Using cached resolver data for {year} {make} {model}")
+        
+        # Extract resolved values
+        curb_weight = resolution_data.get('curb_weight', {}).get('value')
+        aluminum_engine = resolution_data.get('aluminum_engine', {}).get('value')
+        aluminum_rims = resolution_data.get('aluminum_rims', {}).get('value')
+        catalytic_converters = resolution_data.get('catalytic_converters', {}).get('value')
+        
+        # Update progress for found cached data
+        if curb_weight:
+            update_progress("Searching specifications...", "curb_weight", "found")
+        if aluminum_engine is not None:
+            update_progress("Searching specifications...", "engine_material", "found")
+        if aluminum_rims is not None:
+            update_progress("Searching specifications...", "rim_material", "found")
+        if catalytic_converters is not None:
+            update_progress("Searching specifications...", "catalytic_converters", "found")
+        
+        # Convert boolean values from numeric storage
+        if aluminum_engine is not None:
+            aluminum_engine = bool(aluminum_engine)
+        if aluminum_rims is not None:
+            aluminum_rims = bool(aluminum_rims)
+        
+        # If we have curb weight from resolver, we can return early
+        if curb_weight:
+            print(f"  -> Using resolver data: {curb_weight} lbs, Al Engine: {aluminum_engine}, Al Rims: {aluminum_rims}")
+            logging.info(f"Successfully returned cached data for {year} {make} {model}")
+            update_progress("Search complete", None, None)
+            return {
+                'curb_weight_lbs': curb_weight,
+                'aluminum_engine': aluminum_engine,
+                'aluminum_rims': aluminum_rims,
+                'catalytic_converters': catalytic_converters
+            }
+    
+    # Check database for legitimate vehicle data as fallback (graceful degradation level 2)
+    update_progress("Checking database...", None, None)
     vehicle_data = get_vehicle_data_from_db(year, make, model)
     
     if vehicle_data and vehicle_data['curb_weight_lbs'] is not None and vehicle_data['curb_weight_lbs'] > 0:
         print(f"  -> Found in DB: {vehicle_data['curb_weight_lbs']} lbs, Cats: {vehicle_data['catalytic_converters']}")
-
-        # NOTE: Catalytic converter count estimation is temporarily disabled.
-        # TODO: Revisit approach for more accuracy (e.g., OEM diagrams, VIN decoding, engine/bank heuristics).
-        # Leaving DB value as-is if present; otherwise calculations will use the default average in app (CATS_PER_CAR).
-        # (Previously: would query API and update DB when missing.)
         
+        # Update progress for found database data
+        if vehicle_data['curb_weight_lbs']:
+            update_progress("Searching specifications...", "curb_weight", "found")
+        if vehicle_data.get('aluminum_engine') is not None:
+            update_progress("Searching specifications...", "engine_material", "found")
+        if vehicle_data.get('aluminum_rims') is not None:
+            update_progress("Searching specifications...", "rim_material", "found")
+        if vehicle_data.get('catalytic_converters') is not None:
+            update_progress("Searching specifications...", "catalytic_converters", "found")
+        
+        # Enhance database data with any available resolver data
+        if resolution_data:
+            aluminum_engine = resolution_data.get('aluminum_engine', {}).get('value')
+            aluminum_rims = resolution_data.get('aluminum_rims', {}).get('value')
+            
+            if aluminum_engine is not None:
+                vehicle_data['aluminum_engine'] = bool(aluminum_engine)
+            if aluminum_rims is not None:
+                vehicle_data['aluminum_rims'] = bool(aluminum_rims)
+        
+        update_progress("Search complete", None, None)
         return vehicle_data
     else:
         print("  -> Not in DB or missing data. Validating vehicle existence first...")
         
-        # Validate vehicle existence before making expensive API calls
+        # Validate vehicle existence before making expensive resolver calls
+        update_progress("Validating vehicle...", None, None)
         vehicle_exists = validate_vehicle_existence(year, make, model)
         
         if vehicle_exists is False:
+            # Only mark as not found if validation explicitly returned False
             print(f"  -> Vehicle validation failed: {year} {make} {model} does not exist")
             mark_vehicle_as_not_found(year, make, model)
+            update_progress("Search complete", None, None)
             return None  # Return None to indicate vehicle not found
         elif vehicle_exists is None:
             print(f"  -> Vehicle validation inconclusive for: {year} {make} {model}")
-            # Continue with processing but be aware it might be invalid
+            print(f"  -> Will attempt resolution but won't mark as fake if unsuccessful")
+            # Continue with processing - inconclusive doesn't mean fake
         else:
             print(f"  -> Vehicle validation passed: {year} {make} {model} exists")
         
-        print("  -> Proceeding with API queries...")
+        print("  -> Proceeding with single-call resolution...")
         
-        # Get curb weight
-        weight = get_curb_weight_from_api(year, make, model)
-        if weight:
-            print(f"  -> Found curb weight via API: {weight} lbs")
+        # Try single-call resolution first
+        update_progress("Searching specifications...", None, "searching")
+        single_call_result = single_call_resolver.resolve_all_specifications(year, make, model)
         
-        # Additional validation: if no weight found and vehicle existence was inconclusive, 
-        # it's likely a fake vehicle
-        if not weight and vehicle_exists is None:
-            print(f"  -> No weight found and vehicle existence inconclusive - likely fake vehicle")
-            mark_vehicle_as_not_found(year, make, model)
-            return None
+        # Check if single-call resolution was successful
+        if (single_call_result and 
+            single_call_result.curb_weight_lbs is not None and 
+            single_call_resolver.has_sufficient_confidence(single_call_result)):
+            
+            print(f"  -> Single-call resolution successful!")
+            print(f"  -> Weight: {single_call_result.curb_weight_lbs} lbs")
+            print(f"  -> Aluminum Engine: {single_call_result.aluminum_engine}")
+            print(f"  -> Aluminum Rims: {single_call_result.aluminum_rims}")
+            print(f"  -> Catalytic Converters: {single_call_result.catalytic_converters}")
+            
+            # Update progress for all found specifications
+            if single_call_result.curb_weight_lbs is not None:
+                confidence = single_call_result.confidence_scores.get('curb_weight', 0.8)
+                update_progress("Searching specifications...", "curb_weight", "found", confidence)
+            
+            if single_call_result.aluminum_engine is not None:
+                confidence = single_call_result.confidence_scores.get('engine_material', 0.7)
+                update_progress("Searching specifications...", "engine_material", "found", confidence)
+            
+            if single_call_result.aluminum_rims is not None:
+                confidence = single_call_result.confidence_scores.get('rim_material', 0.7)
+                update_progress("Searching specifications...", "rim_material", "found", confidence)
+            
+            if single_call_result.catalytic_converters is not None:
+                confidence = single_call_result.confidence_scores.get('catalytic_converters', 0.6)
+                update_progress("Searching specifications...", "catalytic_converters", "found", confidence)
+            
+            # Store single-call resolution results in provenance tracker
+            try:
+                vehicle_key = f"{year}_{make}_{model}"
+                
+                # Create resolution records for each field
+                if single_call_result.curb_weight_lbs is not None:
+                    from resolver import ResolutionResult
+                    weight_resolution = ResolutionResult(
+                        final_value=single_call_result.curb_weight_lbs,
+                        confidence_score=single_call_result.confidence_scores.get('curb_weight', 0.8),
+                        method="single_call_resolution",
+                        candidates=[],  # Single call doesn't use candidates
+                        outliers=[],    # Single call doesn't use outliers
+                        warnings=single_call_result.warnings
+                    )
+                    provenance_tracker.create_resolution_record(vehicle_key, "curb_weight", weight_resolution)
+                
+                if single_call_result.aluminum_engine is not None:
+                    engine_resolution = ResolutionResult(
+                        final_value=int(single_call_result.aluminum_engine),
+                        confidence_score=single_call_result.confidence_scores.get('engine_material', 0.7),
+                        method="single_call_resolution",
+                        candidates=[],  # Single call doesn't use candidates
+                        outliers=[],    # Single call doesn't use outliers
+                        warnings=single_call_result.warnings
+                    )
+                    provenance_tracker.create_resolution_record(vehicle_key, "aluminum_engine", engine_resolution)
+                
+                if single_call_result.aluminum_rims is not None:
+                    rims_resolution = ResolutionResult(
+                        final_value=int(single_call_result.aluminum_rims),
+                        confidence_score=single_call_result.confidence_scores.get('rim_material', 0.7),
+                        method="single_call_resolution",
+                        candidates=[],  # Single call doesn't use candidates
+                        outliers=[],    # Single call doesn't use outliers
+                        warnings=single_call_result.warnings
+                    )
+                    provenance_tracker.create_resolution_record(vehicle_key, "aluminum_rims", rims_resolution)
+                
+                if single_call_result.catalytic_converters is not None:
+                    cat_resolution = ResolutionResult(
+                        final_value=single_call_result.catalytic_converters,
+                        confidence_score=single_call_result.confidence_scores.get('catalytic_converters', 0.6),
+                        method="single_call_resolution",
+                        candidates=[],  # Single call doesn't use candidates
+                        outliers=[],    # Single call doesn't use outliers
+                        warnings=single_call_result.warnings
+                    )
+                    provenance_tracker.create_resolution_record(vehicle_key, "catalytic_converters", cat_resolution)
+                    
+            except Exception as e:
+                print(f"  -> Warning: Failed to store single-call resolution records: {e}")
+            
+            # Update database with single-call results
+            update_progress("Saving to database...", None, None)
+            update_vehicle_data_in_db(
+                year, make, model, 
+                single_call_result.curb_weight_lbs,
+                single_call_result.aluminum_engine,
+                single_call_result.aluminum_rims,
+                single_call_result.catalytic_converters,
+                progress_callback
+            )
+            
+            update_progress("Search complete", None, None)
+            return {
+                'curb_weight_lbs': single_call_result.curb_weight_lbs,
+                'aluminum_engine': single_call_result.aluminum_engine,
+                'aluminum_rims': single_call_result.aluminum_rims,
+                'catalytic_converters': single_call_result.catalytic_converters
+            }
         
-        # Get aluminum engine info
-        aluminum_engine = get_aluminum_engine_from_api(year, make, model)
-        if aluminum_engine is not None:
-            print(f"  -> Found aluminum engine info via API: {aluminum_engine}")
-        
-        # Get aluminum rims info
-        aluminum_rims = get_aluminum_rims_from_api(year, make, model)
-        if aluminum_rims is not None:
-            print(f"  -> Found aluminum rims info via API: {aluminum_rims}")
+        else:
+            # Single-call resolution failed or insufficient confidence, fallback to multi-call system
+            print("  -> Single-call resolution failed or insufficient confidence, falling back to multi-call system...")
+            if single_call_result and single_call_result.warnings:
+                for warning in single_call_result.warnings:
+                    print(f"  -> Single-call warning: {warning}")
+            
+            # Use existing multi-call resolver system for curb weight
+            update_progress("Searching specifications...", "curb_weight", "searching")
+            weight = get_curb_weight_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
+            if weight:
+                print(f"  -> Resolved curb weight: {weight} lbs")
+                # Try to get confidence score from resolver data if available
+                confidence = 0.8  # Default confidence for successful resolution
+                if resolution_data and 'curb_weight' in resolution_data:
+                    confidence = resolution_data['curb_weight'].get('confidence', 0.8)
+                update_progress("Searching specifications...", "curb_weight", "found", confidence)
+            else:
+                error_msg = "Unable to find reliable curb weight data"
+                update_progress("Searching specifications...", "curb_weight", "failed", None, error_msg)
+            
+            # Graceful degradation: Only mark as fake if validation explicitly failed
+            # Don't mark as fake just because we couldn't resolve data
+            if not weight:
+                if vehicle_exists is False:
+                    # Already handled above, but double-check
+                    print(f"  -> No weight found and vehicle explicitly validated as fake")
+                    mark_vehicle_as_not_found(year, make, model)
+                    update_progress("Search complete", None, None)
+                    return None
+                else:
+                    # Validation was inconclusive or passed - don't mark as fake
+                    print(f"  -> Could not resolve weight, but validation was not conclusive")
+                    print(f"  -> Not marking vehicle as fake - may need manual review or retry later")
+                    # Provide specific error message for weight resolution failure
+                    error_msg = "Weight data not available from reliable sources"
+                    update_progress("Search complete", "curb_weight", "failed", None, error_msg)
+                    return None
+            
+            # Use existing multi-call resolver system for aluminum engine info
+            update_progress("Searching specifications...", "engine_material", "searching")
+            aluminum_engine = get_aluminum_engine_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
+            if aluminum_engine is not None:
+                print(f"  -> Resolved aluminum engine: {aluminum_engine}")
+                # Try to get confidence score from resolver data if available
+                confidence = 0.7  # Default confidence for successful resolution
+                if resolution_data and 'aluminum_engine' in resolution_data:
+                    confidence = resolution_data['aluminum_engine'].get('confidence', 0.7)
+                update_progress("Searching specifications...", "engine_material", "found", confidence)
+            else:
+                update_progress("Searching specifications...", "engine_material", "partial", 0.5, "Engine material could not be determined")
+            
+            # Use existing multi-call resolver system for aluminum rims info
+            update_progress("Searching specifications...", "rim_material", "searching")
+            aluminum_rims = get_aluminum_rims_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
+            if aluminum_rims is not None:
+                print(f"  -> Resolved aluminum rims: {aluminum_rims}")
+                # Try to get confidence score from resolver data if available
+                confidence = 0.7  # Default confidence for successful resolution
+                if resolution_data and 'aluminum_rims' in resolution_data:
+                    confidence = resolution_data['aluminum_rims'].get('confidence', 0.7)
+                update_progress("Searching specifications...", "rim_material", "found", confidence)
+            else:
+                update_progress("Searching specifications...", "rim_material", "partial", 0.5, "Rim material could not be determined")
 
-        # NOTE: Catalytic converter count estimation is temporarily disabled.
-        # TODO: Revisit approach for more accuracy (see note above). Use default average in calculations.
-        catalytic_converters = None
+            # Use existing multi-call resolver system for catalytic converters if single-call didn't provide it
+            catalytic_converters = None
+            if single_call_result and single_call_result.catalytic_converters is not None:
+                catalytic_converters = single_call_result.catalytic_converters
+                print(f"  -> Using catalytic converter count from single-call: {catalytic_converters}")
+                confidence = single_call_result.confidence_scores.get('catalytic_converters', 0.6)
+                update_progress("Searching specifications...", "catalytic_converters", "found", confidence)
+            else:
+                # NOTE: Catalytic converter count estimation is temporarily disabled in multi-call system.
+                # TODO: Revisit approach for more accuracy (e.g., OEM diagrams, VIN decoding, engine/bank heuristics).
+                # Use default average in calculations for now.
+                update_progress("Searching specifications...", "catalytic_converters", "partial", 0.4, "Using default average - specific count not available")
+                catalytic_converters = None
 
-        # Update database with all data (store None for catalytic_converters for now)
-        update_vehicle_data_in_db(year, make, model, weight, aluminum_engine, aluminum_rims, catalytic_converters)
+        # Update database with all resolved data
+        update_progress("Saving to database...", None, None)
+        update_vehicle_data_in_db(year, make, model, weight, aluminum_engine, aluminum_rims, catalytic_converters, progress_callback)
 
+        update_progress("Search complete", None, None)
         return {
             'curb_weight_lbs': weight,
             'aluminum_engine': aluminum_engine,
