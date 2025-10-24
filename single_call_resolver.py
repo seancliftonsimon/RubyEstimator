@@ -113,7 +113,7 @@ SOURCE PRIORITIZATION (search in this order):
 2. HIGH PRIORITY: Kelley Blue Book (KBB.com), Edmunds.com, Cars.com
 3. MEDIUM PRIORITY: AutoTrader.com, CarGurus.com, MotorTrend.com, Car and Driver
 4. ACCEPTABLE: NHTSA.gov, EPA.gov, automotive forums with verified data
-5. AVOID: Wikipedia, user-generated content without verification
+5. AVOID: user-generated content without verification
 
 FIELD-SPECIFIC SEARCH INSTRUCTIONS:
 
@@ -225,13 +225,30 @@ Return ONLY the JSON object, no additional text or explanations."""
                 except (ValueError, TypeError):
                     bundle.warnings.append("Invalid catalytic converter count format in response")
             
-            # Extract confidence scores
+            # Extract confidence scores - ONLY for fields that were actually resolved
             if 'confidence_scores' in data and isinstance(data['confidence_scores'], dict):
-                for field, score in data['confidence_scores'].items():
+                # Map confidence field names to data field names
+                field_mapping = {
+                    'curb_weight': 'curb_weight_lbs',
+                    'engine_material': 'aluminum_engine',
+                    'rim_material': 'aluminum_rims',
+                    'catalytic_converters': 'catalytic_converters'
+                }
+                
+                for confidence_field, score in data['confidence_scores'].items():
                     if isinstance(score, (int, float)) and 0.0 <= score <= 1.0:
-                        bundle.confidence_scores[field] = float(score)
+                        # Only accept confidence score if the corresponding field was resolved
+                        data_field = field_mapping.get(confidence_field)
+                        if data_field and data_field in data and data[data_field] is not None:
+                            bundle.confidence_scores[confidence_field] = float(score)
+                        elif confidence_field in field_mapping:
+                            # Field wasn't resolved, don't include the confidence score
+                            pass
+                        else:
+                            # Unknown field in confidence scores
+                            bundle.warnings.append(f"Unknown field in confidence scores: {confidence_field}")
                     else:
-                        bundle.warnings.append(f"Invalid confidence score for {field}: {score}")
+                        bundle.warnings.append(f"Invalid confidence score for {confidence_field}: {score}")
             
             # Validate confidence score completeness
             self._validate_confidence_scores(bundle, data)

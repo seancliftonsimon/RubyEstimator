@@ -9,6 +9,7 @@ from resolver import GroundedSearchClient, ConsensusResolver, ProvenanceTracker,
 from single_call_resolver import SingleCallVehicleResolver, VehicleSpecificationBundle
 import time
 import random
+import logging
 
 # --- Configuration ---
 # Get API key from environment variables (works with Railway, Streamlit Cloud, and local development)
@@ -75,6 +76,47 @@ single_call_resolver = SingleCallVehicleResolver(
     confidence_threshold=resolver_config["confidence_threshold"]
 )
 
+# Define required fields for a complete AI resolution
+REQUIRED_FIELDS_FOR_COMPLETE_SEARCH = [
+    'curb_weight',
+    'aluminum_engine',
+    'aluminum_rims',
+    'catalytic_converters'
+]
+
+def has_complete_resolution(resolution_data):
+    """
+    Check if resolution data contains all required fields for a complete search.
+    
+    This function determines completeness by checking the resolutions table for the presence
+    of all required fields. This is the correct approach because:
+    - The resolutions table stores one row per field (not per search)
+    - Completeness is derived by checking if all required fields exist
+    - No separate 'is_complete_search' column is needed
+    
+    Args:
+        resolution_data: Dictionary of resolved fields from get_resolution_data_from_db()
+                        Format: {field_name: {'value': ..., 'confidence': ..., 'created_at': ...}}
+    
+    Returns:
+        bool: True if all required fields are present with non-None values, False otherwise
+    """
+    if not resolution_data:
+        return False
+    
+    for field_name in REQUIRED_FIELDS_FOR_COMPLETE_SEARCH:
+        if field_name not in resolution_data:
+            return False
+        
+        field_data = resolution_data[field_name]
+        if not isinstance(field_data, dict):
+            return False
+        
+        value = field_data.get('value')
+        if value is None:
+            return False
+    
+    return True
 
 
 def retry_with_exponential_backoff(func, max_retries=3, base_delay=1.0, max_delay=10.0, timeout_seconds=30):
@@ -1102,12 +1144,14 @@ def process_vehicle(year, make, model, progress_callback=None):
         update_progress("Search complete", None, None)
         return None
     
-    # First check for high-confidence resolver data (cached data first - graceful degradation)
+    # Check for COMPLETE high-confidence resolver data (cached data first)
     update_progress("Checking cached data...", None, None)
     resolution_data = get_resolution_data_from_db(year, make, model)
-    if resolution_data:
-        print(f"  -> Found high-confidence resolver data for some fields")
-        logging.info(f"Using cached resolver data for {year} {make} {model}")
+    
+    # Only use cache if we have ALL required fields (complete resolution)
+    if resolution_data and has_complete_resolution(resolution_data):
+        print(f"  -> Found complete cached AI resolution for all fields")
+        logging.info(f"Using complete cached resolver data for {year} {make} {model}")
         
         # Extract resolved values
         curb_weight = resolution_data.get('curb_weight', {}).get('value')
@@ -1115,15 +1159,11 @@ def process_vehicle(year, make, model, progress_callback=None):
         aluminum_rims = resolution_data.get('aluminum_rims', {}).get('value')
         catalytic_converters = resolution_data.get('catalytic_converters', {}).get('value')
         
-        # Update progress for found cached data
-        if curb_weight:
-            update_progress("Searching specifications...", "curb_weight", "found")
-        if aluminum_engine is not None:
-            update_progress("Searching specifications...", "engine_material", "found")
-        if aluminum_rims is not None:
-            update_progress("Searching specifications...", "rim_material", "found")
-        if catalytic_converters is not None:
-            update_progress("Searching specifications...", "catalytic_converters", "found")
+        # Update progress for cached complete data
+        update_progress("Using cached AI search...", "curb_weight", "found")
+        update_progress("Using cached AI search...", "engine_material", "found")
+        update_progress("Using cached AI search...", "rim_material", "found")
+        update_progress("Using cached AI search...", "catalytic_converters", "found")
         
         # Convert boolean values from numeric storage
         if aluminum_engine is not None:
@@ -1131,251 +1171,282 @@ def process_vehicle(year, make, model, progress_callback=None):
         if aluminum_rims is not None:
             aluminum_rims = bool(aluminum_rims)
         
-        # If we have curb weight from resolver, we can return early
-        if curb_weight:
-            print(f"  -> Using resolver data: {curb_weight} lbs, Al Engine: {aluminum_engine}, Al Rims: {aluminum_rims}")
-            logging.info(f"Successfully returned cached data for {year} {make} {model}")
-            update_progress("Search complete", None, None)
-            return {
-                'curb_weight_lbs': curb_weight,
-                'aluminum_engine': aluminum_engine,
-                'aluminum_rims': aluminum_rims,
-                'catalytic_converters': catalytic_converters
-            }
-    
-    # Check database for legitimate vehicle data as fallback (graceful degradation level 2)
-    update_progress("Checking database...", None, None)
-    vehicle_data = get_vehicle_data_from_db(year, make, model)
-    
-    if vehicle_data and vehicle_data['curb_weight_lbs'] is not None and vehicle_data['curb_weight_lbs'] > 0:
-        print(f"  -> Found in DB: {vehicle_data['curb_weight_lbs']} lbs, Cats: {vehicle_data['catalytic_converters']}")
-        
-        # Update progress for found database data
-        if vehicle_data['curb_weight_lbs']:
-            update_progress("Searching specifications...", "curb_weight", "found")
-        if vehicle_data.get('aluminum_engine') is not None:
-            update_progress("Searching specifications...", "engine_material", "found")
-        if vehicle_data.get('aluminum_rims') is not None:
-            update_progress("Searching specifications...", "rim_material", "found")
-        if vehicle_data.get('catalytic_converters') is not None:
-            update_progress("Searching specifications...", "catalytic_converters", "found")
-        
-        # Enhance database data with any available resolver data
-        if resolution_data:
-            aluminum_engine = resolution_data.get('aluminum_engine', {}).get('value')
-            aluminum_rims = resolution_data.get('aluminum_rims', {}).get('value')
-            
-            if aluminum_engine is not None:
-                vehicle_data['aluminum_engine'] = bool(aluminum_engine)
-            if aluminum_rims is not None:
-                vehicle_data['aluminum_rims'] = bool(aluminum_rims)
-        
+        print(f"  -> Using complete cached AI data: {curb_weight} lbs, Al Engine: {aluminum_engine}, Al Rims: {aluminum_rims}, Cats: {catalytic_converters}")
+        logging.info(f"Successfully returned complete cached data for {year} {make} {model}")
         update_progress("Search complete", None, None)
-        return vehicle_data
+        return {
+            'curb_weight_lbs': curb_weight,
+            'aluminum_engine': aluminum_engine,
+            'aluminum_rims': aluminum_rims,
+            'catalytic_converters': catalytic_converters
+        }
+    elif resolution_data:
+        # Partial data exists but not complete - log and proceed with new AI search
+        missing_fields = [f for f in REQUIRED_FIELDS_FOR_COMPLETE_SEARCH if f not in resolution_data or resolution_data[f].get('value') is None]
+        print(f"  -> Found partial cached data but missing fields: {missing_fields}")
+        print(f"  -> Will run new AI search for complete resolution")
+        logging.info(f"Incomplete cached data for {year} {make} {model}, missing: {missing_fields}")
+    
+    # No complete cached data - proceed with AI search
+    # (vehicles table is NOT used as cache - only resolutions table with complete data)
+    print("  -> No complete cached AI data. Validating vehicle existence first...")
+    
+    # Validate vehicle existence before making expensive resolver calls
+    update_progress("Validating vehicle...", None, None)
+    vehicle_exists = validate_vehicle_existence(year, make, model)
+    
+    if vehicle_exists is False:
+        # Only mark as not found if validation explicitly returned False
+        print(f"  -> Vehicle validation failed: {year} {make} {model} does not exist")
+        mark_vehicle_as_not_found(year, make, model)
+        update_progress("Search complete", None, None)
+        return None  # Return None to indicate vehicle not found
+    elif vehicle_exists is None:
+        print(f"  -> Vehicle validation inconclusive for: {year} {make} {model}")
+        print(f"  -> Will attempt resolution but won't mark as fake if unsuccessful")
+        # Continue with processing - inconclusive doesn't mean fake
     else:
-        print("  -> Not in DB or missing data. Validating vehicle existence first...")
+        print(f"  -> Vehicle validation passed: {year} {make} {model} exists")
+    
+    print("  -> Proceeding with single-call resolution...")
+    
+    # Try single-call resolution first - always run for new searches
+    update_progress("Running new AI search...", None, "searching")
+    single_call_result = single_call_resolver.resolve_all_specifications(year, make, model)
+    
+    # Check if single-call resolution was successful
+    if (single_call_result and 
+        single_call_result.curb_weight_lbs is not None and 
+        single_call_resolver.has_sufficient_confidence(single_call_result)):
         
-        # Validate vehicle existence before making expensive resolver calls
-        update_progress("Validating vehicle...", None, None)
-        vehicle_exists = validate_vehicle_existence(year, make, model)
+        print(f"  -> Single-call resolution successful!")
+        print(f"  -> Weight: {single_call_result.curb_weight_lbs} lbs")
+        print(f"  -> Aluminum Engine: {single_call_result.aluminum_engine}")
+        print(f"  -> Aluminum Rims: {single_call_result.aluminum_rims}")
+        print(f"  -> Catalytic Converters: {single_call_result.catalytic_converters}")
         
-        if vehicle_exists is False:
-            # Only mark as not found if validation explicitly returned False
-            print(f"  -> Vehicle validation failed: {year} {make} {model} does not exist")
-            mark_vehicle_as_not_found(year, make, model)
-            update_progress("Search complete", None, None)
-            return None  # Return None to indicate vehicle not found
-        elif vehicle_exists is None:
-            print(f"  -> Vehicle validation inconclusive for: {year} {make} {model}")
-            print(f"  -> Will attempt resolution but won't mark as fake if unsuccessful")
-            # Continue with processing - inconclusive doesn't mean fake
-        else:
-            print(f"  -> Vehicle validation passed: {year} {make} {model} exists")
+        # Update progress for all found specifications
+        if single_call_result.curb_weight_lbs is not None:
+            confidence = single_call_result.confidence_scores.get('curb_weight', 0.8)
+            update_progress("Searching specifications...", "curb_weight", "found", confidence)
         
-        print("  -> Proceeding with single-call resolution...")
+        if single_call_result.aluminum_engine is not None:
+            confidence = single_call_result.confidence_scores.get('engine_material', 0.7)
+            update_progress("Searching specifications...", "engine_material", "found", confidence)
         
-        # Try single-call resolution first
-        update_progress("Searching specifications...", None, "searching")
-        single_call_result = single_call_resolver.resolve_all_specifications(year, make, model)
+        if single_call_result.aluminum_rims is not None:
+            confidence = single_call_result.confidence_scores.get('rim_material', 0.7)
+            update_progress("Searching specifications...", "rim_material", "found", confidence)
         
-        # Check if single-call resolution was successful
-        if (single_call_result and 
-            single_call_result.curb_weight_lbs is not None and 
-            single_call_resolver.has_sufficient_confidence(single_call_result)):
+        if single_call_result.catalytic_converters is not None:
+            confidence = single_call_result.confidence_scores.get('catalytic_converters', 0.6)
+            update_progress("Searching specifications...", "catalytic_converters", "found", confidence)
+        
+        # Store single-call resolution results in provenance tracker
+        try:
+            vehicle_key = f"{year}_{make}_{model}"
             
-            print(f"  -> Single-call resolution successful!")
-            print(f"  -> Weight: {single_call_result.curb_weight_lbs} lbs")
-            print(f"  -> Aluminum Engine: {single_call_result.aluminum_engine}")
-            print(f"  -> Aluminum Rims: {single_call_result.aluminum_rims}")
-            print(f"  -> Catalytic Converters: {single_call_result.catalytic_converters}")
-            
-            # Update progress for all found specifications
+            # Create resolution records for each field
             if single_call_result.curb_weight_lbs is not None:
-                confidence = single_call_result.confidence_scores.get('curb_weight', 0.8)
-                update_progress("Searching specifications...", "curb_weight", "found", confidence)
+                from resolver import ResolutionResult
+                weight_resolution = ResolutionResult(
+                    final_value=single_call_result.curb_weight_lbs,
+                    confidence_score=single_call_result.confidence_scores.get('curb_weight', 0.8),
+                    method="single_call_resolution",
+                    candidates=[],  # Single call doesn't use candidates
+                    outliers=[],    # Single call doesn't use outliers
+                    warnings=single_call_result.warnings
+                )
+                provenance_tracker.create_resolution_record(vehicle_key, "curb_weight", weight_resolution)
             
             if single_call_result.aluminum_engine is not None:
-                confidence = single_call_result.confidence_scores.get('engine_material', 0.7)
-                update_progress("Searching specifications...", "engine_material", "found", confidence)
+                engine_resolution = ResolutionResult(
+                    final_value=int(single_call_result.aluminum_engine),
+                    confidence_score=single_call_result.confidence_scores.get('engine_material', 0.7),
+                    method="single_call_resolution",
+                    candidates=[],  # Single call doesn't use candidates
+                    outliers=[],    # Single call doesn't use outliers
+                    warnings=single_call_result.warnings
+                )
+                provenance_tracker.create_resolution_record(vehicle_key, "aluminum_engine", engine_resolution)
             
             if single_call_result.aluminum_rims is not None:
-                confidence = single_call_result.confidence_scores.get('rim_material', 0.7)
-                update_progress("Searching specifications...", "rim_material", "found", confidence)
+                rims_resolution = ResolutionResult(
+                    final_value=int(single_call_result.aluminum_rims),
+                    confidence_score=single_call_result.confidence_scores.get('rim_material', 0.7),
+                    method="single_call_resolution",
+                    candidates=[],  # Single call doesn't use candidates
+                    outliers=[],    # Single call doesn't use outliers
+                    warnings=single_call_result.warnings
+                )
+                provenance_tracker.create_resolution_record(vehicle_key, "aluminum_rims", rims_resolution)
             
             if single_call_result.catalytic_converters is not None:
-                confidence = single_call_result.confidence_scores.get('catalytic_converters', 0.6)
-                update_progress("Searching specifications...", "catalytic_converters", "found", confidence)
+                cat_resolution = ResolutionResult(
+                    final_value=single_call_result.catalytic_converters,
+                    confidence_score=single_call_result.confidence_scores.get('catalytic_converters', 0.6),
+                    method="single_call_resolution",
+                    candidates=[],  # Single call doesn't use candidates
+                    outliers=[],    # Single call doesn't use outliers
+                    warnings=single_call_result.warnings
+                )
+                provenance_tracker.create_resolution_record(vehicle_key, "catalytic_converters", cat_resolution)
             
-            # Store single-call resolution results in provenance tracker
-            try:
-                vehicle_key = f"{year}_{make}_{model}"
-                
-                # Create resolution records for each field
-                if single_call_result.curb_weight_lbs is not None:
-                    from resolver import ResolutionResult
-                    weight_resolution = ResolutionResult(
-                        final_value=single_call_result.curb_weight_lbs,
-                        confidence_score=single_call_result.confidence_scores.get('curb_weight', 0.8),
-                        method="single_call_resolution",
-                        candidates=[],  # Single call doesn't use candidates
-                        outliers=[],    # Single call doesn't use outliers
-                        warnings=single_call_result.warnings
-                    )
-                    provenance_tracker.create_resolution_record(vehicle_key, "curb_weight", weight_resolution)
-                
-                if single_call_result.aluminum_engine is not None:
-                    engine_resolution = ResolutionResult(
-                        final_value=int(single_call_result.aluminum_engine),
-                        confidence_score=single_call_result.confidence_scores.get('engine_material', 0.7),
-                        method="single_call_resolution",
-                        candidates=[],  # Single call doesn't use candidates
-                        outliers=[],    # Single call doesn't use outliers
-                        warnings=single_call_result.warnings
-                    )
-                    provenance_tracker.create_resolution_record(vehicle_key, "aluminum_engine", engine_resolution)
-                
-                if single_call_result.aluminum_rims is not None:
-                    rims_resolution = ResolutionResult(
-                        final_value=int(single_call_result.aluminum_rims),
-                        confidence_score=single_call_result.confidence_scores.get('rim_material', 0.7),
-                        method="single_call_resolution",
-                        candidates=[],  # Single call doesn't use candidates
-                        outliers=[],    # Single call doesn't use outliers
-                        warnings=single_call_result.warnings
-                    )
-                    provenance_tracker.create_resolution_record(vehicle_key, "aluminum_rims", rims_resolution)
-                
-                if single_call_result.catalytic_converters is not None:
-                    cat_resolution = ResolutionResult(
-                        final_value=single_call_result.catalytic_converters,
-                        confidence_score=single_call_result.confidence_scores.get('catalytic_converters', 0.6),
-                        method="single_call_resolution",
-                        candidates=[],  # Single call doesn't use candidates
-                        outliers=[],    # Single call doesn't use outliers
-                        warnings=single_call_result.warnings
-                    )
-                    provenance_tracker.create_resolution_record(vehicle_key, "catalytic_converters", cat_resolution)
-                    
-            except Exception as e:
-                print(f"  -> Warning: Failed to store single-call resolution records: {e}")
+            # Check completeness of resolution and log if incomplete
+            resolved_fields = []
+            missing_fields = []
             
-            # Update database with single-call results
-            update_progress("Saving to database...", None, None)
-            update_vehicle_data_in_db(
-                year, make, model, 
-                single_call_result.curb_weight_lbs,
-                single_call_result.aluminum_engine,
-                single_call_result.aluminum_rims,
-                single_call_result.catalytic_converters,
-                progress_callback
-            )
-            
-            update_progress("Search complete", None, None)
-            return {
-                'curb_weight_lbs': single_call_result.curb_weight_lbs,
-                'aluminum_engine': single_call_result.aluminum_engine,
-                'aluminum_rims': single_call_result.aluminum_rims,
-                'catalytic_converters': single_call_result.catalytic_converters
-            }
-        
-        else:
-            # Single-call resolution failed or insufficient confidence, fallback to multi-call system
-            print("  -> Single-call resolution failed or insufficient confidence, falling back to multi-call system...")
-            if single_call_result and single_call_result.warnings:
-                for warning in single_call_result.warnings:
-                    print(f"  -> Single-call warning: {warning}")
-            
-            # Use existing multi-call resolver system for curb weight
-            update_progress("Searching specifications...", "curb_weight", "searching")
-            weight = get_curb_weight_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
-            if weight:
-                print(f"  -> Resolved curb weight: {weight} lbs")
-                # Try to get confidence score from resolver data if available
-                confidence = 0.8  # Default confidence for successful resolution
-                if resolution_data and 'curb_weight' in resolution_data:
-                    confidence = resolution_data['curb_weight'].get('confidence', 0.8)
-                update_progress("Searching specifications...", "curb_weight", "found", confidence)
-            else:
-                error_msg = "Unable to find reliable curb weight data"
-                update_progress("Searching specifications...", "curb_weight", "failed", None, error_msg)
-            
-            # Graceful degradation: Only mark as fake if validation explicitly failed
-            # Don't mark as fake just because we couldn't resolve data
-            if not weight:
-                if vehicle_exists is False:
-                    # Already handled above, but double-check
-                    print(f"  -> No weight found and vehicle explicitly validated as fake")
-                    mark_vehicle_as_not_found(year, make, model)
-                    update_progress("Search complete", None, None)
-                    return None
+            for field_name in REQUIRED_FIELDS_FOR_COMPLETE_SEARCH:
+                if field_name == 'curb_weight' and single_call_result.curb_weight_lbs is not None:
+                    resolved_fields.append(field_name)
+                elif field_name == 'aluminum_engine' and single_call_result.aluminum_engine is not None:
+                    resolved_fields.append(field_name)
+                elif field_name == 'aluminum_rims' and single_call_result.aluminum_rims is not None:
+                    resolved_fields.append(field_name)
+                elif field_name == 'catalytic_converters' and single_call_result.catalytic_converters is not None:
+                    resolved_fields.append(field_name)
                 else:
-                    # Validation was inconclusive or passed - don't mark as fake
-                    print(f"  -> Could not resolve weight, but validation was not conclusive")
-                    print(f"  -> Not marking vehicle as fake - may need manual review or retry later")
-                    # Provide specific error message for weight resolution failure
-                    error_msg = "Weight data not available from reliable sources"
-                    update_progress("Search complete", "curb_weight", "failed", None, error_msg)
-                    return None
+                    missing_fields.append(field_name)
             
-            # Use existing multi-call resolver system for aluminum engine info
-            update_progress("Searching specifications...", "engine_material", "searching")
-            aluminum_engine = get_aluminum_engine_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
-            if aluminum_engine is not None:
-                print(f"  -> Resolved aluminum engine: {aluminum_engine}")
-                # Try to get confidence score from resolver data if available
-                confidence = 0.7  # Default confidence for successful resolution
-                if resolution_data and 'aluminum_engine' in resolution_data:
-                    confidence = resolution_data['aluminum_engine'].get('confidence', 0.7)
-                update_progress("Searching specifications...", "engine_material", "found", confidence)
+            if missing_fields:
+                print(f"  -> WARNING: Incomplete resolution - missing fields: {missing_fields}")
+                logging.warning(f"Incomplete AI resolution for {vehicle_key}: resolved {resolved_fields}, missing {missing_fields}")
             else:
-                update_progress("Searching specifications...", "engine_material", "partial", 0.5, "Engine material could not be determined")
-            
-            # Use existing multi-call resolver system for aluminum rims info
-            update_progress("Searching specifications...", "rim_material", "searching")
-            aluminum_rims = get_aluminum_rims_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
-            if aluminum_rims is not None:
-                print(f"  -> Resolved aluminum rims: {aluminum_rims}")
-                # Try to get confidence score from resolver data if available
-                confidence = 0.7  # Default confidence for successful resolution
-                if resolution_data and 'aluminum_rims' in resolution_data:
-                    confidence = resolution_data['aluminum_rims'].get('confidence', 0.7)
-                update_progress("Searching specifications...", "rim_material", "found", confidence)
+                print(f"  -> Complete resolution achieved - all required fields resolved")
+                logging.info(f"Complete AI resolution for {vehicle_key}: all fields resolved")
+                
+        except Exception as e:
+            print(f"  -> Warning: Failed to store single-call resolution records: {e}")
+        
+        # Update database with single-call results
+        update_progress("Saving to database...", None, None)
+        update_vehicle_data_in_db(
+            year, make, model, 
+            single_call_result.curb_weight_lbs,
+            single_call_result.aluminum_engine,
+            single_call_result.aluminum_rims,
+            single_call_result.catalytic_converters,
+            progress_callback
+        )
+        
+        update_progress("Search complete", None, None)
+        return {
+            'curb_weight_lbs': single_call_result.curb_weight_lbs,
+            'aluminum_engine': single_call_result.aluminum_engine,
+            'aluminum_rims': single_call_result.aluminum_rims,
+            'catalytic_converters': single_call_result.catalytic_converters
+        }
+    
+    else:
+        # Single-call resolution failed or insufficient confidence, fallback to multi-call system
+        print("  -> Single-call resolution failed or insufficient confidence, falling back to multi-call system...")
+        if single_call_result and single_call_result.warnings:
+            for warning in single_call_result.warnings:
+                print(f"  -> Single-call warning: {warning}")
+        
+        # Use existing multi-call resolver system for curb weight
+        update_progress("Searching specifications...", "curb_weight", "searching")
+        weight = get_curb_weight_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
+        if weight:
+            print(f"  -> Resolved curb weight: {weight} lbs")
+            # Try to get confidence score from resolver data if available
+            confidence = 0.8  # Default confidence for successful resolution
+            if resolution_data and 'curb_weight' in resolution_data:
+                confidence = resolution_data['curb_weight'].get('confidence', 0.8)
+            update_progress("Searching specifications...", "curb_weight", "found", confidence)
+        else:
+            error_msg = "Unable to find reliable curb weight data"
+            update_progress("Searching specifications...", "curb_weight", "failed", None, error_msg)
+        
+        # Graceful degradation: Only mark as fake if validation explicitly failed
+        # Don't mark as fake just because we couldn't resolve data
+        if not weight:
+            if vehicle_exists is False:
+                # Already handled above, but double-check
+                print(f"  -> No weight found and vehicle explicitly validated as fake")
+                mark_vehicle_as_not_found(year, make, model)
+                update_progress("Search complete", None, None)
+                return None
             else:
-                update_progress("Searching specifications...", "rim_material", "partial", 0.5, "Rim material could not be determined")
+                # Validation was inconclusive or passed - don't mark as fake
+                print(f"  -> Could not resolve weight, but validation was not conclusive")
+                print(f"  -> Not marking vehicle as fake - may need manual review or retry later")
+                # Provide specific error message for weight resolution failure
+                error_msg = "Weight data not available from reliable sources"
+                update_progress("Search complete", "curb_weight", "failed", None, error_msg)
+                return None
+        
+        # Use existing multi-call resolver system for aluminum engine info
+        update_progress("Searching specifications...", "engine_material", "searching")
+        aluminum_engine = get_aluminum_engine_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
+        if aluminum_engine is not None:
+            print(f"  -> Resolved aluminum engine: {aluminum_engine}")
+            # Try to get confidence score from resolver data if available
+            confidence = 0.7  # Default confidence for successful resolution
+            if resolution_data and 'aluminum_engine' in resolution_data:
+                confidence = resolution_data['aluminum_engine'].get('confidence', 0.7)
+            update_progress("Searching specifications...", "engine_material", "found", confidence)
+        else:
+            update_progress("Searching specifications...", "engine_material", "partial", 0.5, "Engine material could not be determined")
+        
+        # Use existing multi-call resolver system for aluminum rims info
+        update_progress("Searching specifications...", "rim_material", "searching")
+        aluminum_rims = get_aluminum_rims_from_api(year, make, model, progress_callback)  # This uses existing resolver internally
+        if aluminum_rims is not None:
+            print(f"  -> Resolved aluminum rims: {aluminum_rims}")
+            # Try to get confidence score from resolver data if available
+            confidence = 0.7  # Default confidence for successful resolution
+            if resolution_data and 'aluminum_rims' in resolution_data:
+                confidence = resolution_data['aluminum_rims'].get('confidence', 0.7)
+            update_progress("Searching specifications...", "rim_material", "found", confidence)
+        else:
+            update_progress("Searching specifications...", "rim_material", "partial", 0.5, "Rim material could not be determined")
 
-            # Use existing multi-call resolver system for catalytic converters if single-call didn't provide it
+        # Use existing multi-call resolver system for catalytic converters if single-call didn't provide it
+        catalytic_converters = None
+        if single_call_result and single_call_result.catalytic_converters is not None:
+            catalytic_converters = single_call_result.catalytic_converters
+            print(f"  -> Using catalytic converter count from single-call: {catalytic_converters}")
+            confidence = single_call_result.confidence_scores.get('catalytic_converters', 0.6)
+            update_progress("Searching specifications...", "catalytic_converters", "found", confidence)
+        else:
+            # NOTE: Catalytic converter count estimation is temporarily disabled in multi-call system.
+            # TODO: Revisit approach for more accuracy (e.g., OEM diagrams, VIN decoding, engine/bank heuristics).
+            # Use default average in calculations for now.
+            update_progress("Searching specifications...", "catalytic_converters", "partial", 0.4, "Using default average - specific count not available")
             catalytic_converters = None
-            if single_call_result and single_call_result.catalytic_converters is not None:
-                catalytic_converters = single_call_result.catalytic_converters
-                print(f"  -> Using catalytic converter count from single-call: {catalytic_converters}")
-                confidence = single_call_result.confidence_scores.get('catalytic_converters', 0.6)
-                update_progress("Searching specifications...", "catalytic_converters", "found", confidence)
-            else:
-                # NOTE: Catalytic converter count estimation is temporarily disabled in multi-call system.
-                # TODO: Revisit approach for more accuracy (e.g., OEM diagrams, VIN decoding, engine/bank heuristics).
-                # Use default average in calculations for now.
-                update_progress("Searching specifications...", "catalytic_converters", "partial", 0.4, "Using default average - specific count not available")
-                catalytic_converters = None
+
+        # Check completeness of multi-call resolution and log if incomplete
+        vehicle_key = f"{year}_{make}_{model}"
+        resolved_fields = []
+        missing_fields = []
+        
+        if weight is not None:
+            resolved_fields.append('curb_weight')
+        else:
+            missing_fields.append('curb_weight')
+        
+        if aluminum_engine is not None:
+            resolved_fields.append('aluminum_engine')
+        else:
+            missing_fields.append('aluminum_engine')
+        
+        if aluminum_rims is not None:
+            resolved_fields.append('aluminum_rims')
+        else:
+            missing_fields.append('aluminum_rims')
+        
+        if catalytic_converters is not None:
+            resolved_fields.append('catalytic_converters')
+        else:
+            missing_fields.append('catalytic_converters')
+        
+        if missing_fields:
+            print(f"  -> WARNING: Incomplete multi-call resolution - missing fields: {missing_fields}")
+            logging.warning(f"Incomplete multi-call AI resolution for {vehicle_key}: resolved {resolved_fields}, missing {missing_fields}")
+        else:
+            print(f"  -> Complete multi-call resolution achieved - all required fields resolved")
+            logging.info(f"Complete multi-call AI resolution for {vehicle_key}: all fields resolved")
 
         # Update database with all resolved data
         update_progress("Saving to database...", None, None)

@@ -4,6 +4,7 @@ Provides streamlined, user-friendly components with progressive disclosure and r
 """
 
 import streamlit as st
+import textwrap
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -442,45 +443,16 @@ class SearchProgressTracker:
             progress_completion = self.get_progress_completion()
             current_phase = self.current_phase
             
-            st.markdown(f"""
-            <div style="
-                background: rgba(248, 250, 252, 0.95);
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 1rem;
-                margin: 0.5rem 0;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            ">
-                <div style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 0.75rem;
-                ">
-                    <div style="font-weight: 600; color: #334155;">
-                        🔍 Search Progress
-                    </div>
-                    <div style="
-                        font-size: 0.875rem;
-                        color: #64748b;
-                        font-weight: 500;
-                    ">
-                        {progress_completion}
-                    </div>
-                </div>
-                
-                <div style="
-                    font-size: 0.875rem;
-                    color: #475569;
-                    margin-bottom: 0.75rem;
-                    font-style: italic;
-                ">
-                    {current_phase}
-                </div>
-            """, unsafe_allow_html=True)
+            # Build HTML as a single string
+            html_parts = []
+            html_parts.append(f'''<div style="background: rgba(248, 250, 252, 0.95); border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">''')
+            html_parts.append(f'''<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">''')
+            html_parts.append(f'''<div style="font-weight: 600; color: #334155;">🔍 Search Progress</div>''')
+            html_parts.append(f'''<div style="font-size: 0.875rem; color: #64748b; font-weight: 500;">{progress_completion}</div>''')
+            html_parts.append(f'''</div>''')
+            html_parts.append(f'''<div style="font-size: 0.875rem; color: #475569; margin-bottom: 0.75rem; font-style: italic;">{current_phase}</div>''')
             
             # Create enhanced progress items
-            progress_items = []
             for spec, status in self.progress.specifications.items():
                 status_icon = status.value
                 spec_display = spec.replace("_", " ").title()
@@ -509,140 +481,52 @@ class SearchProgressTracker:
                 if spec in self.low_confidence_warnings:
                     confidence_indicator = " ⚠️"
                 
-                progress_items.append(f"""
-                <div style="
-                    display: inline-block;
-                    margin: 0.25rem 0.5rem 0.25rem 0;
-                    padding: 0.5rem 0.75rem;
-                    background: {bg_color};
-                    border: 1px solid {color};
-                    border-radius: 6px;
-                    font-size: 0.875rem;
-                    color: {color};
-                    font-weight: 500;
-                    transition: all 0.2s ease;
-                ">
-                    {status_icon} {spec_display}{timeout_indicator}{confidence_indicator}
-                </div>
-                """)
+                html_parts.append(f'''<div style="display: inline-block; margin: 0.25rem 0.5rem 0.25rem 0; padding: 0.5rem 0.75rem; background: {bg_color}; border: 1px solid {color}; border-radius: 6px; font-size: 0.875rem; color: {color}; font-weight: 500;">{status_icon} {spec_display}{timeout_indicator}{confidence_indicator}</div>''')
             
             # Add database step if all specs are complete
             all_complete = all(status != SearchStatus.SEARCHING for status in self.progress.specifications.values())
             if all_complete:
-                progress_items.append(f"""
-                <div style="
-                    display: inline-block;
-                    margin: 0.25rem 0.5rem 0.25rem 0;
-                    padding: 0.5rem 0.75rem;
-                    background: rgba(22, 163, 74, 0.1);
-                    border: 1px solid #16a34a;
-                    border-radius: 6px;
-                    font-size: 0.875rem;
-                    color: #16a34a;
-                    font-weight: 500;
-                ">
-                    ✅ Saving to Database
-                </div>
-                """)
-            
-            st.markdown("".join(progress_items), unsafe_allow_html=True)
+                html_parts.append(f'''<div style="display: inline-block; margin: 0.25rem 0.5rem 0.25rem 0; padding: 0.5rem 0.75rem; background: rgba(22, 163, 74, 0.1); border: 1px solid #16a34a; border-radius: 6px; font-size: 0.875rem; color: #16a34a; font-weight: 500;">✅ Saving to Database</div>''')
             
             # Show error messages if any
             if self.error_messages:
-                st.markdown("""
-                <div style="
-                    margin-top: 0.75rem;
-                    padding: 0.5rem;
-                    background: rgba(220, 38, 38, 0.1);
-                    border: 1px solid #dc2626;
-                    border-radius: 4px;
-                    font-size: 0.875rem;
-                ">
-                    <div style="font-weight: 600; color: #dc2626; margin-bottom: 0.25rem;">
-                        ⚠️ Issues Found:
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                html_parts.append(f'''<div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; border-radius: 4px; font-size: 0.875rem;">''')
+                html_parts.append(f'''<div style="font-weight: 600; color: #dc2626; margin-bottom: 0.25rem;">⚠️ Issues Found:</div>''')
                 for spec, error in self.error_messages.items():
                     spec_display = spec.replace("_", " ").title()
-                    st.markdown(f"""
-                    <div style="color: #dc2626; margin-left: 1rem;">
-                        • {spec_display}: {error}
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                st.markdown("</div>", unsafe_allow_html=True)
+                    html_parts.append(f'''<div style="color: #dc2626; margin-left: 1rem;">• {spec_display}: {error}</div>''')
+                html_parts.append(f'''</div>''')
             
             # Show timeout warnings if any
             if self.timeout_warnings:
-                st.markdown("""
-                <div style="
-                    margin-top: 0.5rem;
-                    padding: 0.5rem;
-                    background: rgba(217, 119, 6, 0.1);
-                    border: 1px solid #d97706;
-                    border-radius: 4px;
-                    font-size: 0.875rem;
-                ">
-                    <div style="font-weight: 600; color: #d97706; margin-bottom: 0.25rem;">
-                        ⏱️ Timeout Warnings:
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                html_parts.append(f'''<div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(217, 119, 6, 0.1); border: 1px solid #d97706; border-radius: 4px; font-size: 0.875rem;">''')
+                html_parts.append(f'''<div style="font-weight: 600; color: #d97706; margin-bottom: 0.25rem;">⏱️ Timeout Warnings:</div>''')
                 for spec, warning in self.timeout_warnings.items():
                     spec_display = spec.replace("_", " ").title()
-                    st.markdown(f"""
-                    <div style="color: #d97706; margin-left: 1rem;">
-                        • {spec_display}: {warning}
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                st.markdown("</div>", unsafe_allow_html=True)
+                    html_parts.append(f'''<div style="color: #d97706; margin-left: 1rem;">• {spec_display}: {warning}</div>''')
+                html_parts.append(f'''</div>''')
             
             # Show low confidence warnings if any
             if self.low_confidence_warnings:
-                st.markdown("""
-                <div style="
-                    margin-top: 0.5rem;
-                    padding: 0.5rem;
-                    background: rgba(217, 119, 6, 0.1);
-                    border: 1px solid #d97706;
-                    border-radius: 4px;
-                    font-size: 0.875rem;
-                ">
-                    <div style="font-weight: 600; color: #d97706; margin-bottom: 0.25rem;">
-                        ⚠️ Low Confidence Results:
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                html_parts.append(f'''<div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(217, 119, 6, 0.1); border: 1px solid #d97706; border-radius: 4px; font-size: 0.875rem;">''')
+                html_parts.append(f'''<div style="font-weight: 600; color: #d97706; margin-bottom: 0.25rem;">⚠️ Low Confidence Results:</div>''')
                 for spec, warning in self.low_confidence_warnings.items():
                     spec_display = spec.replace("_", " ").title()
-                    st.markdown(f"""
-                    <div style="color: #d97706; margin-left: 1rem;">
-                        • {spec_display}: {warning}
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                st.markdown("</div>", unsafe_allow_html=True)
+                    html_parts.append(f'''<div style="color: #d97706; margin-left: 1rem;">• {spec_display}: {warning}</div>''')
+                html_parts.append(f'''</div>''')
             
-            # Show retry options for failed specifications
+            # Close the main container
+            html_parts.append('</div>')
+            
+            # Render all HTML in one call
+            st.markdown(''.join(html_parts), unsafe_allow_html=True)
+            
+            # Show retry options for failed specifications (separate from HTML to allow buttons)
             failed_specs = [spec for spec, status in self.progress.specifications.items() 
                           if status == SearchStatus.FAILED]
             
             if failed_specs:
-                st.markdown("""
-                <div style="
-                    margin-top: 0.75rem;
-                    padding: 0.5rem;
-                    background: rgba(239, 246, 255, 0.8);
-                    border: 1px solid #3b82f6;
-                    border-radius: 4px;
-                    font-size: 0.875rem;
-                ">
-                    <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">
-                        🔄 Retry Options:
-                    </div>
-                """, unsafe_allow_html=True)
+                st.markdown('<div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(239, 246, 255, 0.8); border: 1px solid #3b82f6; border-radius: 4px; font-size: 0.875rem;"><div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">🔄 Retry Options:</div></div>', unsafe_allow_html=True)
                 
                 # Create retry buttons for each failed specification
                 cols = st.columns(len(failed_specs))
@@ -663,10 +547,6 @@ class SearchProgressTracker:
                             # Return the spec name so the caller can retry the search
                             st.session_state[f'retry_spec_{spec}'] = True
                             st.rerun()
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-            
-            st.markdown("</div>", unsafe_allow_html=True)
     
     def add_error_recovery_options(self, spec: str, error_type: str) -> None:
         """Add error recovery options for a failed specification."""
