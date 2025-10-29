@@ -141,9 +141,11 @@ def generate_button_css(
 
 
 def generate_table_css() -> str:
-    """Generate CSS for data tables with ruby gradient headers."""
+    """Generate CSS for data tables with clean headers (no gradient)."""
     return f"""
-    .stDataFrame table {{
+    /* Both st.dataframe and st.table styling */
+    .stDataFrame table,
+    table {{
         border-collapse: collapse !important;
         width: 100% !important;
         margin: 1rem 0 !important;
@@ -153,7 +155,15 @@ def generate_table_css() -> str:
         box-shadow: {Shadows.MD} !important;
     }}
     
-    .stDataFrame th {{
+    /* Hide index column for st.table */
+    table thead th:first-child,
+    table tbody td:first-child {{
+        display: none !important;
+    }}
+    
+    /* Table headers - clean gray background, no gradient */
+    .stDataFrame th,
+    table th {{
         background: {Colors.GRAY_100} !important;
         color: {Colors.GRAY_800} !important;
         padding: 1rem !important;
@@ -163,16 +173,19 @@ def generate_table_css() -> str:
         border: none !important;
     }}
     
-    .stDataFrame th * {{
+    .stDataFrame th *,
+    table th * {{
         color: {Colors.GRAY_800} !important;
         text-align: center !important;
     }}
     
-    .stDataFrame thead tr th {{
+    .stDataFrame thead tr th,
+    table thead tr th {{
         text-align: center !important;
     }}
     
-    .stDataFrame td {{
+    .stDataFrame td,
+    table td {{
         padding: 0.875rem 1rem !important;
         border-bottom: 1px solid {Colors.GRAY_200} !important;
         vertical-align: middle !important;
@@ -181,11 +194,13 @@ def generate_table_css() -> str:
         font-size: 1rem !important;
     }}
     
-    .stDataFrame tr:nth-child(even) {{
+    .stDataFrame tr:nth-child(even),
+    table tbody tr:nth-child(even) {{
         background: {Colors.GRAY_50} !important;
     }}
     
-    .stDataFrame tr:hover {{
+    .stDataFrame tr:hover,
+    table tbody tr:hover {{
         background: {Colors.GRAY_100} !important;
         box-shadow: {Shadows.SM} !important;
     }}
@@ -467,17 +482,17 @@ def generate_main_app_css() -> str:
     button[kind="secondary"],
     .stFormSubmitButton button,
     .stFormSubmitButton > button {{
-        background: #3b82f6 !important;
-        background-color: #3b82f6 !important;
+        background: #60a5fa !important;
+        background-color: #60a5fa !important;
         color: {Colors.WHITE} !important;
-        border: 3px solid #2563eb !important;
+        border: 3px solid #3b82f6 !important;
         border-radius: {BorderRadius.LG} !important;
         padding: 1rem 2.5rem !important;
         font-weight: 700 !important;
         font-size: 1.3rem !important;
         letter-spacing: 0.5px !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 6px 16px rgba(96, 165, 250, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
         cursor: pointer !important;
         text-transform: uppercase !important;
@@ -487,11 +502,11 @@ def generate_main_app_css() -> str:
     .stButton button:hover,
     .stButton > button:hover,
     .stFormSubmitButton button:hover {{
-        background: #60a5fa !important;
-        background-color: #60a5fa !important;
-        border-color: #3b82f6 !important;
+        background: #93c5fd !important;
+        background-color: #93c5fd !important;
+        border-color: #60a5fa !important;
         transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 10px 28px rgba(59, 130, 246, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 10px 28px rgba(96, 165, 250, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15) !important;
         color: {Colors.WHITE} !important;
     }}
     
