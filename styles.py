@@ -482,7 +482,7 @@ def generate_main_app_css() -> str:
     button[kind="secondary"],
     .stFormSubmitButton button,
     .stFormSubmitButton > button {{
-        background: #60a5fa !important;
+        background: linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%) !important;
         background-color: #60a5fa !important;
         color: {Colors.WHITE} !important;
         border: 3px solid #3b82f6 !important;
@@ -502,7 +502,7 @@ def generate_main_app_css() -> str:
     .stButton button:hover,
     .stButton > button:hover,
     .stFormSubmitButton button:hover {{
-        background: #93c5fd !important;
+        background: linear-gradient(135deg, #93c5fd 0%, #bfdbfe 100%) !important;
         background-color: #93c5fd !important;
         border-color: #60a5fa !important;
         transform: translateY(-3px) scale(1.02) !important;
@@ -679,6 +679,14 @@ def generate_main_app_css() -> str:
         height: 1.5rem !important;
         vertical-align: middle !important;
         fill: {Colors.RUBY_PRIMARY} !important;
+    }}
+    
+    /* Hide keyboard shortcut text that Streamlit adds */
+    [data-testid="stExpander"] details summary span[data-testid*="shortcut"],
+    [data-testid="stExpander"] .shortcuts,
+    [data-testid="stExpander"] kbd {{
+        display: none !important;
+        visibility: hidden !important;
     }}
     
     .streamlit-expanderContent {{
