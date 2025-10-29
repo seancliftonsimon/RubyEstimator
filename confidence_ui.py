@@ -449,7 +449,7 @@ def add_confidence_css() -> None:
         padding: 1rem !important;
         font-weight: 600;
         font-size: 1.1rem;
-        text-align: left;
+        text-align: center;
     }
     
     table td {

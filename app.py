@@ -1200,8 +1200,23 @@ with right_col:
             count_based = []
             
             for commodity in commodities:
-                # Create mock confidence info for demonstration (in real implementation, this would come from resolver)
-                confidence_score = 0.85 if commodity["key"] in ["ELV", "HARNESS", "BATTERY"] else 0.75
+                # Assign confidence scores based on whether item uses vehicle search data or fixed config values
+                # Fixed weight items (from config) = 1.0 confidence (no badge shown)
+                fixed_weight_items = ["HARNESS", "FE_RAD", "BREAKAGE", "ALT", "STARTER", "AC_COMP", "FUSE_BOX", "BATTERY"]
+                
+                if commodity["key"] in fixed_weight_items:
+                    confidence_score = 1.0  # High confidence, no badge
+                elif commodity["key"] == "ELV":
+                    confidence_score = 0.90  # High confidence for curb weight calculation
+                elif commodity["key"] in ["AL_ENGINE", "FE_ENGINE"]:
+                    confidence_score = 0.75  # Medium confidence for engine material (from search)
+                elif commodity["key"] == "AL_RIMS":
+                    confidence_score = 0.75  # Medium confidence for rims (from search)
+                elif commodity["key"] == "CATS":
+                    confidence_score = 0.70  # Medium confidence for cat count (estimated)
+                else:
+                    confidence_score = 0.85  # Default high confidence
+                
                 confidence_info = create_mock_confidence_info(confidence_score)
                 confidence_badge = render_confidence_badge(confidence_info, "small")
                 
@@ -1279,20 +1294,30 @@ with right_col:
                 display_df = display_df.drop('is_engine', axis=1)
                 
                 # Add confidence indicators to commodity names
+                # Only add badges for items with medium/low confidence (< 80%)
                 enhanced_commodities = []
                 for i, row in display_df.iterrows():
                     commodity_name = row['Commodity']
                     
-                    # Create mock confidence info for demonstration
-                    # In real implementation, this would come from the resolver
-                    if 'Engine' in commodity_name:
+                    # Determine confidence based on data source
+                    # Fixed weight items from config = 1.0 (no badge)
+                    fixed_weight_items = ["Wiring Harness", "FE Radiator", "Breakage", "Alternator", 
+                                         "Starter", "A/C Compressor", "Fuse Box", "Battery"]
+                    
+                    if commodity_name in fixed_weight_items:
+                        confidence_score = 1.0  # High confidence, no badge shown
+                        warnings = []
+                    elif 'Engine' in commodity_name:
                         confidence_score = 0.75  # Medium confidence for engine estimates
                         warnings = ["Engine weight estimated from curb weight percentage"]
                     elif commodity_name == 'ELV':
                         confidence_score = 0.90  # High confidence for ELV calculation
                         warnings = []
+                    elif 'Rims' in commodity_name:
+                        confidence_score = 0.75  # Medium confidence for rims (from search)
+                        warnings = []
                     else:
-                        confidence_score = 0.85  # High confidence for fixed weights
+                        confidence_score = 1.0  # Default high confidence for other fixed items
                         warnings = []
                     
                     confidence_info = create_mock_confidence_info(confidence_score, warnings)
@@ -1329,16 +1354,17 @@ with right_col:
                 st.markdown('<div class="subsection-header">Estimated by Count</div>', unsafe_allow_html=True)
                 
                 # Add confidence indicators to count-based commodities
+                # Only add badges for items with medium/low confidence (< 80%)
                 enhanced_count_commodities = []
                 for item in count_based:
                     commodity_name = item['Commodity']
                     
-                    # Create mock confidence info
+                    # Create confidence info
                     if 'Catalytic' in commodity_name:
-                        confidence_score = 0.70  # Medium confidence for cat estimates
+                        confidence_score = 0.70  # Medium confidence for cat estimates (from search/estimate)
                         warnings = ["Count estimated from vehicle type averages"]
                     else:
-                        confidence_score = 0.85  # High confidence for tires
+                        confidence_score = 1.0  # High confidence for tires (standard count)
                         warnings = []
                     
                     confidence_info = create_mock_confidence_info(confidence_score, warnings)

@@ -153,7 +153,7 @@ def generate_table_css() -> str:
         padding: 1rem !important;
         font-weight: 600 !important;
         font-size: 1.1rem !important;
-        text-align: left !important;
+        text-align: center !important;
         border: none !important;
     }}
     
@@ -296,10 +296,42 @@ def generate_main_app_css() -> str:
     """Generate the complete CSS for the main application."""
     return f"""
 <style>
-    /* ========== GLOBAL STYLES ========== */
+    /* ========== FORCE LIGHT MODE ========== */
+    .stApp {{
+        background: {Colors.WHITE} !important;
+        color: {Colors.GRAY_800} !important;
+    }}
+    
+    [data-testid="stAppViewContainer"] {{
+        background: {Colors.WHITE} !important;
+    }}
+    
+    [data-testid="stHeader"] {{
+        background: {Colors.WHITE} !important;
+    }}
+    
     .main {{
-        background: {Colors.WHITE};
-        color: {Colors.GRAY_800};
+        background: {Colors.WHITE} !important;
+        color: {Colors.GRAY_800} !important;
+    }}
+    
+    /* Force all text elements to be dark */
+    p, span, div, label, h1, h2, h3, h4, h5, h6 {{
+        color: {Colors.GRAY_800} !important;
+    }}
+    
+    /* Exception: elements that need white text */
+    button, .stButton > button, 
+    [data-testid="stDataFrame"] th,
+    table th,
+    button * {{
+        color: {Colors.WHITE} !important;
+    }}
+    
+    /* Force input backgrounds to be white */
+    input, textarea, select {{
+        background: {Colors.WHITE} !important;
+        color: {Colors.GRAY_800} !important;
     }}
     
     /* ========== ADMIN BUTTON - Only Teal Element ========== */
@@ -481,6 +513,15 @@ def generate_admin_mode_css() -> str:
     """Generate CSS specific to admin mode with distinct styling."""
     return f"""
 <style>
+    /* ========== FORCE LIGHT MODE FOR ADMIN ========== */
+    .stApp {{
+        background: {Colors.ADMIN_BG} !important;
+    }}
+    
+    [data-testid="stAppViewContainer"] {{
+        background: {Colors.ADMIN_BG} !important;
+    }}
+    
     /* ========== ADMIN MODE SPECIFIC ========== */
     .admin-mode-container {{
         background: {Colors.ADMIN_BG};

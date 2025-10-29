@@ -4,4 +4,11 @@ enableCORS = false
 enableXsrfProtection = false
 
 [browser]
-gatherUsageStats = false 
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#990C41"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F8FAFC"
+textColor = "#1E293B"
+font = "sans serif" 
