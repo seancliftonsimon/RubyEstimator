@@ -193,21 +193,23 @@ def generate_input_css() -> str:
     .stTextInput > div > div > input,
     [data-testid="stTextInput"] > div > div > input,
     input[type="text"] {{
-        background: {Colors.WHITE} !important;
-        border: 2px solid {Colors.RUBY_BORDER_MEDIUM} !important;
+        background: {Colors.GRAY_50} !important;
+        border: 3px solid {Colors.RUBY_BORDER_STRONG} !important;
         border-radius: {BorderRadius.LG} !important;
-        padding: {Spacing.MD} !important;
-        font-size: 1rem !important;
+        padding: 0.75rem !important;
+        font-size: 1.05rem !important;
         color: {Colors.GRAY_800} !important;
+        font-weight: 500 !important;
         transition: all 0.3s ease !important;
-        box-shadow: {Shadows.SM} !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06) !important;
     }}
     
     .stTextInput input:focus,
     [data-testid="stTextInput"] input:focus,
     input[type="text"]:focus {{
+        background: {Colors.WHITE} !important;
         border-color: {Colors.RUBY_PRIMARY} !important;
-        box-shadow: 0 0 0 3px {Colors.RUBY_LIGHT} !important;
+        box-shadow: 0 0 0 4px {Colors.RUBY_LIGHT}, inset 0 2px 4px rgba(0, 0, 0, 0.06) !important;
         outline: none !important;
     }}
     """
@@ -306,14 +308,14 @@ def generate_main_app_css() -> str:
     """Generate the complete CSS for the main application."""
     return f"""
 <style>
-    /* ========== FORCE LIGHT MODE WITH SUBTLE GRADIENT ========== */
+    /* ========== FORCE LIGHT MODE WITH ENHANCED CONTRAST GRADIENT ========== */
     .stApp {{
-        background: linear-gradient(135deg, {Colors.WHITE} 0%, {Colors.GRAY_50} 50%, {Colors.RUBY_LIGHT} 100%) !important;
+        background: linear-gradient(135deg, {Colors.GRAY_100} 0%, {Colors.GRAY_200} 50%, rgba(153, 12, 65, 0.08) 100%) !important;
         color: {Colors.GRAY_800} !important;
     }}
     
     [data-testid="stAppViewContainer"] {{
-        background: linear-gradient(135deg, {Colors.WHITE} 0%, {Colors.GRAY_50} 50%, rgba(153, 12, 65, 0.05) 100%) !important;
+        background: linear-gradient(135deg, {Colors.GRAY_100} 0%, {Colors.GRAY_200} 50%, rgba(153, 12, 65, 0.08) 100%) !important;
     }}
     
     [data-testid="stHeader"] {{
@@ -385,10 +387,11 @@ def generate_main_app_css() -> str:
         color: {Colors.WHITE};
         background: {Colors.RUBY_GRADIENT};
         margin-bottom: 1rem;
-        padding: 0.75rem 1rem;
+        padding: 1rem 1.5rem;
         border-radius: {BorderRadius.LG};
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        box-shadow: {Shadows.MD};
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 6px 16px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15);
+        border: 2px solid {Colors.RUBY_DARK};
     }}
     
     .subsection-header {{
@@ -405,20 +408,20 @@ def generate_main_app_css() -> str:
     
     /* ========== CARDS & CONTAINERS ========== */
     .main-section-card {{
-        background: linear-gradient(135deg, {Colors.WHITE} 0%, {Colors.GRAY_50} 100%);
+        background: {Colors.WHITE};
         backdrop-filter: blur(10px);
         border-radius: {BorderRadius.XL};
-        border: 2px solid {Colors.RUBY_BORDER_MEDIUM};
-        box-shadow: {Shadows.MD};
-        padding: 1rem;
-        margin-bottom: 1rem;
+        border: 3px solid {Colors.RUBY_BORDER_STRONG};
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
         transition: all 0.3s ease;
     }}
     
     .main-section-card:hover {{
-        border-color: {Colors.RUBY_BORDER_STRONG};
-        box-shadow: {Shadows.LG};
-        transform: translateY(-2px);
+        border-color: {Colors.RUBY_PRIMARY};
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(153, 12, 65, 0.2) !important;
+        transform: translateY(-3px);
     }}
     
     /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
@@ -429,27 +432,31 @@ def generate_main_app_css() -> str:
     .main button[kind="secondary"],
     div[data-testid="column"] .stButton button,
     div[data-testid="column"] button {{
-        background: {Colors.BUTTON_PRIMARY} !important;
+        background: linear-gradient(135deg, {Colors.BUTTON_PRIMARY} 0%, {Colors.BUTTON_HOVER} 100%) !important;
         background-color: {Colors.BUTTON_PRIMARY} !important;
         color: {Colors.WHITE} !important;
-        border: 2px solid {Colors.BUTTON_PRIMARY} !important;
+        border: 3px solid {Colors.BUTTON_DARK} !important;
         border-radius: {BorderRadius.LG} !important;
-        padding: {Spacing.MD} {Spacing.XXL} !important;
-        font-weight: 600 !important;
-        font-size: 1rem !important;
+        padding: 0.75rem 2rem !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        letter-spacing: 0.5px !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 12px {Colors.BUTTON_SHADOW} !important;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        box-shadow: 0 6px 16px {Colors.BUTTON_SHADOW}, 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+        cursor: pointer !important;
+        text-transform: uppercase !important;
+        min-height: 48px !important;
     }}
     
     .main .stButton button:hover,
     .main .stButton > button:hover,
     div[data-testid="column"] .stButton button:hover {{
-        background: {Colors.BUTTON_HOVER} !important;
+        background: linear-gradient(135deg, {Colors.BUTTON_HOVER} 0%, #3b82f6 100%) !important;
         background-color: {Colors.BUTTON_HOVER} !important;
-        border-color: {Colors.BUTTON_HOVER} !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px {Colors.BUTTON_SHADOW} !important;
+        border-color: {Colors.BUTTON_PRIMARY} !important;
+        transform: translateY(-3px) scale(1.02) !important;
+        box-shadow: 0 10px 28px {Colors.BUTTON_SHADOW}, 0 4px 8px rgba(0, 0, 0, 0.15) !important;
         color: {Colors.WHITE} !important;
     }}
     
@@ -462,6 +469,7 @@ def generate_main_app_css() -> str:
     div[data-testid="column"] .stButton button div {{
         color: {Colors.WHITE} !important;
         background: transparent !important;
+        font-weight: 700 !important;
     }}
     
     /* Admin button styling - teal background (ONLY teal element) */
@@ -505,17 +513,18 @@ def generate_main_app_css() -> str:
     
     /* ========== FORMS ========== */
     .stForm {{
-        background: linear-gradient(135deg, {Colors.WHITE} 0%, {Colors.GRAY_50} 100%);
+        background: {Colors.WHITE};
         backdrop-filter: blur(10px);
-        padding: 1rem;
+        padding: 1.5rem;
         border-radius: {BorderRadius.LG};
-        border: 2px solid {Colors.RUBY_BORDER_MEDIUM};
-        box-shadow: {Shadows.MD};
+        border: 3px solid {Colors.RUBY_BORDER_STRONG};
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.3s ease;
     }}
     
     .stForm:hover {{
-        border-color: {Colors.RUBY_BORDER_STRONG};
-        box-shadow: {Shadows.LG};
+        border-color: {Colors.RUBY_PRIMARY};
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(153, 12, 65, 0.2) !important;
     }}
     
     /* ========== MESSAGES ========== */
