@@ -643,22 +643,73 @@ add_confidence_css()
 # Apply main app CSS from centralized styles module
 st.markdown(generate_main_app_css(), unsafe_allow_html=True)
 
-# Additional CSS to forcefully hide keyboard arrow text in expanders
+# Additional CSS to forcefully hide keyboard arrow text in expanders (CSS only, no JS)
 st.markdown("""
 <style>
-    /* Aggressive hiding of keyboard arrow text */
+    /* Ultra aggressive hiding of keyboard arrow text - multiple approaches */
+    
+    /* Approach 1: Hide all non-first spans in expander summaries */
     [data-testid="stExpander"] details summary span:not(:first-child) {
         display: none !important;
+        visibility: hidden !important;
+        font-size: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
     }
     
-    /* Hide Material Icons font rendering */
-    [data-testid="stExpander"] span[style*="Material Icons"] {
+    /* Approach 2: Hide Material Icons rendering */
+    [data-testid="stExpander"] span[style*="Material Icons"],
+    [data-testid="stExpander"] span[style*="Material-Icons"],
+    [data-testid="stExpander"] .material-icons,
+    [data-testid="stExpander"] [class*="material"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Approach 3: Force expander summary to only show first child */
+    [data-testid="stExpander"] details summary {
+        font-size: 1rem !important;
+        max-width: 100% !important;
+    }
+    
+    /* Approach 4: Make the summary act like it only has one child */
+    [data-testid="stExpander"] details summary > *:nth-child(n+2) {
         display: none !important;
     }
     
-    /* Target specific expander labels and truncate to only show the question mark and text */
+    /* Approach 5: Clip any overflow that might contain the arrow text */
     [data-testid="stExpander"] details summary {
+        overflow: hidden !important;
+        text-overflow: clip !important;
+        max-height: 3rem !important;
+    }
+    
+    /* Approach 6: Set font size to 0 for anything that's not the label */
+    [data-testid="stExpander"] details summary span[style] {
+        font-size: 0 !important;
+    }
+    
+    [data-testid="stExpander"] details summary span:first-child {
         font-size: 1rem !important;
+    }
+    
+    /* Approach 7: Color match - make any potential arrow text invisible by matching background */
+    [data-testid="stExpander"] details summary span[style*="font"] {
+        color: transparent !important;
+        background: transparent !important;
+    }
+    
+    /* Approach 8: Force maximum width on summary to cut off extra text */
+    [data-testid="stExpander"] details summary {
+        max-width: calc(100% - 3rem) !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Approach 9: Target SVG/icons in summary */
+    [data-testid="stExpander"] details summary svg:not(:first-child) {
+        display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -991,7 +1042,7 @@ with left_col:
                 """, unsafe_allow_html=True)
 
     # --- Display Recent Entries (Minimized) ---
-    with st.expander("📋 Recently Searched Vehicles (Last 5)", expanded=False):
+    with st.expander("📋 Recently Searched Vehicles (Last 5)", expanded=False, icon="📋"):
         try:
             recent_entries_df = get_last_ten_entries()
             if not recent_entries_df.empty:
@@ -1402,7 +1453,7 @@ with right_col:
         """, unsafe_allow_html=True)
         
         # Show manual entry option when no vehicle is selected
-        with st.expander("❓ Unknown make/model? Enter curb weight manually", expanded=False):
+        with st.expander("❓ Unknown make/model? Enter curb weight manually", expanded=False, icon="❓"):
             with st.form(key="manual_calc_form_no_vehicle"):
                 col1, col2 = st.columns(2)
                 with col1:
