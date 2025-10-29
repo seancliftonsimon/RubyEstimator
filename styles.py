@@ -165,6 +165,11 @@ def generate_table_css() -> str:
     
     .stDataFrame th * {{
         color: {Colors.WHITE} !important;
+        text-align: center !important;
+    }}
+    
+    .stDataFrame thead tr th {{
+        text-align: center !important;
     }}
     
     .stDataFrame td {{
@@ -384,7 +389,7 @@ def generate_main_app_css() -> str:
     .section-header {{
         font-size: 1.5rem;
         font-weight: 700;
-        color: {Colors.WHITE};
+        color: {Colors.WHITE} !important;
         background: {Colors.RUBY_GRADIENT};
         margin-bottom: 1rem;
         padding: 1rem 1.5rem;
@@ -392,6 +397,10 @@ def generate_main_app_css() -> str:
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         box-shadow: 0 6px 16px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15);
         border: 2px solid {Colors.RUBY_DARK};
+    }}
+    
+    .section-header * {{
+        color: {Colors.WHITE} !important;
     }}
     
     .subsection-header {{
@@ -426,23 +435,24 @@ def generate_main_app_css() -> str:
     
     /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
     /* Only target buttons within the main content area, not Streamlit's UI chrome */
+    /* Matches the exact blue used in vehicle name and total sale value (#1e40af) */
     .main .stButton button,
     .main .stButton > button,
     .main button[kind="primary"],
     .main button[kind="secondary"],
     div[data-testid="column"] .stButton button,
     div[data-testid="column"] button {{
-        background: linear-gradient(135deg, {Colors.BUTTON_PRIMARY} 0%, {Colors.BUTTON_HOVER} 100%) !important;
-        background-color: {Colors.BUTTON_PRIMARY} !important;
+        background: #1e40af !important;
+        background-color: #1e40af !important;
         color: {Colors.WHITE} !important;
-        border: 3px solid {Colors.BUTTON_DARK} !important;
+        border: 3px solid #1e3a8a !important;
         border-radius: {BorderRadius.LG} !important;
         padding: 0.75rem 2rem !important;
         font-weight: 700 !important;
         font-size: 1.1rem !important;
         letter-spacing: 0.5px !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 6px 16px {Colors.BUTTON_SHADOW}, 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 6px 16px rgba(30, 64, 175, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
         cursor: pointer !important;
         text-transform: uppercase !important;
@@ -452,11 +462,11 @@ def generate_main_app_css() -> str:
     .main .stButton button:hover,
     .main .stButton > button:hover,
     div[data-testid="column"] .stButton button:hover {{
-        background: linear-gradient(135deg, {Colors.BUTTON_HOVER} 0%, #3b82f6 100%) !important;
-        background-color: {Colors.BUTTON_HOVER} !important;
-        border-color: {Colors.BUTTON_PRIMARY} !important;
+        background: #2563eb !important;
+        background-color: #2563eb !important;
+        border-color: #1e40af !important;
         transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 10px 28px {Colors.BUTTON_SHADOW}, 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 10px 28px rgba(30, 64, 175, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15) !important;
         color: {Colors.WHITE} !important;
     }}
     

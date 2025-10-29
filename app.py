@@ -693,20 +693,10 @@ with left_col:
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            # Get confidence score for curb weight
-            confidence_scores = vehicle_info.get('confidence_scores', {})
-            weight_confidence = confidence_scores.get('curb_weight', 0.0)
-            
-            # Create confidence badge if available
-            confidence_badge = ""
-            if weight_confidence > 0:
-                from confidence_ui import create_mock_confidence_info, render_confidence_badge
-                confidence_info = create_mock_confidence_info(weight_confidence)
-                confidence_badge = render_confidence_badge(confidence_info, size="small")
-            
             st.markdown(f"""
-            <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6;">
-                <strong>Weight:</strong> <span style="color: #1e40af; font-weight: 600;">{vehicle_info['weight']} lbs</span>{confidence_badge}
+            <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6; text-align: center;">
+                <strong>Weight</strong><br>
+                <span style="color: #1e40af; font-weight: 600;">{vehicle_info['weight']} lbs</span>
             </div>
             """, unsafe_allow_html=True)
         
@@ -716,23 +706,17 @@ with left_col:
                 engine_color = "#14b8a6" if vehicle_info['aluminum_engine'] else "#f59e0b"
                 engine_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_engine'] else "rgba(245, 158, 11, 0.1)"
                 
-                # Get confidence score for engine material
-                engine_confidence = confidence_scores.get('aluminum_engine', 0.0)
-                confidence_badge = ""
-                if engine_confidence > 0:
-                    from confidence_ui import create_mock_confidence_info, render_confidence_badge
-                    confidence_info = create_mock_confidence_info(engine_confidence)
-                    confidence_badge = render_confidence_badge(confidence_info, size="small")
-                
                 st.markdown(f"""
-                <div style="background: {engine_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color};">
-                    <strong>Engine:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>{confidence_badge}
+                <div style="background: {engine_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color}; text-align: center;">
+                    <strong>Engine</strong><br>
+                    <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
-                    <strong>Engine:</strong> <span style="color: #6b7280;">Unknown</span>
+                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
+                    <strong>Engine</strong><br>
+                    <span style="color: #6b7280;">Unknown</span>
                 </div>
                 """, unsafe_allow_html=True)
         
@@ -742,23 +726,17 @@ with left_col:
                 rims_color = "#14b8a6" if vehicle_info['aluminum_rims'] else "#f59e0b"
                 rims_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_rims'] else "rgba(245, 158, 11, 0.1)"
                 
-                # Get confidence score for rim material
-                rims_confidence = confidence_scores.get('aluminum_rims', 0.0)
-                confidence_badge = ""
-                if rims_confidence > 0:
-                    from confidence_ui import create_mock_confidence_info, render_confidence_badge
-                    confidence_info = create_mock_confidence_info(rims_confidence)
-                    confidence_badge = render_confidence_badge(confidence_info, size="small")
-                
                 st.markdown(f"""
-                <div style="background: {rims_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color};">
-                    <strong>Rims:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>{confidence_badge}
+                <div style="background: {rims_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color}; text-align: center;">
+                    <strong>Rims</strong><br>
+                    <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
-                    <strong>Rims:</strong> <span style="color: #6b7280;">Unknown</span>
+                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
+                    <strong>Rims</strong><br>
+                    <span style="color: #6b7280;">Unknown</span>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -766,23 +744,17 @@ with left_col:
             if vehicle_info.get('catalytic_converters') is not None:
                 cats_count = vehicle_info['catalytic_converters']
                 
-                # Get confidence score for catalytic converters
-                cats_confidence = confidence_scores.get('catalytic_converters', 0.0)
-                confidence_badge = ""
-                if cats_confidence > 0:
-                    from confidence_ui import create_mock_confidence_info, render_confidence_badge
-                    confidence_info = create_mock_confidence_info(cats_confidence)
-                    confidence_badge = render_confidence_badge(confidence_info, size="small")
-                
                 st.markdown(f"""
-                <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6;">
-                    <strong>Cats:</strong> <span style="color: #1e40af; font-weight: 600;">{cats_count}</span>{confidence_badge}
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6; text-align: center;">
+                    <strong>Cats</strong><br>
+                    <span style="color: #1e40af; font-weight: 600;">{cats_count}</span>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af;">
-                    <strong>Cats:</strong> <span style="color: #6b7280;">Unknown</span>
+                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
+                    <strong>Cats</strong><br>
+                    <span style="color: #6b7280;">Unknown</span>
                 </div>
                 """, unsafe_allow_html=True)
         
@@ -1175,12 +1147,12 @@ with right_col:
                 </div>
                 """, unsafe_allow_html=True)
             with col2:
-                # Total Costs - Orange/Amber styling (not red, as red indicates errors)
+                # Total Costs - Neutral styling
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #f59e0b; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                <div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #9ca3af; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.2);">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: #92400e; font-weight: 600; margin-bottom: 0.5rem;">📉 Total Costs</div>
-                        <div style="font-size: 1.5rem; color: #92400e; font-weight: 700;">-{format_currency(totals["total_costs"])}</div>
+                        <div style="font-size: 0.875rem; color: #4b5563; font-weight: 600; margin-bottom: 0.5rem;">📉 Total Costs</div>
+                        <div style="font-size: 1.5rem; color: #1f2937; font-weight: 700;">-{format_currency(totals["total_costs"])}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
