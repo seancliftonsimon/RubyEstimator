@@ -202,9 +202,9 @@ def generate_input_css() -> str:
         border: 3px solid {Colors.RUBY_BORDER_STRONG} !important;
         border-radius: {BorderRadius.LG} !important;
         padding: 0.75rem !important;
-        font-size: 1.05rem !important;
+        font-size: 1.25rem !important;
         color: {Colors.GRAY_800} !important;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
         transition: all 0.3s ease !important;
         box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06) !important;
     }}
@@ -390,17 +390,18 @@ def generate_main_app_css() -> str:
         font-size: 1.5rem;
         font-weight: 700;
         color: {Colors.WHITE} !important;
-        background: {Colors.RUBY_GRADIENT};
+        background: {Colors.RUBY_PRIMARY};
         margin-bottom: 1rem;
         padding: 1rem 1.5rem;
         border-radius: {BorderRadius.LG};
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
         box-shadow: 0 6px 16px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15);
         border: 2px solid {Colors.RUBY_DARK};
     }}
     
     .section-header * {{
         color: {Colors.WHITE} !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
     }}
     
     .subsection-header {{
