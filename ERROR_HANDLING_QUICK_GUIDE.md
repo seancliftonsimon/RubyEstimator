@@ -160,3 +160,5 @@ If you continue seeing errors after these fixes:
 2. Review application logs for detailed error messages
 3. Verify API key is valid in `.streamlit/secrets.toml`
 4. Check internet connectivity and firewall settings
+
+

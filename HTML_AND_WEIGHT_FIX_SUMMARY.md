@@ -204,3 +204,5 @@ Test with vehicles known to have multiple trim levels:
 - 2021 Ford F-150 (Regular cab vs SuperCrew, different engine options)
 
 Expected behavior: Always shows the lightest available configuration.
+
+

@@ -207,3 +207,5 @@ Until then, our simple animated indicator is honest and effective!
 ✅ Reflects actual process
 
 The new progress indicator does exactly what it should: **show activity and set accurate expectations** without pretending to track progress that doesn't exist.
+
+

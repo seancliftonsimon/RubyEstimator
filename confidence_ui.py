@@ -49,17 +49,23 @@ def get_confidence_explanation(level: str, score: float) -> str:
     return explanations.get(level, f"Unknown confidence level ({score:.0%})")
 
 
-def render_confidence_badge(confidence_info: ConfidenceInfo, size: str = "normal") -> str:
+def render_confidence_badge(confidence_info: ConfidenceInfo, size: str = "normal", show_all: bool = False) -> str:
     """
     Render a confidence badge with color-coded status.
+    Only shows badges for medium/low confidence unless show_all=True.
     
     Args:
         confidence_info: Confidence information
         size: "small", "normal", or "large"
+        show_all: If True, show badges even for high confidence (default: False)
     
     Returns:
-        HTML string for the confidence badge
+        HTML string for the confidence badge (empty string if high confidence and show_all=False)
     """
+    # Only show badges for medium/low confidence (< 80%) unless explicitly requested
+    if confidence_info.score >= 0.8 and not show_all:
+        return ""
+    
     colors = {
         "high": {"bg": "#dcfce7", "border": "#16a34a", "text": "#15803d"},
         "medium": {"bg": "#fef3c7", "border": "#d97706", "text": "#92400e"},
@@ -75,7 +81,10 @@ def render_confidence_badge(confidence_info: ConfidenceInfo, size: str = "normal
     color = colors[confidence_info.level]
     size_style = sizes[size]
     
-    badge_html = f'<span class="confidence-badge confidence-{confidence_info.level}" style="background-color: {color["bg"]}; border: 1px solid {color["border"]}; color: {color["text"]}; padding: {size_style["padding"]}; font-size: {size_style["font_size"]}; font-weight: 600; border-radius: 4px; display: inline-block; margin-left: 0.5rem;" title="{confidence_info.explanation}">{confidence_info.level.upper()} ({confidence_info.score:.0%})</span>'
+    # Show appropriate icon based on level
+    icon = "⚠️" if confidence_info.level == "medium" else "❌" if confidence_info.level == "low" else "✓"
+    
+    badge_html = f'<span class="confidence-badge confidence-{confidence_info.level}" style="background-color: {color["bg"]}; border: 1px solid {color["border"]}; color: {color["text"]}; padding: {size_style["padding"]}; font-size: {size_style["font_size"]}; font-weight: 600; border-radius: 4px; display: inline-block; margin-left: 0.5rem;" title="{confidence_info.explanation}">{icon} {confidence_info.level.upper()} ({confidence_info.score:.0%})</span>'
     
     return badge_html
 
@@ -386,14 +395,14 @@ def add_confidence_css() -> None:
     """Add CSS styles for confidence indicators and provenance panels."""
     st.markdown("""
     <style>
-    /* Confidence badge animations */
+    /* Confidence badge animations - only for medium/low */
     .confidence-badge {
         transition: all 0.2s ease;
         cursor: help;
     }
     
     .confidence-badge:hover {
-        transform: scale(1.05);
+        transform: translateY(-1px);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
@@ -418,9 +427,9 @@ def add_confidence_css() -> None:
     
     /* Enhanced table styling for candidates */
     .stDataFrame {
-        border-radius: 6px;
+        border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(153, 12, 65, 0.08);
     }
     
     /* Enhanced table styling for results with confidence indicators */
@@ -431,21 +440,23 @@ def add_confidence_css() -> None:
         background: white;
         border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(153, 12, 65, 0.08);
     }
     
     table th {
-        background: #990C41 !important;
+        background: linear-gradient(135deg, #990C41 0%, #c00e4f 100%) !important;
         color: white !important;
-        padding: 0.75rem !important;
+        padding: 1rem !important;
         font-weight: 600;
+        font-size: 1.1rem;
         text-align: left;
     }
     
     table td {
-        padding: 0.75rem !important;
+        padding: 0.875rem 1rem !important;
         border-bottom: 1px solid #e2e8f0;
         vertical-align: middle;
+        font-size: 1rem;
     }
     
     table tr:nth-child(even) {
@@ -454,6 +465,7 @@ def add_confidence_css() -> None:
     
     table tr:hover {
         background: #f1f5f9;
+        box-shadow: 0 2px 4px rgba(153, 12, 65, 0.08);
     }
     
     /* Ensure confidence badges display properly in tables */

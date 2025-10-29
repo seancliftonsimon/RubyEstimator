@@ -330,3 +330,5 @@ python test_error_handling.py
 4. **Adjust log level** if needed (INFO vs DEBUG)
 
 You should now have full visibility into everything the application is doing!
+
+
