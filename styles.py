@@ -155,12 +155,6 @@ def generate_table_css() -> str:
         box-shadow: {Shadows.MD} !important;
     }}
     
-    /* Hide index column for st.table */
-    table thead th:first-child,
-    table tbody td:first-child {{
-        display: none !important;
-    }}
-    
     /* Table headers - clean gray background, no gradient */
     .stDataFrame th,
     table th {{
@@ -328,6 +322,9 @@ def generate_main_app_css() -> str:
     """Generate the complete CSS for the main application."""
     return f"""
 <style>
+    /* ========== GOOGLE FONTS IMPORT ========== */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap');
+    
     /* ========== PROFESSIONAL FONT FAMILY ========== */
     body, p, h1, h2, h3, h4, h5, h6, span, div, label, input, button, textarea, select {{
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
@@ -392,6 +389,7 @@ def generate_main_app_css() -> str:
     
     /* ========== TYPOGRAPHY ========== */
     .main-title {{
+        font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
         font-size: 3rem;
         font-weight: 800;
         text-align: center;
@@ -404,6 +402,7 @@ def generate_main_app_css() -> str:
     }}
     
     .main-title * {{
+        font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
         color: {Colors.RUBY_PRIMARY} !important;
     }}
     
@@ -421,6 +420,7 @@ def generate_main_app_css() -> str:
     }}
     
     .section-header {{
+        font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
         font-size: 1.5rem !important;
         font-weight: 700 !important;
         color: {Colors.WHITE} !important;
@@ -435,6 +435,7 @@ def generate_main_app_css() -> str:
     
     .section-header,
     .section-header * {{
+        font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
         color: {Colors.WHITE} !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
     }}
@@ -444,6 +445,7 @@ def generate_main_app_css() -> str:
     }}
     
     .subsection-header {{
+        font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
         font-size: 1.2rem;
         font-weight: 600;
         color: {Colors.RUBY_PRIMARY};
@@ -785,6 +787,7 @@ def generate_admin_mode_css() -> str:
     }}
     
     .admin-mode-header {{
+        font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
         background: {Colors.GRAY_700};
         color: {Colors.WHITE};
         padding: {Spacing.LG};

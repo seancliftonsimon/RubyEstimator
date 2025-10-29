@@ -159,7 +159,7 @@ def render_provenance_panel(provenance_info: ProvenanceInfo, expanded: bool = Fa
             if candidates_df:
                 import pandas as pd
                 df = pd.DataFrame(candidates_df)
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(df, use_container_width=True, hide_index=True)
         
         # Warnings
         if provenance_info.confidence.warnings:
