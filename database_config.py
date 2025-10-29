@@ -13,6 +13,9 @@ from sqlalchemy import create_engine as _create_engine, text
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Engine cache for singleton pattern
+_engine_cache = None
+
 
 def get_database_url() -> str:
     """Get database URL from environment or fallback to SQLite."""
@@ -58,17 +61,34 @@ def is_sqlite() -> bool:
 
 
 def create_database_engine():
-    """Create SQLAlchemy engine with connection logging."""
+    """Create or return cached SQLAlchemy engine (singleton pattern)."""
+    global _engine_cache
+    
+    # Return cached engine if available
+    if _engine_cache is not None:
+        logger.debug("♻️  Reusing cached database engine")
+        return _engine_cache
+    
+    # Create new engine
     url = get_database_url()
     db_type = "PostgreSQL (Neon)" if url.startswith("postgresql://") else "SQLite"
     logger.info(f"⚙️  Creating database engine for {db_type}")
     try:
-        engine = _create_engine(url, echo=False)
-        logger.info(f"✓ Database engine created successfully")
-        return engine
+        _engine_cache = _create_engine(url, echo=False, pool_pre_ping=True)
+        logger.info(f"✓ Database engine created successfully (cached for reuse)")
+        return _engine_cache
     except Exception as e:
         logger.error(f"❌ Failed to create database engine: {e}", exc_info=True)
         raise
+
+
+def clear_engine_cache():
+    """Clear the cached database engine. Useful for testing or reconnection."""
+    global _engine_cache
+    if _engine_cache is not None:
+        logger.info("🔄 Clearing cached database engine")
+        _engine_cache.dispose()
+        _engine_cache = None
 
 
 def test_database_connection():
