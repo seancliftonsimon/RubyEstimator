@@ -1257,48 +1257,12 @@ with right_col:
             if weight_based:
                 st.markdown('<div class="subsection-header">Estimated by Weight</div>', unsafe_allow_html=True)
                 
-                # Create display dataframe with confidence indicators
+                # Create display dataframe
                 display_df = pd.DataFrame(weight_based)
                 display_df = display_df.drop('is_engine', axis=1)
                 
-                # Add confidence indicators to commodity names
-                # Only add badges for items with medium/low confidence (< 80%)
-                enhanced_commodities = []
-                for i, row in display_df.iterrows():
-                    commodity_name = row['Commodity']
-                    
-                    # Determine confidence based on data source
-                    # Fixed weight items from config = 1.0 (no badge)
-                    fixed_weight_items = ["Wiring Harness", "FE Radiator", "Breakage", "Alternator", 
-                                         "Starter", "A/C Compressor", "Fuse Box", "Battery"]
-                    
-                    if commodity_name in fixed_weight_items:
-                        confidence_score = 1.0  # High confidence, no badge shown
-                        warnings = []
-                    elif 'Engine' in commodity_name:
-                        confidence_score = 0.75  # Medium confidence for engine estimates
-                        warnings = ["Engine weight estimated from curb weight percentage"]
-                    elif commodity_name == 'ELV':
-                        confidence_score = 0.90  # High confidence for ELV calculation
-                        warnings = []
-                    elif 'Rims' in commodity_name:
-                        confidence_score = 0.75  # Medium confidence for rims (from search)
-                        warnings = []
-                    else:
-                        confidence_score = 1.0  # Default high confidence for other fixed items
-                        warnings = []
-                    
-                    confidence_info = create_mock_confidence_info(confidence_score, warnings)
-                    confidence_badge = render_confidence_badge(confidence_info, size="small")
-                    
-                    enhanced_row = row.copy()
-                    enhanced_row['Commodity'] = str(f"{commodity_name} {confidence_badge}")
-                    enhanced_commodities.append(enhanced_row)
-                
-                enhanced_df = pd.DataFrame(enhanced_commodities)
-                
-                # Display the enhanced table
-                st.markdown(enhanced_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+                # Display the table
+                st.table(display_df)
                 
                 # Check if there are engine commodities and add a small note below the chart
                 engine_commodities = [item for item in weight_based if item.get('is_engine')]
@@ -1313,29 +1277,9 @@ with right_col:
             if count_based:
                 st.markdown('<div class="subsection-header">Estimated by Count</div>', unsafe_allow_html=True)
                 
-                # Add confidence indicators to count-based commodities
-                # Only add badges for items with medium/low confidence (< 80%)
-                enhanced_count_commodities = []
-                for item in count_based:
-                    commodity_name = item['Commodity']
-                    
-                    # Create confidence info
-                    if 'Catalytic' in commodity_name:
-                        confidence_score = 0.70  # Medium confidence for cat estimates (from search/estimate)
-                        warnings = ["Count estimated from vehicle type averages"]
-                    else:
-                        confidence_score = 1.0  # High confidence for tires (standard count)
-                        warnings = []
-                    
-                    confidence_info = create_mock_confidence_info(confidence_score, warnings)
-                    confidence_badge = render_confidence_badge(confidence_info, size="small")
-                    
-                    enhanced_item = item.copy()
-                    enhanced_item['Commodity'] = str(f"{commodity_name} {confidence_badge}")
-                    enhanced_count_commodities.append(enhanced_item)
-                
-                count_df = pd.DataFrame(enhanced_count_commodities)
-                st.markdown(count_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+                # Display count-based commodities
+                count_df = pd.DataFrame(count_based)
+                st.table(count_df)
             
 
             

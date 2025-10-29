@@ -333,10 +333,10 @@ def generate_main_app_css() -> str:
         color: {Colors.GRAY_800} !important;
     }}
     
-    /* Force all text elements to be dark - but NOT in buttons or tables */
+    /* Force all text elements to be dark - but NOT in buttons, tables, or special headers */
     p:not(button p):not(.stButton p), 
     span:not(button span):not(.stButton span), 
-    div:not(button div):not(.stButton div), 
+    div:not(button div):not(.stButton div):not(.section-header):not(.section-header *), 
     label, h1, h2, h3, h4, h5, h6 {{
         color: {Colors.GRAY_800} !important;
     }}
@@ -348,6 +348,15 @@ def generate_main_app_css() -> str:
     
     .main-title * {{
         color: {Colors.RUBY_PRIMARY} !important;
+    }}
+    
+    /* Exception: section headers use white text on red background */
+    .section-header {{
+        color: {Colors.WHITE} !important;
+    }}
+    
+    .section-header * {{
+        color: {Colors.WHITE} !important;
     }}
     
     /* Force input backgrounds to be white */
@@ -387,21 +396,26 @@ def generate_main_app_css() -> str:
     }}
     
     .section-header {{
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
         color: {Colors.WHITE} !important;
-        background: {Colors.RUBY_PRIMARY};
-        margin-bottom: 1rem;
-        padding: 1rem 1.5rem;
-        border-radius: {BorderRadius.LG};
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-        box-shadow: 0 6px 16px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15);
-        border: 2px solid {Colors.RUBY_DARK};
+        background: {Colors.RUBY_PRIMARY} !important;
+        margin-bottom: 1rem !important;
+        padding: 1rem 1.5rem !important;
+        border-radius: {BorderRadius.LG} !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+        box-shadow: 0 6px 16px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+        border: 2px solid {Colors.RUBY_DARK} !important;
     }}
     
+    .section-header,
     .section-header * {{
         color: {Colors.WHITE} !important;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+    }}
+    
+    div.section-header {{
+        color: {Colors.WHITE} !important;
     }}
     
     .subsection-header {{
@@ -448,16 +462,16 @@ def generate_main_app_css() -> str:
         color: {Colors.WHITE} !important;
         border: 3px solid #1e3a8a !important;
         border-radius: {BorderRadius.LG} !important;
-        padding: 0.75rem 2rem !important;
+        padding: 1rem 2.5rem !important;
         font-weight: 700 !important;
-        font-size: 1.1rem !important;
+        font-size: 1.3rem !important;
         letter-spacing: 0.5px !important;
         transition: all 0.3s ease !important;
         box-shadow: 0 6px 16px rgba(30, 64, 175, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
         cursor: pointer !important;
         text-transform: uppercase !important;
-        min-height: 48px !important;
+        min-height: 56px !important;
     }}
     
     .main .stButton button:hover,

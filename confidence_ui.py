@@ -354,43 +354,6 @@ def render_detailed_provenance_panel(field_name: str, provenance_info: Provenanc
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-def create_mock_confidence_info(score: float, warnings: List[str] = None) -> ConfidenceInfo:
-    """Create mock confidence info for testing/demo purposes."""
-    level = get_confidence_level(score)
-    explanation = get_confidence_explanation(level, score)
-    return ConfidenceInfo(
-        score=score,
-        level=level,
-        explanation=explanation,
-        warnings=warnings or []
-    )
-
-
-def create_mock_provenance_info(field_name: str, value: float, confidence_score: float = 0.85) -> ProvenanceInfo:
-    """Create mock provenance info for testing/demo purposes."""
-    confidence = create_mock_confidence_info(confidence_score)
-    
-    # Handle None values by using a default
-    if value is None:
-        value = 0.0
-    
-    # Mock candidates based on the field
-    candidates = [
-        {"value": value * 0.95, "source": "kbb.com", "confidence": 0.9},
-        {"value": value, "source": "edmunds.com", "confidence": 0.85},
-        {"value": value * 1.05, "source": "manufacturer", "confidence": 0.8}
-    ]
-    
-    return ProvenanceInfo(
-        method="grounded_consensus",
-        sources=["kbb.com", "edmunds.com", "manufacturer"],
-        candidates=candidates,
-        final_value=value,
-        confidence=confidence,
-        resolved_at=datetime.now()
-    )
-
-
 def add_confidence_css() -> None:
     """Add CSS styles for confidence indicators and provenance panels."""
     st.markdown("""

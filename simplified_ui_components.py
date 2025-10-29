@@ -948,54 +948,6 @@ class RealTimeStatus:
                 """, unsafe_allow_html=True)
 
 
-# Utility functions for creating mock data and testing
-def create_mock_simplified_vehicle_spec(
-    weight: float = 3500.0,
-    cats: int = 2,
-    engine: str = "Aluminum",
-    rims: str = "Aluminum",
-    year: int = 2020,
-    make: str = "Toyota",
-    model: str = "Camry"
-) -> SimplifiedVehicleSpec:
-    """Create a mock simplified vehicle specification for testing."""
-    spec = SimplifiedVehicleSpec(
-        year=year,
-        make=make,
-        model=model,
-        curb_weight=weight,
-        catalytic_converters=cats,
-        engine_material=engine,
-        rim_material=rims,
-        confidence_scores={
-            "curb_weight": 0.85,
-            "catalytic_converters": 0.75,
-            "engine_material": 0.80,
-            "rim_material": 0.90
-        },
-        warnings=["Engine material estimated from vehicle class"]
-    )
-    spec.calculate_overall_confidence()
-    return spec
-
-
-def create_mock_search_progress(
-    vehicle_key: str = "2020_Toyota_Camry",
-    specifications: List[str] = None
-) -> SearchProgress:
-    """Create a mock search progress for testing."""
-    if specifications is None:
-        specifications = ["curb_weight", "catalytic_converters", "engine_material", "rim_material"]
-    
-    progress = SearchProgress(
-        vehicle_key=vehicle_key,
-        specifications={spec: SearchStatus.SEARCHING for spec in specifications},
-        total_steps=len(specifications) + 1,  # +1 for database step
-        current_step="Starting search..."
-    )
-    return progress
-
-
 # Integration utilities for connecting with existing systems
 def convert_vehicle_data_to_simplified_spec(
     vehicle_data: Dict[str, Any],
@@ -1012,14 +964,6 @@ def convert_vehicle_data_to_simplified_spec(
         for field_name, field_data in resolution_data.items():
             confidence = field_data.get('confidence', 0.7)
             spec.confidence_scores[field_name] = confidence
-            
-            # Add provenance information if available
-            if 'created_at' in field_data:
-                # Create mock provenance info from resolution data
-                from confidence_ui import create_mock_provenance_info
-                spec.resolution_details[field_name] = create_mock_provenance_info(
-                    field_name, field_data.get('value'), confidence
-                )
     
     spec.calculate_overall_confidence()
     return spec
@@ -1071,83 +1015,6 @@ def create_confidence_summary_for_display(vehicle_spec: SimplifiedVehicleSpec) -
     }
     
     return summary
-
-
-def render_simplified_search_interface() -> None:
-    """Render the complete simplified search interface."""
-    st.markdown("""
-    <div style="
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        border: 1px solid #cbd5e1;
-    ">
-        <h2 style="
-            color: #334155;
-            margin-bottom: 1rem;
-            font-size: 1.5rem;
-            font-weight: 600;
-        ">
-            🚗 Simplified Vehicle Search
-        </h2>
-    """, unsafe_allow_html=True)
-    
-    # Search form
-    with st.form("simplified_search_form"):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            year = st.text_input("Year", placeholder="2020")
-        with col2:
-            make = st.text_input("Make", placeholder="Toyota")
-        with col3:
-            model = st.text_input("Model", placeholder="Camry")
-        
-        search_button = st.form_submit_button("🔍 Search Vehicle", use_container_width=True)
-    
-    if search_button and year and make and model:
-        # Create real-time status container
-        status_container = st.empty()
-        real_time_status = RealTimeStatus(status_container)
-        
-        # Start search simulation
-        vehicle_name = f"{year} {make} {model}"
-        real_time_status.start_search(vehicle_name)
-        
-        # Simulate search progress
-        time.sleep(0.5)
-        real_time_status.update_progress("curb_weight", "found")
-        time.sleep(0.3)
-        real_time_status.update_progress("engine_material", "found")
-        time.sleep(0.4)
-        real_time_status.update_progress("rim_material", "partial")
-        time.sleep(0.2)
-        real_time_status.update_progress("catalytic_converters", "found")
-        
-        # Complete search with mock results
-        mock_results = {
-            "curb_weight": 3500.0,
-            "engine_material": "Aluminum",
-            "rim_material": "Aluminum",
-            "catalytic_converters": 2
-        }
-        real_time_status.complete_search(mock_results)
-        
-        # Display results in confidence cards
-        st.markdown("### Search Results")
-        
-        # Create mock specification data for confidence card
-        specifications = {
-            "Weight": {"value": "3,500 lbs", "confidence": 0.85},
-            "Catalytic Converters": {"value": "2", "confidence": 0.75},
-            "Engine Material": {"value": "Aluminum", "confidence": 0.80},
-            "Rim Material": {"value": "Aluminum", "confidence": 0.90}
-        }
-        
-        confidence_card = ConfidenceCard("Vehicle Specifications", specifications)
-        confidence_card.render()
-    
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # Confidence score aggregation and analysis functions
