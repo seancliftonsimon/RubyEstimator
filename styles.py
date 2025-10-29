@@ -157,6 +157,10 @@ def generate_table_css() -> str:
         border: none !important;
     }}
     
+    .stDataFrame th * {{
+        color: {Colors.WHITE} !important;
+    }}
+    
     .stDataFrame td {{
         padding: 0.875rem 1rem !important;
         border-bottom: 1px solid {Colors.GRAY_200} !important;
@@ -316,23 +320,20 @@ def generate_main_app_css() -> str:
         color: {Colors.GRAY_800} !important;
     }}
     
-    /* Force all text elements to be dark */
-    p, span, div, label, h1, h2, h3, h4, h5, h6 {{
+    /* Force all text elements to be dark - but NOT in buttons or tables */
+    p:not(button p):not(.stButton p), 
+    span:not(button span):not(.stButton span), 
+    div:not(button div):not(.stButton div), 
+    label, h1, h2, h3, h4, h5, h6 {{
         color: {Colors.GRAY_800} !important;
-    }}
-    
-    /* Exception: elements that need white text */
-    button, .stButton > button, 
-    [data-testid="stDataFrame"] th,
-    table th,
-    button *,
-    .main-title,
-    .main-title * {{
-        color: {Colors.WHITE} !important;
     }}
     
     /* Exception: main title uses ruby color */
     .main-title {{
+        color: {Colors.RUBY_PRIMARY} !important;
+    }}
+    
+    .main-title * {{
         color: {Colors.RUBY_PRIMARY} !important;
     }}
     
@@ -414,9 +415,17 @@ def generate_main_app_css() -> str:
         transform: translateY(-2px);
     }}
     
-    /* ========== BUTTONS ========== */
-    .stButton > button {{
+    /* ========== BUTTONS - AGGRESSIVE OVERRIDES ========== */
+    /* Target all possible button selectors */
+    button,
+    .stButton button,
+    .stButton > button,
+    [data-testid="baseButton-secondary"],
+    [data-testid="baseButton-primary"],
+    button[kind="primary"],
+    button[kind="secondary"] {{
         background: {Colors.RUBY_PRIMARY} !important;
+        background-color: {Colors.RUBY_PRIMARY} !important;
         color: {Colors.WHITE} !important;
         border: 2px solid {Colors.RUBY_PRIMARY} !important;
         border-radius: {BorderRadius.LG} !important;
@@ -428,33 +437,53 @@ def generate_main_app_css() -> str:
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
     }}
     
-    .stButton > button:hover {{
+    button:hover,
+    .stButton button:hover,
+    .stButton > button:hover,
+    [data-testid="baseButton-secondary"]:hover,
+    [data-testid="baseButton-primary"]:hover {{
         background: {Colors.RUBY_HOVER} !important;
+        background-color: {Colors.RUBY_HOVER} !important;
         border-color: {Colors.RUBY_HOVER} !important;
         transform: translateY(-2px) !important;
         box-shadow: {Shadows.HOVER} !important;
         color: {Colors.WHITE} !important;
     }}
     
-    /* Ensure all button text is white */
-    .stButton > button * {{
+    /* Ensure all button text and children are white */
+    button *,
+    .stButton button *,
+    .stButton > button *,
+    button span,
+    button p,
+    button div,
+    .stButton button span,
+    .stButton button p,
+    .stButton button div {{
         color: {Colors.WHITE} !important;
+        background: transparent !important;
     }}
     
-    /* Admin button styling - teal background */
-    button[key="admin_toggle_btn"] {{
+    /* Admin button styling - teal background (ONLY teal element) */
+    button[key="admin_toggle_btn"],
+    .stButton button[key="admin_toggle_btn"],
+    button:has([key="admin_toggle_btn"]) {{
         background: {Colors.ADMIN_BUTTON} !important;
+        background-color: {Colors.ADMIN_BUTTON} !important;
         border-color: {Colors.ADMIN_BUTTON} !important;
         color: {Colors.WHITE} !important;
     }}
     
-    button[key="admin_toggle_btn"]:hover {{
+    button[key="admin_toggle_btn"]:hover,
+    .stButton button[key="admin_toggle_btn"]:hover {{
         background: {Colors.ADMIN_BUTTON_HOVER} !important;
+        background-color: {Colors.ADMIN_BUTTON_HOVER} !important;
         border-color: {Colors.ADMIN_BUTTON_HOVER} !important;
         color: {Colors.WHITE} !important;
     }}
     
-    button[key="admin_toggle_btn"] * {{
+    button[key="admin_toggle_btn"] *,
+    .stButton button[key="admin_toggle_btn"] * {{
         color: {Colors.WHITE} !important;
     }}
     
