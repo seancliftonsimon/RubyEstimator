@@ -25,6 +25,12 @@ class Colors:
     RUBY_SHADOW_MEDIUM = "rgba(153, 12, 65, 0.15)"
     RUBY_SHADOW_STRONG = "rgba(153, 12, 65, 0.25)"
     
+    # Button Colors (Complementary Blue)
+    BUTTON_PRIMARY = "#1e40af"  # Deep blue
+    BUTTON_DARK = "#1e3a8a"
+    BUTTON_HOVER = "#2563eb"
+    BUTTON_SHADOW = "rgba(30, 64, 175, 0.3)"
+    
     # Semantic Colors
     SUCCESS = "#16a34a"  # Green for profit, positive values
     SUCCESS_LIGHT = "rgba(22, 163, 74, 0.1)"
@@ -415,51 +421,45 @@ def generate_main_app_css() -> str:
         transform: translateY(-2px);
     }}
     
-    /* ========== BUTTONS - AGGRESSIVE OVERRIDES ========== */
-    /* Target all possible button selectors */
-    button,
-    .stButton button,
-    .stButton > button,
-    [data-testid="baseButton-secondary"],
-    [data-testid="baseButton-primary"],
-    button[kind="primary"],
-    button[kind="secondary"] {{
-        background: {Colors.RUBY_PRIMARY} !important;
-        background-color: {Colors.RUBY_PRIMARY} !important;
+    /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
+    /* Only target buttons within the main content area, not Streamlit's UI chrome */
+    .main .stButton button,
+    .main .stButton > button,
+    .main button[kind="primary"],
+    .main button[kind="secondary"],
+    div[data-testid="column"] .stButton button,
+    div[data-testid="column"] button {{
+        background: {Colors.BUTTON_PRIMARY} !important;
+        background-color: {Colors.BUTTON_PRIMARY} !important;
         color: {Colors.WHITE} !important;
-        border: 2px solid {Colors.RUBY_PRIMARY} !important;
+        border: 2px solid {Colors.BUTTON_PRIMARY} !important;
         border-radius: {BorderRadius.LG} !important;
         padding: {Spacing.MD} {Spacing.XXL} !important;
         font-weight: 600 !important;
         font-size: 1rem !important;
         transition: all 0.3s ease !important;
-        box-shadow: {Shadows.MD} !important;
+        box-shadow: 0 4px 12px {Colors.BUTTON_SHADOW} !important;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
     }}
     
-    button:hover,
-    .stButton button:hover,
-    .stButton > button:hover,
-    [data-testid="baseButton-secondary"]:hover,
-    [data-testid="baseButton-primary"]:hover {{
-        background: {Colors.RUBY_HOVER} !important;
-        background-color: {Colors.RUBY_HOVER} !important;
-        border-color: {Colors.RUBY_HOVER} !important;
+    .main .stButton button:hover,
+    .main .stButton > button:hover,
+    div[data-testid="column"] .stButton button:hover {{
+        background: {Colors.BUTTON_HOVER} !important;
+        background-color: {Colors.BUTTON_HOVER} !important;
+        border-color: {Colors.BUTTON_HOVER} !important;
         transform: translateY(-2px) !important;
-        box-shadow: {Shadows.HOVER} !important;
+        box-shadow: 0 6px 20px {Colors.BUTTON_SHADOW} !important;
         color: {Colors.WHITE} !important;
     }}
     
     /* Ensure all button text and children are white */
-    button *,
-    .stButton button *,
-    .stButton > button *,
-    button span,
-    button p,
-    button div,
-    .stButton button span,
-    .stButton button p,
-    .stButton button div {{
+    .main .stButton button *,
+    .main .stButton > button *,
+    div[data-testid="column"] .stButton button *,
+    div[data-testid="column"] .stButton button span,
+    div[data-testid="column"] .stButton button p,
+    div[data-testid="column"] .stButton button div {{
         color: {Colors.WHITE} !important;
         background: transparent !important;
     }}
@@ -487,9 +487,10 @@ def generate_main_app_css() -> str:
         color: {Colors.WHITE} !important;
     }}
     
-    .stButton > button:active {{
-        background: {Colors.RUBY_DARK} !important;
-        border-color: {Colors.RUBY_DARK} !important;
+    .main .stButton > button:active,
+    div[data-testid="column"] .stButton button:active {{
+        background: {Colors.BUTTON_DARK} !important;
+        border-color: {Colors.BUTTON_DARK} !important;
         transform: translateY(0) !important;
     }}
     
