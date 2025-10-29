@@ -296,22 +296,23 @@ def generate_main_app_css() -> str:
     """Generate the complete CSS for the main application."""
     return f"""
 <style>
-    /* ========== FORCE LIGHT MODE ========== */
+    /* ========== FORCE LIGHT MODE WITH SUBTLE GRADIENT ========== */
     .stApp {{
-        background: {Colors.WHITE} !important;
+        background: linear-gradient(135deg, {Colors.WHITE} 0%, {Colors.GRAY_50} 50%, {Colors.RUBY_LIGHT} 100%) !important;
         color: {Colors.GRAY_800} !important;
     }}
     
     [data-testid="stAppViewContainer"] {{
-        background: {Colors.WHITE} !important;
+        background: linear-gradient(135deg, {Colors.WHITE} 0%, {Colors.GRAY_50} 50%, rgba(153, 12, 65, 0.05) 100%) !important;
     }}
     
     [data-testid="stHeader"] {{
         background: {Colors.WHITE} !important;
+        border-bottom: 3px solid {Colors.RUBY_PRIMARY} !important;
     }}
     
     .main {{
-        background: {Colors.WHITE} !important;
+        background: transparent !important;
         color: {Colors.GRAY_800} !important;
     }}
     
@@ -338,13 +339,18 @@ def generate_main_app_css() -> str:
     button[key="admin_toggle_btn"],
     button[data-testid*="admin"] {{
         background: {Colors.ADMIN_BUTTON} !important;
-        border-color: {Colors.ADMIN_BUTTON} !important;
+        border: 2px solid {Colors.ADMIN_BUTTON} !important;
+        color: {Colors.WHITE} !important;
+        font-weight: 600 !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
     }}
     
     button[key="admin_toggle_btn"]:hover,
     button[data-testid*="admin"]:hover {{
         background: {Colors.ADMIN_BUTTON_HOVER} !important;
         border-color: {Colors.ADMIN_BUTTON_HOVER} !important;
+        color: {Colors.WHITE} !important;
+        transform: translateY(-2px) !important;
     }}
     
     /* ========== TYPOGRAPHY ========== */
@@ -375,50 +381,72 @@ def generate_main_app_css() -> str:
     
     .section-header {{
         font-size: 1.5rem;
-        font-weight: 600;
-        color: {Colors.RUBY_PRIMARY};
-        margin-bottom: 0.5rem;
-        padding-bottom: 0.25rem;
-        border-bottom: 2px solid {Colors.RUBY_PRIMARY};
-        text-shadow: 0 1px 2px {Colors.RUBY_SHADOW};
+        font-weight: 700;
+        color: {Colors.WHITE};
+        background: {Colors.RUBY_GRADIENT};
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: {BorderRadius.LG};
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        box-shadow: {Shadows.MD};
     }}
     
     .subsection-header {{
         font-size: 1.2rem;
-        font-weight: 500;
-        color: {Colors.RUBY_HOVER};
-        margin-bottom: 0.25rem;
-        text-shadow: 0 1px 2px {Colors.RUBY_SHADOW};
+        font-weight: 600;
+        color: {Colors.RUBY_PRIMARY};
+        margin-bottom: 0.5rem;
+        margin-top: 1rem;
+        padding: 0.5rem 0.75rem;
+        border-left: 4px solid {Colors.RUBY_PRIMARY};
+        background: {Colors.RUBY_LIGHT};
+        border-radius: 0 {BorderRadius.MD} {BorderRadius.MD} 0;
     }}
     
     /* ========== CARDS & CONTAINERS ========== */
     .main-section-card {{
-        background: {Colors.WHITE};
+        background: linear-gradient(135deg, {Colors.WHITE} 0%, {Colors.GRAY_50} 100%);
         backdrop-filter: blur(10px);
         border-radius: {BorderRadius.XL};
-        border: 1px solid {Colors.RUBY_BORDER};
+        border: 2px solid {Colors.RUBY_BORDER_MEDIUM};
         box-shadow: {Shadows.MD};
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }}
+    
+    .main-section-card:hover {{
+        border-color: {Colors.RUBY_BORDER_STRONG};
+        box-shadow: {Shadows.LG};
+        transform: translateY(-2px);
     }}
     
     /* ========== BUTTONS ========== */
     .stButton > button {{
-        background: {Colors.RUBY_GRADIENT} !important;
+        background: {Colors.RUBY_PRIMARY} !important;
         color: {Colors.WHITE} !important;
-        border: none !important;
+        border: 2px solid {Colors.RUBY_PRIMARY} !important;
         border-radius: {BorderRadius.LG} !important;
         padding: {Spacing.MD} {Spacing.XXL} !important;
         font-weight: 600 !important;
         font-size: 1rem !important;
         transition: all 0.3s ease !important;
         box-shadow: {Shadows.MD} !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
     }}
     
     .stButton > button:hover {{
-        background: {Colors.RUBY_GRADIENT_HOVER} !important;
+        background: {Colors.RUBY_HOVER} !important;
+        border-color: {Colors.RUBY_HOVER} !important;
         transform: translateY(-2px) !important;
         box-shadow: {Shadows.HOVER} !important;
+        color: {Colors.WHITE} !important;
+    }}
+    
+    .stButton > button:active {{
+        background: {Colors.RUBY_DARK} !important;
+        border-color: {Colors.RUBY_DARK} !important;
+        transform: translateY(0) !important;
     }}
     
     /* ========== INPUT FIELDS ========== */
@@ -432,55 +460,76 @@ def generate_main_app_css() -> str:
     
     /* ========== FORMS ========== */
     .stForm {{
-        background: {Colors.WHITE};
+        background: linear-gradient(135deg, {Colors.WHITE} 0%, {Colors.GRAY_50} 100%);
         backdrop-filter: blur(10px);
-        padding: 0.5rem;
+        padding: 1rem;
         border-radius: {BorderRadius.LG};
-        border: 1px solid {Colors.RUBY_BORDER};
+        border: 2px solid {Colors.RUBY_BORDER_MEDIUM};
         box-shadow: {Shadows.MD};
+    }}
+    
+    .stForm:hover {{
+        border-color: {Colors.RUBY_BORDER_STRONG};
+        box-shadow: {Shadows.LG};
     }}
     
     /* ========== MESSAGES ========== */
     .success-message {{
-        background: {Colors.SUCCESS_LIGHT};
-        padding: 1rem;
+        background: linear-gradient(135deg, {Colors.SUCCESS_LIGHT} 0%, rgba(22, 163, 74, 0.15) 100%);
+        padding: 1rem 1.5rem;
         border-radius: {BorderRadius.LG};
-        border-left: 4px solid {Colors.SUCCESS_BORDER};
+        border: 2px solid {Colors.SUCCESS_BORDER};
+        border-left: 6px solid {Colors.SUCCESS_BORDER};
         margin: 1rem 0;
         color: {Colors.SUCCESS};
+        font-weight: 500;
+        box-shadow: {Shadows.SM};
     }}
     
     .warning-message {{
-        background: {Colors.WARNING_LIGHT};
-        padding: 1rem;
+        background: linear-gradient(135deg, {Colors.WARNING_LIGHT} 0%, rgba(217, 119, 6, 0.15) 100%);
+        padding: 1rem 1.5rem;
         border-radius: {BorderRadius.LG};
-        border-left: 4px solid {Colors.WARNING_BORDER};
+        border: 2px solid {Colors.WARNING_BORDER};
+        border-left: 6px solid {Colors.WARNING_BORDER};
         margin: 1rem 0;
         color: {Colors.WARNING};
+        font-weight: 500;
+        box-shadow: {Shadows.SM};
     }}
     
     .error-message {{
-        background: {Colors.ERROR_LIGHT};
-        padding: 1rem;
+        background: linear-gradient(135deg, {Colors.ERROR_LIGHT} 0%, rgba(220, 38, 38, 0.15) 100%);
+        padding: 1rem 1.5rem;
         border-radius: {BorderRadius.LG};
-        border-left: 4px solid {Colors.ERROR_BORDER};
+        border: 2px solid {Colors.ERROR_BORDER};
+        border-left: 6px solid {Colors.ERROR_BORDER};
         margin: 1rem 0;
         color: {Colors.ERROR};
+        font-weight: 500;
+        box-shadow: {Shadows.SM};
     }}
     
     /* ========== EXPANDERS ========== */
     .streamlit-expanderHeader {{
-        background: {Colors.GRAY_50} !important;
-        border: 1px solid {Colors.GRAY_200} !important;
+        background: linear-gradient(135deg, {Colors.RUBY_LIGHT} 0%, {Colors.GRAY_50} 100%) !important;
+        border: 2px solid {Colors.RUBY_BORDER_MEDIUM} !important;
         border-radius: {BorderRadius.LG} !important;
         padding: 1rem !important;
         font-weight: 600 !important;
-        color: {Colors.GRAY_700} !important;
+        color: {Colors.RUBY_PRIMARY} !important;
+        transition: all 0.3s ease !important;
+    }}
+    
+    .streamlit-expanderHeader:hover {{
+        background: linear-gradient(135deg, {Colors.RUBY_BORDER} 0%, {Colors.RUBY_LIGHT} 100%) !important;
+        border-color: {Colors.RUBY_BORDER_STRONG} !important;
+        box-shadow: {Shadows.SM} !important;
     }}
     
     .streamlit-expanderContent {{
         background: {Colors.WHITE} !important;
-        border: 1px solid {Colors.GRAY_200} !important;
+        border: 2px solid {Colors.RUBY_BORDER_MEDIUM} !important;
         border-top: none !important;
         border-radius: 0 0 {BorderRadius.LG} {BorderRadius.LG} !important;
         padding: 1rem !important;

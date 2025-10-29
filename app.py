@@ -672,10 +672,7 @@ left_col, spacer, right_col = st.columns([1, 0.2, 1])
 with left_col:
     st.markdown("""
     <div class="section-header">
-        Vehicle Search & Estimator
-        <div class="info-icon-container">
-            <span class="info-icon" title="Search for vehicle specifications using AI. The app will automatically detect engine materials (aluminum vs iron) and rim types (aluminum vs steel) when possible. Results are cached in the database to avoid repeated API calls.">ⓘ</span>
-        </div>
+        🚗 Vehicle Search & Estimator
     </div>
     """, unsafe_allow_html=True)
 
@@ -683,11 +680,11 @@ with left_col:
     if st.session_state.get('detailed_vehicle_info'):
         vehicle_info = st.session_state['detailed_vehicle_info']
         
-        # Display vehicle name with green styling
+        # Display vehicle name with blue styling
         vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
         st.markdown(f"""
-        <div style="background: rgba(76, 241, 179, 0.15); padding: 1rem; border-radius: 8px; border: 2px solid #0C9964; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(76, 241, 179, 0.2);">
-            <div style="margin: 0; color: #0C9964; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(12, 153, 100, 0.1); font-size: 1.25rem;">{vehicle_name}</div>
+        <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1rem; border-radius: 8px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+            <div style="margin: 0; color: #1e40af; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5); font-size: 1.25rem;">{vehicle_name}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -708,15 +705,16 @@ with left_col:
                 confidence_badge = render_confidence_badge(confidence_info, size="small")
             
             st.markdown(f"""
-            <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #22c55e;">
-                <strong>Weight:</strong> <span style="color: #22c55e; font-weight: 600;">{vehicle_info['weight']} lbs</span>{confidence_badge}
+            <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6;">
+                <strong>Weight:</strong> <span style="color: #1e40af; font-weight: 600;">{vehicle_info['weight']} lbs</span>{confidence_badge}
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
             if vehicle_info['aluminum_engine'] is not None:
                 engine_status = "Al" if vehicle_info['aluminum_engine'] else "Fe"
-                engine_color = "#22c55e" if vehicle_info['aluminum_engine'] else "#f59e0b"
+                engine_color = "#14b8a6" if vehicle_info['aluminum_engine'] else "#f59e0b"
+                engine_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_engine'] else "rgba(245, 158, 11, 0.1)"
                 
                 # Get confidence score for engine material
                 engine_confidence = confidence_scores.get('aluminum_engine', 0.0)
@@ -727,7 +725,7 @@ with left_col:
                     confidence_badge = render_confidence_badge(confidence_info, size="small")
                 
                 st.markdown(f"""
-                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color};">
+                <div style="background: {engine_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color};">
                     <strong>Engine:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>{confidence_badge}
                 </div>
                 """, unsafe_allow_html=True)
@@ -741,7 +739,8 @@ with left_col:
         with col3:
             if vehicle_info['aluminum_rims'] is not None:
                 rims_status = "Al" if vehicle_info['aluminum_rims'] else "Fe"
-                rims_color = "#22c55e" if vehicle_info['aluminum_rims'] else "#f59e0b"
+                rims_color = "#14b8a6" if vehicle_info['aluminum_rims'] else "#f59e0b"
+                rims_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_rims'] else "rgba(245, 158, 11, 0.1)"
                 
                 # Get confidence score for rim material
                 rims_confidence = confidence_scores.get('aluminum_rims', 0.0)
@@ -752,7 +751,7 @@ with left_col:
                     confidence_badge = render_confidence_badge(confidence_info, size="small")
                 
                 st.markdown(f"""
-                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color};">
+                <div style="background: {rims_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color};">
                     <strong>Rims:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>{confidence_badge}
                 </div>
                 """, unsafe_allow_html=True)
@@ -776,8 +775,8 @@ with left_col:
                     confidence_badge = render_confidence_badge(confidence_info, size="small")
                 
                 st.markdown(f"""
-                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #22c55e;">
-                    <strong>Cats:</strong> <span style="color: #22c55e; font-weight: 600;">{cats_count}</span>{confidence_badge}
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6;">
+                    <strong>Cats:</strong> <span style="color: #1e40af; font-weight: 600;">{cats_count}</span>{confidence_badge}
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -841,22 +840,33 @@ with left_col:
                         # Show simplified progress indicator
                         with progress_container.container():
                             st.markdown("""
-                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%); border-radius: 12px; padding: 1.5rem; border-left: 4px solid #0ea5e9; box-shadow: 0 4px 16px rgba(14, 165, 233, 0.15); margin-bottom: 1rem;">
+                            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%); border-radius: 12px; padding: 1.5rem; border: 3px solid #3b82f6; box-shadow: 0 6px 24px rgba(59, 130, 246, 0.3); margin-bottom: 1rem;">
                                 <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                                    <div style="font-size: 1.5rem; margin-right: 0.75rem;">🔍</div>
-                                    <div style="font-size: 1.1rem; font-weight: 600; color: #0369a1;">Searching the web for vehicle info</div>
+                                    <div style="font-size: 1.75rem; margin-right: 0.75rem; animation: pulse-icon 1.5s ease-in-out infinite;">🔍</div>
+                                    <div style="font-size: 1.2rem; font-weight: 700; color: #1e40af; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);">Searching the web for vehicle info...</div>
                                 </div>
-                                <div style="background: rgba(255, 255, 255, 0.6); border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 0.5rem; position: relative;">
-                                    <div style="background: linear-gradient(90deg, transparent 0%, #990C41 25%, #c00e4f 50%, #E0115F 75%, transparent 100%); height: 100%; width: 40%; position: absolute; animation: progress-slide 1.5s ease-in-out infinite;"></div>
+                                <div style="background: rgba(255, 255, 255, 0.8); border-radius: 8px; height: 12px; overflow: hidden; margin-bottom: 0.5rem; position: relative; border: 2px solid #3b82f6;">
+                                    <div style="background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 25%, #2dd4bf 50%, #14b8a6 75%, #3b82f6 100%); height: 100%; width: 50%; position: absolute; animation: progress-slide 1.5s ease-in-out infinite; box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);"></div>
                                 </div>
+                                <div style="text-align: center; font-size: 0.875rem; color: #1e3a8a; font-weight: 500; margin-top: 0.5rem;">This may take a few moments...</div>
                             </div>
                             <style>
                                 @keyframes progress-slide {
                                     0% { 
-                                        left: -40%; 
+                                        left: -50%; 
                                     }
                                     100% { 
                                         left: 100%; 
+                                    }
+                                }
+                                @keyframes pulse-icon {
+                                    0%, 100% { 
+                                        transform: scale(1); 
+                                        opacity: 1;
+                                    }
+                                    50% { 
+                                        transform: scale(1.1); 
+                                        opacity: 0.8;
                                     }
                                 }
                             </style>
@@ -899,8 +909,8 @@ with left_col:
                     elif vehicle_data and vehicle_data.get('curb_weight_lbs'):
                         # Display simple success message
                         st.markdown(f"""
-                        <div class="success-message">
-                            <strong>Vehicle Found!</strong> {year_int} {make_input} {model_input}
+                        <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
+                            ✅ <strong>Vehicle Found!</strong> {year_int} {make_input} {model_input}
                         </div>
                         """, unsafe_allow_html=True)
                         
@@ -1039,10 +1049,7 @@ with left_col:
 with right_col:
     st.markdown("""
     <div class="section-header">
-        Cost Estimate Results
-        <div class="info-icon-container">
-            <span class="info-icon" title="Detailed breakdown of commodity values and costs. Adjust purchase price and tow fees to see how they affect your net profit. All calculations are based on current market prices for automotive recycling commodities.">ⓘ</span>
-        </div>
+        💰 Cost Estimate Results
     </div>
     """, unsafe_allow_html=True)
     
@@ -1158,35 +1165,37 @@ with right_col:
             # Display summary metrics with semantic colors
             col1, col2, col3 = st.columns(3)
             with col1:
-                # Total Sale Value - Neutral/Info styling
-                sale_colors = get_semantic_colors(totals["total_sale"], "info")
+                # Total Sale Value - Blue/Info styling
                 st.markdown(f"""
-                <div style="background: {sale_colors['background']}; padding: 1.5rem; border-radius: 12px; border: 1px solid {Colors.GRAY_200}; border-left: 4px solid {sale_colors['border']}; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(153, 12, 65, 0.08);">
+                <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: {sale_colors['text']}; font-weight: 600; margin-bottom: 0.5rem;">Total Sale Value</div>
-                        <div style="font-size: 1.5rem; color: {sale_colors['text']}; font-weight: 700;">{format_currency(totals["total_sale"])}</div>
+                        <div style="font-size: 0.875rem; color: #1e40af; font-weight: 600; margin-bottom: 0.5rem;">💰 Total Sale Value</div>
+                        <div style="font-size: 1.5rem; color: #1e40af; font-weight: 700;">{format_currency(totals["total_sale"])}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
             with col2:
-                # Total Costs - Red styling (semantic negative)
-                cost_colors = get_semantic_colors(totals["total_costs"], "cost")
+                # Total Costs - Orange/Amber styling (not red, as red indicates errors)
                 st.markdown(f"""
-                <div style="background: {cost_colors['background']}; padding: 1.5rem; border-radius: 12px; border: 1px solid {Colors.GRAY_200}; border-left: 4px solid {cost_colors['border']}; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(153, 12, 65, 0.08);">
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #f59e0b; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: {cost_colors['text']}; font-weight: 600; margin-bottom: 0.5rem;">Total Costs</div>
-                        <div style="font-size: 1.5rem; color: {cost_colors['text']}; font-weight: 700;">-{format_currency(totals["total_costs"])}</div>
+                        <div style="font-size: 0.875rem; color: #92400e; font-weight: 600; margin-bottom: 0.5rem;">📉 Total Costs</div>
+                        <div style="font-size: 1.5rem; color: #92400e; font-weight: 700;">-{format_currency(totals["total_costs"])}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
             with col3:
                 # Net Profit - Dynamic color based on positive/negative
                 profit_colors = get_semantic_colors(totals["net"], "profit")
+                profit_bg = "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)" if totals["net"] >= 0 else "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)"
+                profit_border = "#16a34a" if totals["net"] >= 0 else "#dc2626"
+                profit_text = "#15803d" if totals["net"] >= 0 else "#991b1b"
+                profit_icon = "✅" if totals["net"] >= 0 else "⚠️"
                 st.markdown(f"""
-                <div style="background: {profit_colors['background']}; padding: 1.5rem; border-radius: 12px; border: 1px solid {Colors.GRAY_200}; border-left: 4px solid {profit_colors['border']}; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(153, 12, 65, 0.08);">
+                <div style="background: {profit_bg}; padding: 1.5rem; border-radius: 12px; border: 3px solid {profit_border}; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba({profit_colors['text']}, 0.2);">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: {profit_colors['text']}; font-weight: 600; margin-bottom: 0.5rem;">Net Profit</div>
-                        <div style="font-size: 1.5rem; color: {profit_colors['text']}; font-weight: 700;">{format_currency(totals["net"])}</div>
+                        <div style="font-size: 0.875rem; color: {profit_text}; font-weight: 600; margin-bottom: 0.5rem;">{profit_icon} Net Profit</div>
+                        <div style="font-size: 1.5rem; color: {profit_text}; font-weight: 700;">{format_currency(totals["net"])}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1199,37 +1208,20 @@ with right_col:
             weight_based = []
             count_based = []
             
+            # Note: Confidence badges will be added later during display rendering
+            # to avoid duplication when creating enhanced display tables
             for commodity in commodities:
-                # Assign confidence scores based on whether item uses vehicle search data or fixed config values
-                # Fixed weight items (from config) = 1.0 confidence (no badge shown)
-                fixed_weight_items = ["HARNESS", "FE_RAD", "BREAKAGE", "ALT", "STARTER", "AC_COMP", "FUSE_BOX", "BATTERY"]
-                
-                if commodity["key"] in fixed_weight_items:
-                    confidence_score = 1.0  # High confidence, no badge
-                elif commodity["key"] == "ELV":
-                    confidence_score = 0.90  # High confidence for curb weight calculation
-                elif commodity["key"] in ["AL_ENGINE", "FE_ENGINE"]:
-                    confidence_score = 0.75  # Medium confidence for engine material (from search)
-                elif commodity["key"] == "AL_RIMS":
-                    confidence_score = 0.75  # Medium confidence for rims (from search)
-                elif commodity["key"] == "CATS":
-                    confidence_score = 0.70  # Medium confidence for cat count (estimated)
-                else:
-                    confidence_score = 0.85  # Default high confidence
-                
-                confidence_info = create_mock_confidence_info(confidence_score)
-                confidence_badge = render_confidence_badge(confidence_info, "small")
                 
                 if commodity.get("is_count_based"):
                     count_based.append({
-                        "Commodity": commodity["label"] + confidence_badge,
+                        "Commodity": commodity["label"],
                         "Count": f"{commodity['weight']:.2f}",
                         "Price/Unit": f"${commodity['unit_price']:.2f}",
                         "Sale Value": f"${commodity['sale_value']:.2f}"
                     })
                 elif commodity.get("is_special"):
                     count_based.append({
-                        "Commodity": commodity["label"] + confidence_badge,
+                        "Commodity": commodity["label"],
                         "Count": f"{commodity['weight']:.0f}",
                         "Price/Unit": f"${commodity['unit_price']:.2f}",
                         "Sale Value": f"${commodity['sale_value']:.2f}"
@@ -1240,7 +1232,7 @@ with right_col:
                         continue
                     
                     weight_based.append({
-                        "Commodity": commodity["label"] + confidence_badge,
+                        "Commodity": commodity["label"],
                         "Weight (lb)": f"{commodity['weight']:,.1f}",
                         "$/lb": f"${commodity['unit_price']:.2f}",
                         "Sale Value": f"${commodity['sale_value']:.2f}",
@@ -1336,18 +1328,10 @@ with right_col:
                 engine_commodities = [item for item in weight_based if item.get('is_engine')]
                 if engine_commodities:
                     info_text = (
-                        f"Engine weight estimated at {ENGINE_WEIGHT_PERCENT*100:.1f}% of curb weight based on typical engine weights. "
-                        f"For unknown engine materials, weight is split {UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Al / {100-UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Fe."
+                        f"Engine weight estimated at {ENGINE_WEIGHT_PERCENT*100:.1f}% of curb weight. "
+                        f"For unknown materials, weight is split {UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Al / {100-UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Fe."
                     )
-                    st.markdown(f"""
-                    <div style="margin-top: 0.5rem; text-align: right;">
-                        <span style="color: #6b7280; font-size: 0.875rem;">
-                            <span class="info-icon-container">
-                                <span class="info-icon" title="{info_text}">ⓘ</span>
-                            </span>
-                        </span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.caption(info_text)
             
             # Display count-based commodities  
             if count_based:
@@ -1566,7 +1550,11 @@ with right_col:
                                 'catalytic_converters': None
                             }
                             
-                            st.success("Manual estimate calculated!")
+                            st.markdown("""
+                            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
+                                ✅ <strong>Manual estimate calculated!</strong>
+                            </div>
+                            """, unsafe_allow_html=True)
                             st.rerun()
                         
                     except ValueError:
