@@ -646,76 +646,96 @@ st.markdown(generate_main_app_css(), unsafe_allow_html=True)
 # Additional CSS to forcefully hide keyboard arrow text in expanders (CSS only, no JS)
 st.markdown("""
 <style>
-    /* Ultra aggressive hiding of keyboard arrow text - multiple approaches */
+    /* NUCLEAR OPTION: Completely remove all icon text and tooltips from expanders */
     
-    /* Approach 1: Hide all non-first spans in expander summaries */
-    [data-testid="stExpander"] details summary span:not(:first-child) {
+    /* Remove all title/tooltip attributes */
+    [data-testid="stExpander"] *,
+    [data-testid="stExpander"] details summary *,
+    [data-testid="stExpander"] span,
+    [data-testid="stExpander"] svg {
+        pointer-events: auto !important;
+    }
+    
+    /* Hide ALL spans except the very first one that contains the actual label */
+    [data-testid="stExpander"] details summary span:not(:first-child),
+    [data-testid="stExpander"] details summary > span:last-child,
+    [data-testid="stExpander"] details summary > span + span {
         display: none !important;
         visibility: hidden !important;
-        font-size: 0 !important;
+        opacity: 0 !important;
         width: 0 !important;
         height: 0 !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+        overflow: hidden !important;
         position: absolute !important;
-        left: -9999px !important;
+        left: -99999px !important;
+        clip: rect(0,0,0,0) !important;
     }
     
-    /* Approach 2: Hide Material Icons rendering */
-    [data-testid="stExpander"] span[style*="Material Icons"],
-    [data-testid="stExpander"] span[style*="Material-Icons"],
-    [data-testid="stExpander"] .material-icons,
-    [data-testid="stExpander"] [class*="material"] {
+    /* Hide any Material Icons font rendering */
+    [data-testid="stExpander"] *[style*="Material Icons"],
+    [data-testid="stExpander"] *[style*="Material-Icons"],
+    [data-testid="stExpander"] *[class*="material"],
+    [data-testid="stExpander"] .material-icons {
         display: none !important;
         visibility: hidden !important;
+        opacity: 0 !important;
     }
     
-    /* Approach 3: Force expander summary to only show first child */
-    [data-testid="stExpander"] details summary {
-        font-size: 1rem !important;
-        max-width: 100% !important;
-    }
-    
-    /* Approach 4: Make the summary act like it only has one child */
-    [data-testid="stExpander"] details summary > *:nth-child(n+2) {
+    /* Remove all pseudo-elements that might contain icon text */
+    [data-testid="stExpander"] details summary *::before,
+    [data-testid="stExpander"] details summary *::after,
+    [data-testid="stExpander"] details summary::before,
+    [data-testid="stExpander"] details summary::after {
+        content: "" !important;
         display: none !important;
     }
     
-    /* Approach 5: Clip any overflow that might contain the arrow text */
+    /* Force the summary to only display its first text child */
     [data-testid="stExpander"] details summary {
         overflow: hidden !important;
         text-overflow: clip !important;
         max-height: 3rem !important;
+        position: relative !important;
     }
     
-    /* Approach 6: Set font size to 0 for anything that's not the label */
-    [data-testid="stExpander"] details summary span[style] {
-        font-size: 0 !important;
-    }
-    
-    [data-testid="stExpander"] details summary span:first-child {
+    /* Make only the first span visible and properly sized */
+    [data-testid="stExpander"] details summary > span:first-child {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
         font-size: 1rem !important;
+        position: static !important;
+        clip: auto !important;
     }
     
-    /* Approach 7: Color match - make any potential arrow text invisible by matching background */
-    [data-testid="stExpander"] details summary span[style*="font"] {
-        color: transparent !important;
-        background: transparent !important;
+    /* Completely disable tooltips on hover for expander elements */
+    [data-testid="stExpander"] [title],
+    [data-testid="stExpander"] *[title] {
+        pointer-events: none !important;
     }
     
-    /* Approach 8: Force maximum width on summary to cut off extra text */
-    [data-testid="stExpander"] details summary {
-        max-width: calc(100% - 3rem) !important;
-        white-space: nowrap !important;
-    }
-    
-    /* Approach 9: Target SVG/icons in summary */
-    [data-testid="stExpander"] details summary svg:not(:first-child) {
+    [data-testid="stExpander"] details summary [title]::after {
+        content: "" !important;
         display: none !important;
+    }
+    
+    /* Force hide any tooltip/title popups */
+    [data-testid="stExpander"]:hover [title]::before,
+    [data-testid="stExpander"]:hover [title]::after,
+    [data-testid="stExpander"] *:hover[title]::before,
+    [data-testid="stExpander"] *:hover[title]::after {
+        display: none !important;
+        content: "" !important;
+        visibility: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # Main title with minimal padding
-st.markdown('<div class="main-title">🚗 Ruby GEM</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🚗 Ruby G.E.M.</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">General Estimation Model</div>', unsafe_allow_html=True)
 
 # Admin toggle - Initialize state
 if 'admin_mode' not in st.session_state:
@@ -1042,7 +1062,7 @@ with left_col:
                 """, unsafe_allow_html=True)
 
     # --- Display Recent Entries (Minimized) ---
-    with st.expander("📋 Recently Searched Vehicles (Last 5)", expanded=False, icon="📋"):
+    with st.expander("Recently Searched Vehicles (Last 5)", expanded=False, icon="📋"):
         try:
             recent_entries_df = get_last_ten_entries()
             if not recent_entries_df.empty:
@@ -1072,10 +1092,7 @@ with left_col:
                 # Format the dataframe for display
                 display_df['Weight'] = display_df['Weight'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "?")
                 
-                # Reset index to remove the index column from display
-                display_df = display_df.reset_index(drop=True)
-                
-                st.table(display_df)
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
                 st.caption("E = Engine (Al=Aluminum, Fe=Iron), W = Wheels (Al=Aluminum, St=Steel), C = Catalytic Converters")
             else:
                 st.info("No vehicles searched yet.")
@@ -1326,11 +1343,8 @@ with right_col:
                 display_df = pd.DataFrame(weight_based)
                 display_df = display_df.drop('is_engine', axis=1)
                 
-                # Reset index to remove the index column from display
-                display_df = display_df.reset_index(drop=True)
-                
                 # Display the table
-                st.table(display_df)
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
                 
                 # Check if there are engine commodities and add a small note below the chart
                 engine_commodities = [item for item in weight_based if item.get('is_engine')]
@@ -1348,10 +1362,7 @@ with right_col:
                 # Display count-based commodities
                 count_df = pd.DataFrame(count_based)
                 
-                # Reset index to remove the index column from display
-                count_df = count_df.reset_index(drop=True)
-                
-                st.table(count_df)
+                st.dataframe(count_df, use_container_width=True, hide_index=True)
             
 
             
@@ -1378,10 +1389,7 @@ with right_col:
             
             summary_df = pd.DataFrame(summary_data)
             
-            # Reset index to remove the index column from display
-            summary_df = summary_df.reset_index(drop=True)
-            
-            st.table(summary_df)
+            st.dataframe(summary_df, use_container_width=True, hide_index=True)
             
             # Add provenance and confidence details section
             st.markdown('<div class="subsection-header">Data Quality & Sources</div>', unsafe_allow_html=True)

@@ -391,14 +391,25 @@ def generate_main_app_css() -> str:
     .main-title {{
         font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
         font-size: 3rem;
-        font-weight: 800;
+        font-weight: 500;
         text-align: center;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
         margin-top: 0.5rem;
         color: {Colors.RUBY_PRIMARY} !important;
         text-shadow: 0 4px 8px {Colors.RUBY_SHADOW_STRONG};
         letter-spacing: 0.05em;
         position: relative;
+    }}
+    
+    .subtitle {{
+        font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
+        font-size: 0.9rem;
+        font-weight: 400;
+        font-style: italic;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        margin-top: 0;
+        color: {Colors.GRAY_600} !important;
     }}
     
     .main-title * {{
@@ -693,28 +704,58 @@ def generate_main_app_css() -> str:
         fill: {Colors.RUBY_PRIMARY} !important;
     }}
     
-    /* Hide keyboard shortcut text and Material Icons text that Streamlit adds */
-    [data-testid="stExpander"] details summary span[data-testid*="shortcut"],
-    [data-testid="stExpander"] .shortcuts,
-    [data-testid="stExpander"] kbd,
-    [data-testid="stExpander"] span.material-icons,
-    [data-testid="stExpander"] span:contains("keyboard_arrow"),
-    .streamlit-expanderHeader span[class*="icon"],
-    .streamlit-expanderHeader .material-icons,
-    [data-testid="stExpander"] span[style*="font-family"],
-    [data-testid="stExpander"] details summary > span:last-child {{
+    /* COMPLETELY REMOVE keyboard arrow text and all Material Icons */
+    /* Hide ALL spans except the first one (which contains the actual label) */
+    [data-testid="stExpander"] details summary span:not(:first-child),
+    [data-testid="stExpander"] details summary > span:last-child,
+    [data-testid="stExpander"] details summary > span + span {{
         display: none !important;
         visibility: hidden !important;
-        font-size: 0 !important;
+        opacity: 0 !important;
         width: 0 !important;
         height: 0 !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
         overflow: hidden !important;
+        position: absolute !important;
+        left: -99999px !important;
+        clip: rect(0,0,0,0) !important;
     }}
     
-    /* Hide any text that contains "keyboard" in expanders */
-    [data-testid="stExpander"] *::before,
-    [data-testid="stExpander"] *::after {{
-        content: none !important;
+    /* Hide Material Icons font rendering */
+    [data-testid="stExpander"] *[style*="Material Icons"],
+    [data-testid="stExpander"] *[style*="Material-Icons"],
+    [data-testid="stExpander"] *[class*="material"],
+    [data-testid="stExpander"] .material-icons,
+    .streamlit-expanderHeader .material-icons,
+    .streamlit-expanderHeader span[class*="icon"] {{
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }}
+    
+    /* Remove all pseudo-elements */
+    [data-testid="stExpander"] details summary *::before,
+    [data-testid="stExpander"] details summary *::after,
+    [data-testid="stExpander"] details summary::before,
+    [data-testid="stExpander"] details summary::after {{
+        content: "" !important;
+        display: none !important;
+    }}
+    
+    /* Disable all tooltips on hover */
+    [data-testid="stExpander"] [title],
+    [data-testid="stExpander"] *[title] {{
+        pointer-events: none !important;
+    }}
+    
+    [data-testid="stExpander"]:hover [title]::before,
+    [data-testid="stExpander"]:hover [title]::after,
+    [data-testid="stExpander"] *:hover[title]::before,
+    [data-testid="stExpander"] *:hover[title]::after {{
+        display: none !important;
+        content: "" !important;
+        visibility: hidden !important;
     }}
     
     /* Force override for expander summary text - only show the actual label */
