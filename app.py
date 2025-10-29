@@ -1,8 +1,24 @@
 import streamlit as st
 from dotenv import load_dotenv
+import logging
+import sys
+
+# Configure logging FIRST (before any other imports that might use logging)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)],
+    force=True
+)
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file for local development
 load_dotenv()
+
+# Log startup
+logger.info("="*70)
+logger.info("🚀 Ruby GEM Application Starting...")
+logger.info("="*70)
 
 # Configure page with light mode styling (must be first Streamlit command)
 st.set_page_config(
@@ -17,19 +33,19 @@ st.set_page_config(
     }
 )
 
+logger.info("✓ Streamlit page configured")
+
 import pandas as pd
 from vehicle_data import process_vehicle, get_last_ten_entries
 from auth import setup_password_protection
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
+
+logger.info("✓ Core modules imported")
 from confidence_ui import (
-    render_confidence_badge, render_warning_banner, render_provenance_panel,
-    render_detailed_provenance_panel, create_mock_confidence_info, 
-    create_mock_provenance_info, add_confidence_css, ConfidenceInfo, ProvenanceInfo
+    render_confidence_badge, render_warning_banner, 
+    add_confidence_css
 )
-from simplified_ui_components import (
-    SearchProgressTracker, SearchStatus, ProgressiveDisclosureManager,
-    RealTimeStatus, add_simplified_ui_css
-)
+# Simplified UI components no longer needed - using inline progress indicator
 from typing import Dict, Any
 import os
 
@@ -130,178 +146,279 @@ def refresh_config_cache():
     load_db_config.clear()
 
 def render_admin_ui():
+    """Render the admin configuration UI with restore to default functionality."""
+    st.markdown('<div class="main-title">⚙️ Admin Configuration</div>', unsafe_allow_html=True)
+    
+    # Info banner
+    st.info(
+        "🔧 **Admin Settings** - Configure default values used throughout the application. "
+        "Changes are saved to the database and persist across sessions. "
+        "Use the **🔄 Restore to Default** buttons to reset individual sections to factory defaults."
+    )
+    st.markdown("---")
+    
+    # Initialize restore flags in session state
+    if 'restore_prices' not in st.session_state:
+        st.session_state['restore_prices'] = False
+    if 'restore_costs' not in st.session_state:
+        st.session_state['restore_costs'] = False
+    if 'restore_weights' not in st.session_state:
+        st.session_state['restore_weights'] = False
+    if 'restore_assumptions' not in st.session_state:
+        st.session_state['restore_assumptions'] = False
+    if 'restore_heuristics' not in st.session_state:
+        st.session_state['restore_heuristics'] = False
+    if 'restore_grounding' not in st.session_state:
+        st.session_state['restore_grounding'] = False
+    if 'restore_consensus' not in st.session_state:
+        st.session_state['restore_consensus'] = False
+    
     cfg = get_config()
 
-    with st.expander("Admin Settings", expanded=True):
-        # Hide +/- buttons on number inputs while in admin UI
-        st.markdown(
-            """
-            <style>
-            [data-testid="stNumberInput"] button { display: none !important; }
-            [data-testid="stNumberInput"] input { padding-right: 0.5rem !important; }
-            </style>
-            """,
-            unsafe_allow_html=True,
+    # Hide +/- buttons on number inputs while in admin UI
+    st.markdown(
+        """
+        <style>
+        [data-testid="stNumberInput"] button { display: none !important; }
+        [data-testid="stNumberInput"] input { padding-right: 0.5rem !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.form("admin_settings_form"):
+        st.markdown("### 📝 Configuration Settings")
+        st.markdown("Adjust values below and click **Save All Changes** at the bottom. Use **Restore to Default** buttons to reset individual sections.")
+
+        tab_prices, tab_costs, tab_weights, tab_assumptions, tab_heuristics, tab_grounding, tab_consensus = st.tabs(
+            ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions", "🔍 Heuristics", "🌐 Grounding", "🤝 Consensus"]
         )
 
-        with st.form("admin_settings_form"):
-            st.markdown("Adjust values and click Save. These set the defaults used in estimates.")
-
-            tab_prices, tab_costs, tab_weights, tab_assumptions, tab_heuristics, tab_grounding, tab_consensus = st.tabs(
-                ["Prices", "Costs", "Weights", "Assumptions", "Heuristics", "Grounding", "Consensus"]
-            )
-
-            with tab_prices:
+        with tab_prices:
+            col1, col2 = st.columns([3, 1])
+            with col1:
                 st.subheader("Commodity Prices ($/lb)")
+            with col2:
+                if st.form_submit_button("🔄 Restore to Default", key="restore_prices_btn"):
+                    st.session_state['restore_prices'] = True
+            
+            if st.session_state.get('restore_prices', False):
+                price_df = pd.DataFrame(
+                    [(k, float(v)) for k, v in DEFAULT_PRICE_PER_LB.items()], columns=["key", "value"]
+                ).sort_values("key").reset_index(drop=True)
+                st.session_state['restore_prices'] = False
+            else:
                 price_df = pd.DataFrame(
                     [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
                 ).sort_values("key").reset_index(drop=True)
-                price_df = st.data_editor(price_df, use_container_width=True, num_rows="fixed")
+            
+            price_df = st.data_editor(price_df, use_container_width=True, num_rows="fixed", hide_index=True)
 
-            with tab_costs:
+        with tab_costs:
+            col1, col2 = st.columns([3, 1])
+            with col1:
                 st.subheader("Flat Costs")
-                col_fc1, col_fc2, col_fc3, col_fc4 = st.columns(4)
-                purchase = col_fc1.number_input("PURCHASE ($)", value=float(cfg["flat_costs"]["PURCHASE"]))
-                tow = col_fc2.number_input("TOW ($)", value=float(cfg["flat_costs"]["TOW"]))
-                lead = col_fc3.number_input("LEAD_PER_CAR ($)", value=float(cfg["flat_costs"]["LEAD_PER_CAR"]))
-                nut = col_fc4.number_input("NUT_PER_LB ($/lb)", value=float(cfg["flat_costs"]["NUT_PER_LB"]))
+            with col2:
+                if st.form_submit_button("🔄 Restore to Default", key="restore_costs_btn"):
+                    st.session_state['restore_costs'] = True
+            
+            costs_to_use = DEFAULT_FLAT_COSTS if st.session_state.get('restore_costs', False) else cfg["flat_costs"]
+            if st.session_state.get('restore_costs', False):
+                st.session_state['restore_costs'] = False
+            
+            col_fc1, col_fc2, col_fc3, col_fc4 = st.columns(4)
+            purchase = col_fc1.number_input("PURCHASE ($)", value=float(costs_to_use["PURCHASE"]))
+            tow = col_fc2.number_input("TOW ($)", value=float(costs_to_use["TOW"]))
+            lead = col_fc3.number_input("LEAD_PER_CAR ($)", value=float(costs_to_use["LEAD_PER_CAR"]))
+            nut = col_fc4.number_input("NUT_PER_LB ($/lb)", value=float(costs_to_use["NUT_PER_LB"]))
 
-            with tab_weights:
+        with tab_weights:
+            col1, col2 = st.columns([3, 1])
+            with col1:
                 st.subheader("Component Weights (lb per car)")
-                wf = cfg["weights_fixed"]
-                c1, c2, c3, c4 = st.columns(4)
-                rims_al = c1.number_input("Aluminum Rims Weight", value=float(wf["rims_aluminum_weight_lbs"]))
-                battery_baseline = c2.number_input("Battery Baseline", value=float(wf["battery_baseline_weight_lbs"]))
-                harness_w = c3.number_input("Wiring Harness", value=float(wf["harness_weight_lbs"]))
-                fe_rad = c4.number_input("FE Radiator", value=float(wf["fe_radiator_weight_lbs"]))
-                c5, c6, c7, c8, c9 = st.columns(5)
-                breakage_w = c5.number_input("Breakage", value=float(wf["breakage_weight_lbs"]))
-                alt_w = c6.number_input("Alternator", value=float(wf["alternator_weight_lbs"]))
-                starter_w = c7.number_input("Starter", value=float(wf["starter_weight_lbs"]))
-                ac_comp_w = c8.number_input("A/C Compressor", value=float(wf["ac_compressor_weight_lbs"]))
-                fuse_box_w = c9.number_input("Fuse Box", value=float(wf["fuse_box_weight_lbs"]))
+            with col2:
+                if st.form_submit_button("🔄 Restore to Default", key="restore_weights_btn"):
+                    st.session_state['restore_weights'] = True
+            
+            weights_to_use = DEFAULT_WEIGHTS_FIXED if st.session_state.get('restore_weights', False) else cfg["weights_fixed"]
+            if st.session_state.get('restore_weights', False):
+                st.session_state['restore_weights'] = False
+            
+            c1, c2, c3, c4 = st.columns(4)
+            rims_al = c1.number_input("Aluminum Rims Weight", value=float(weights_to_use["rims_aluminum_weight_lbs"]))
+            battery_baseline = c2.number_input("Battery Baseline", value=float(weights_to_use["battery_baseline_weight_lbs"]))
+            harness_w = c3.number_input("Wiring Harness", value=float(weights_to_use["harness_weight_lbs"]))
+            fe_rad = c4.number_input("FE Radiator", value=float(weights_to_use["fe_radiator_weight_lbs"]))
+            c5, c6, c7, c8, c9 = st.columns(5)
+            breakage_w = c5.number_input("Breakage", value=float(weights_to_use["breakage_weight_lbs"]))
+            alt_w = c6.number_input("Alternator", value=float(weights_to_use["alternator_weight_lbs"]))
+            starter_w = c7.number_input("Starter", value=float(weights_to_use["starter_weight_lbs"]))
+            ac_comp_w = c8.number_input("A/C Compressor", value=float(weights_to_use["ac_compressor_weight_lbs"]))
+            fuse_box_w = c9.number_input("Fuse Box", value=float(weights_to_use["fuse_box_weight_lbs"]))
 
-            with tab_assumptions:
+        with tab_assumptions:
+            col1, col2 = st.columns([3, 1])
+            with col1:
                 st.subheader("Assumptions / Factors")
-                a = cfg["assumptions"]
-                a1, a2, a3, a4 = st.columns(4)
-                engine_pct = a1.number_input("Engine % of curb (0-1)", value=float(a["engine_weight_percent_of_curb"]))
-                battery_recov = a2.number_input("Battery Recovery (0-1)", value=float(a["battery_recovery_factor"]))
-                cats_avg = a3.number_input("Default Cats per Car", value=float(a["cats_per_car_default_average"]))
-                unknown_split = a4.number_input("Unknown Engine Al Split (0-1)", value=float(a["unknown_engine_split_aluminum_percent"]))
+            with col2:
+                if st.form_submit_button("🔄 Restore to Default", key="restore_assumptions_btn"):
+                    st.session_state['restore_assumptions'] = True
+            
+            assumptions_to_use = DEFAULT_ASSUMPTIONS if st.session_state.get('restore_assumptions', False) else cfg["assumptions"]
+            if st.session_state.get('restore_assumptions', False):
+                st.session_state['restore_assumptions'] = False
+            
+            a1, a2, a3, a4 = st.columns(4)
+            engine_pct = a1.number_input("Engine % of curb (0-1)", value=float(assumptions_to_use["engine_weight_percent_of_curb"]))
+            battery_recov = a2.number_input("Battery Recovery (0-1)", value=float(assumptions_to_use["battery_recovery_factor"]))
+            cats_avg = a3.number_input("Default Cats per Car", value=float(assumptions_to_use["cats_per_car_default_average"]))
+            unknown_split = a4.number_input("Unknown Engine Al Split (0-1)", value=float(assumptions_to_use["unknown_engine_split_aluminum_percent"]))
 
-            with tab_heuristics:
+        with tab_heuristics:
+            col1, col2 = st.columns([3, 1])
+            with col1:
                 st.subheader("Heuristics (optional)")
-                h = cfg["heuristics"]
-                perf_txt = "\n".join(h.get("performance_indicators", []))
-                v8_txt = "\n".join(h.get("v8_keywords", []))
-                h1, h2, h3 = st.columns([2, 2, 1])
-                perf_txt = h1.text_area("Performance Indicators (one per line)", value=perf_txt)
-                v8_txt = h2.text_area("V8 Keywords (one per line)", value=v8_txt)
-                cats_fallback = h3.number_input("Fallback Cats", value=int(h.get("fallback_cats_default_if_no_match", 1)))
+            with col2:
+                if st.form_submit_button("🔄 Restore to Default", key="restore_heuristics_btn"):
+                    st.session_state['restore_heuristics'] = True
+            
+            heuristics_to_use = DEFAULT_HEURISTICS if st.session_state.get('restore_heuristics', False) else cfg["heuristics"]
+            if st.session_state.get('restore_heuristics', False):
+                st.session_state['restore_heuristics'] = False
+            
+            perf_txt = "\n".join(heuristics_to_use.get("performance_indicators", []))
+            v8_txt = "\n".join(heuristics_to_use.get("v8_keywords", []))
+            h1, h2, h3 = st.columns([2, 2, 1])
+            perf_txt = h1.text_area("Performance Indicators (one per line)", value=perf_txt)
+            v8_txt = h2.text_area("V8 Keywords (one per line)", value=v8_txt)
+            cats_fallback = h3.number_input("Fallback Cats", value=int(heuristics_to_use.get("fallback_cats_default_if_no_match", 1)))
 
-            with tab_grounding:
+        with tab_grounding:
+            col1, col2 = st.columns([3, 1])
+            with col1:
                 st.subheader("Grounding Search Settings")
-                gs = cfg["grounding_settings"]
-                g1, g2, g3, g4 = st.columns(4)
-                target_candidates = g1.number_input("Target Candidates", value=int(gs["target_candidates"]), min_value=1, max_value=10)
-                clustering_tolerance = g2.number_input("Clustering Tolerance", value=float(gs["clustering_tolerance"]), min_value=0.01, max_value=1.0, step=0.01)
-                confidence_threshold = g3.number_input("Confidence Threshold", value=float(gs["confidence_threshold"]), min_value=0.0, max_value=1.0, step=0.01)
-                outlier_threshold = g4.number_input("Outlier Threshold", value=float(gs["outlier_threshold"]), min_value=0.5, max_value=5.0, step=0.1)
-                
-                st.subheader("Nut Fee Configuration")
-                nut_fee_option = st.selectbox(
-                    "Nut fee applies to:",
-                    options=["curb_weight", "elv_weight"],
-                    index=0 if gs["nut_fee_applies_to"] == "curb_weight" else 1,
-                    format_func=lambda x: "Curb Weight" if x == "curb_weight" else "ELV Weight"
-                )
+            with col2:
+                if st.form_submit_button("🔄 Restore to Default", key="restore_grounding_btn"):
+                    st.session_state['restore_grounding'] = True
+            
+            grounding_to_use = DEFAULT_GROUNDING_SETTINGS if st.session_state.get('restore_grounding', False) else cfg["grounding_settings"]
+            if st.session_state.get('restore_grounding', False):
+                st.session_state['restore_grounding'] = False
+            
+            g1, g2, g3, g4 = st.columns(4)
+            target_candidates = g1.number_input("Target Candidates", value=int(grounding_to_use["target_candidates"]), min_value=1, max_value=10)
+            clustering_tolerance = g2.number_input("Clustering Tolerance", value=float(grounding_to_use["clustering_tolerance"]), min_value=0.01, max_value=1.0, step=0.01)
+            confidence_threshold = g3.number_input("Confidence Threshold", value=float(grounding_to_use["confidence_threshold"]), min_value=0.0, max_value=1.0, step=0.01)
+            outlier_threshold = g4.number_input("Outlier Threshold", value=float(grounding_to_use["outlier_threshold"]), min_value=0.5, max_value=5.0, step=0.1)
+            
+            st.subheader("Nut Fee Configuration")
+            nut_fee_option = st.selectbox(
+                "Nut fee applies to:",
+                options=["curb_weight", "elv_weight"],
+                index=0 if grounding_to_use["nut_fee_applies_to"] == "curb_weight" else 1,
+                format_func=lambda x: "Curb Weight" if x == "curb_weight" else "ELV Weight"
+            )
 
-            with tab_consensus:
+        with tab_consensus:
+            col1, col2 = st.columns([3, 1])
+            with col1:
                 st.subheader("Consensus Algorithm Settings")
-                cs = cfg["consensus_settings"]
-                c1, c2 = st.columns(2)
-                min_agreement_ratio = c1.number_input("Min Agreement Ratio", value=float(cs["min_agreement_ratio"]), min_value=0.0, max_value=1.0, step=0.01)
-                
-                st.subheader("Source Preferences")
-                preferred_sources_txt = "\n".join(cs.get("preferred_sources", []))
-                preferred_sources_txt = st.text_area("Preferred Sources (one per line)", value=preferred_sources_txt)
-                
-                st.subheader("Source Weights")
-                sw = cs.get("source_weights", {})
-                sw1, sw2, sw3, sw4 = st.columns(4)
-                kbb_weight = sw1.number_input("KBB.com Weight", value=float(sw.get("kbb.com", 1.2)), min_value=0.1, max_value=3.0, step=0.1)
-                edmunds_weight = sw2.number_input("Edmunds.com Weight", value=float(sw.get("edmunds.com", 1.2)), min_value=0.1, max_value=3.0, step=0.1)
-                manufacturer_weight = sw3.number_input("Manufacturer Weight", value=float(sw.get("manufacturer", 1.5)), min_value=0.1, max_value=3.0, step=0.1)
-                default_weight = sw4.number_input("Default Weight", value=float(sw.get("default", 1.0)), min_value=0.1, max_value=3.0, step=0.1)
+            with col2:
+                if st.form_submit_button("🔄 Restore to Default", key="restore_consensus_btn"):
+                    st.session_state['restore_consensus'] = True
+            
+            consensus_to_use = DEFAULT_CONSENSUS_SETTINGS if st.session_state.get('restore_consensus', False) else cfg["consensus_settings"]
+            if st.session_state.get('restore_consensus', False):
+                st.session_state['restore_consensus'] = False
+            
+            c1, c2 = st.columns(2)
+            min_agreement_ratio = c1.number_input("Min Agreement Ratio", value=float(consensus_to_use["min_agreement_ratio"]), min_value=0.0, max_value=1.0, step=0.01)
+            
+            st.subheader("Source Preferences")
+            preferred_sources_txt = "\n".join(consensus_to_use.get("preferred_sources", []))
+            preferred_sources_txt = st.text_area("Preferred Sources (one per line)", value=preferred_sources_txt)
+            
+            st.subheader("Source Weights")
+            sw = consensus_to_use.get("source_weights", {})
+            sw1, sw2, sw3, sw4 = st.columns(4)
+            kbb_weight = sw1.number_input("KBB.com Weight", value=float(sw.get("kbb.com", 1.2)), min_value=0.1, max_value=3.0, step=0.1)
+            edmunds_weight = sw2.number_input("Edmunds.com Weight", value=float(sw.get("edmunds.com", 1.2)), min_value=0.1, max_value=3.0, step=0.1)
+            manufacturer_weight = sw3.number_input("Manufacturer Weight", value=float(sw.get("manufacturer", 1.5)), min_value=0.1, max_value=3.0, step=0.1)
+            default_weight = sw4.number_input("Default Weight", value=float(sw.get("default", 1.0)), min_value=0.1, max_value=3.0, step=0.1)
 
-            save = st.form_submit_button("Save Settings")
-            if save:
-                # Gather updates
-                new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
-                new_flat = {
-                    "PURCHASE": float(purchase),
-                    "TOW": float(tow),
-                    "LEAD_PER_CAR": float(lead),
-                    "NUT_PER_LB": float(nut),
+        # Save button outside all tabs
+        st.markdown("---")
+        st.markdown("### 💾 Save Changes")
+        col1, col2, col3 = st.columns([2, 1, 2])
+        with col2:
+            save = st.form_submit_button("💾 Save All Changes", use_container_width=True)
+        
+        if save:
+            # Gather updates
+            new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
+            new_flat = {
+                "PURCHASE": float(purchase),
+                "TOW": float(tow),
+                "LEAD_PER_CAR": float(lead),
+                "NUT_PER_LB": float(nut),
+            }
+            new_weights = {
+                "rims_aluminum_weight_lbs": float(rims_al),
+                "battery_baseline_weight_lbs": float(battery_baseline),
+                "harness_weight_lbs": float(harness_w),
+                "fe_radiator_weight_lbs": float(fe_rad),
+                "breakage_weight_lbs": float(breakage_w),
+                "alternator_weight_lbs": float(alt_w),
+                "starter_weight_lbs": float(starter_w),
+                "ac_compressor_weight_lbs": float(ac_comp_w),
+                "fuse_box_weight_lbs": float(fuse_box_w),
+            }
+            new_assumptions = {
+                "engine_weight_percent_of_curb": float(engine_pct),
+                "battery_recovery_factor": float(battery_recov),
+                "cats_per_car_default_average": float(cats_avg),
+                "unknown_engine_split_aluminum_percent": float(unknown_split),
+            }
+            new_heuristics = {
+                "performance_indicators": [s.strip() for s in perf_txt.splitlines() if s.strip()],
+                "v8_keywords": [s.strip() for s in v8_txt.splitlines() if s.strip()],
+                "fallback_cats_default_if_no_match": int(cats_fallback),
+            }
+            new_grounding = {
+                "target_candidates": int(target_candidates),
+                "clustering_tolerance": float(clustering_tolerance),
+                "confidence_threshold": float(confidence_threshold),
+                "outlier_threshold": float(outlier_threshold),
+                "nut_fee_applies_to": str(nut_fee_option),
+            }
+            new_consensus = {
+                "min_agreement_ratio": float(min_agreement_ratio),
+                "preferred_sources": [s.strip() for s in preferred_sources_txt.splitlines() if s.strip()],
+                "source_weights": {
+                    "kbb.com": float(kbb_weight),
+                    "edmunds.com": float(edmunds_weight),
+                    "manufacturer": float(manufacturer_weight),
+                    "default": float(default_weight),
                 }
-                new_weights = {
-                    "rims_aluminum_weight_lbs": float(rims_al),
-                    "battery_baseline_weight_lbs": float(battery_baseline),
-                    "harness_weight_lbs": float(harness_w),
-                    "fe_radiator_weight_lbs": float(fe_rad),
-                    "breakage_weight_lbs": float(breakage_w),
-                    "alternator_weight_lbs": float(alt_w),
-                    "starter_weight_lbs": float(starter_w),
-                    "ac_compressor_weight_lbs": float(ac_comp_w),
-                    "fuse_box_weight_lbs": float(fuse_box_w),
-                }
-                new_assumptions = {
-                    "engine_weight_percent_of_curb": float(engine_pct),
-                    "battery_recovery_factor": float(battery_recov),
-                    "cats_per_car_default_average": float(cats_avg),
-                    "unknown_engine_split_aluminum_percent": float(unknown_split),
-                }
-                new_heuristics = {
-                    "performance_indicators": [s.strip() for s in perf_txt.splitlines() if s.strip()],
-                    "v8_keywords": [s.strip() for s in v8_txt.splitlines() if s.strip()],
-                    "fallback_cats_default_if_no_match": int(cats_fallback),
-                }
-                new_grounding = {
-                    "target_candidates": int(target_candidates),
-                    "clustering_tolerance": float(clustering_tolerance),
-                    "confidence_threshold": float(confidence_threshold),
-                    "outlier_threshold": float(outlier_threshold),
-                    "nut_fee_applies_to": str(nut_fee_option),
-                }
-                new_consensus = {
-                    "min_agreement_ratio": float(min_agreement_ratio),
-                    "preferred_sources": [s.strip() for s in preferred_sources_txt.splitlines() if s.strip()],
-                    "source_weights": {
-                        "kbb.com": float(kbb_weight),
-                        "edmunds.com": float(edmunds_weight),
-                        "manufacturer": float(manufacturer_weight),
-                        "default": float(default_weight),
-                    }
-                }
+            }
 
-                # Persist
-                updated_by = os.getenv("USER") or os.getenv("USERNAME") or "admin"
-                ok = True
-                ok &= upsert_app_config("price_per_lb", new_prices, "$/lb commodity prices", updated_by)
-                ok &= upsert_app_config("flat_costs", new_flat, "Flat costs", updated_by)
-                ok &= upsert_app_config("weights_fixed", new_weights, "Fixed component weights", updated_by)
-                ok &= upsert_app_config("assumptions", new_assumptions, "Estimator assumptions", updated_by)
-                ok &= upsert_app_config("heuristics", new_heuristics, "Cat count heuristics", updated_by)
-                ok &= upsert_app_config("grounding_settings", new_grounding, "Grounding search settings", updated_by)
-                ok &= upsert_app_config("consensus_settings", new_consensus, "Consensus algorithm settings", updated_by)
+            # Persist
+            updated_by = os.getenv("USER") or os.getenv("USERNAME") or "admin"
+            ok = True
+            ok &= upsert_app_config("price_per_lb", new_prices, "$/lb commodity prices", updated_by)
+            ok &= upsert_app_config("flat_costs", new_flat, "Flat costs", updated_by)
+            ok &= upsert_app_config("weights_fixed", new_weights, "Fixed component weights", updated_by)
+            ok &= upsert_app_config("assumptions", new_assumptions, "Estimator assumptions", updated_by)
+            ok &= upsert_app_config("heuristics", new_heuristics, "Cat count heuristics", updated_by)
+            ok &= upsert_app_config("grounding_settings", new_grounding, "Grounding search settings", updated_by)
+            ok &= upsert_app_config("consensus_settings", new_consensus, "Consensus algorithm settings", updated_by)
 
-                if ok:
-                    refresh_config_cache()
-                    st.success("Settings saved. Reloading…")
-                    st.rerun()
-                else:
-                    st.error("Failed to save one or more groups.")
+            if ok:
+                refresh_config_cache()
+                st.success("✅ Settings saved successfully! Reloading configuration...")
+                st.rerun()
+            else:
+                st.error("❌ Failed to save one or more configuration groups. Please try again.")
 
 # Load current config (fallback to defaults)
 CONFIG = get_config()
@@ -521,9 +638,6 @@ if not setup_password_protection():
 
 # Add confidence indicator CSS
 add_confidence_css()
-
-# Add simplified UI components CSS
-add_simplified_ui_css()
 
 # Custom CSS for light theme with ruby and teal accents
 st.markdown("""
@@ -2344,15 +2458,22 @@ st.markdown("""
 # Main title with minimal padding
 st.markdown('<div class="main-title">🚗 Ruby GEM</div>', unsafe_allow_html=True)
 
-# Admin toggle (small control in sidebar)
+# Admin toggle - Button in the top-right corner
 if 'admin_mode' not in st.session_state:
     st.session_state['admin_mode'] = False
 
-with st.sidebar:
-    st.checkbox("Admin Mode", key="admin_mode")
+# Create a container for the admin button in the top-right corner
+col1, col2, col3 = st.columns([5, 1, 1])
+with col3:
+    if st.button("⚙️ Admin" if not st.session_state['admin_mode'] else "✕ Close Admin", 
+                 key="admin_toggle_btn",
+                 help="Access admin settings to configure default values"):
+        st.session_state['admin_mode'] = not st.session_state['admin_mode']
+        st.rerun()
 
 if st.session_state['admin_mode']:
     render_admin_ui()
+    st.stop()  # Don't show the main app when in admin mode
 
 # Create two columns for the main layout with better spacing
 left_col, spacer, right_col = st.columns([1, 0.2, 1])
@@ -2385,9 +2506,20 @@ with left_col:
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
+            # Get confidence score for curb weight
+            confidence_scores = vehicle_info.get('confidence_scores', {})
+            weight_confidence = confidence_scores.get('curb_weight', 0.0)
+            
+            # Create confidence badge if available
+            confidence_badge = ""
+            if weight_confidence > 0:
+                from confidence_ui import create_mock_confidence_info, render_confidence_badge
+                confidence_info = create_mock_confidence_info(weight_confidence)
+                confidence_badge = render_confidence_badge(confidence_info, size="small")
+            
             st.markdown(f"""
             <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #22c55e;">
-                <strong>Weight:</strong> <span style="color: #22c55e; font-weight: 600;">{vehicle_info['weight']} lbs</span>
+                <strong>Weight:</strong> <span style="color: #22c55e; font-weight: 600;">{vehicle_info['weight']} lbs</span>{confidence_badge}
             </div>
             """, unsafe_allow_html=True)
         
@@ -2395,9 +2527,18 @@ with left_col:
             if vehicle_info['aluminum_engine'] is not None:
                 engine_status = "Al" if vehicle_info['aluminum_engine'] else "Fe"
                 engine_color = "#22c55e" if vehicle_info['aluminum_engine'] else "#f59e0b"
+                
+                # Get confidence score for engine material
+                engine_confidence = confidence_scores.get('aluminum_engine', 0.0)
+                confidence_badge = ""
+                if engine_confidence > 0:
+                    from confidence_ui import create_mock_confidence_info, render_confidence_badge
+                    confidence_info = create_mock_confidence_info(engine_confidence)
+                    confidence_badge = render_confidence_badge(confidence_info, size="small")
+                
                 st.markdown(f"""
                 <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color};">
-                    <strong>Engine:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
+                    <strong>Engine:</strong> <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>{confidence_badge}
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -2411,9 +2552,18 @@ with left_col:
             if vehicle_info['aluminum_rims'] is not None:
                 rims_status = "Al" if vehicle_info['aluminum_rims'] else "Fe"
                 rims_color = "#22c55e" if vehicle_info['aluminum_rims'] else "#f59e0b"
+                
+                # Get confidence score for rim material
+                rims_confidence = confidence_scores.get('aluminum_rims', 0.0)
+                confidence_badge = ""
+                if rims_confidence > 0:
+                    from confidence_ui import create_mock_confidence_info, render_confidence_badge
+                    confidence_info = create_mock_confidence_info(rims_confidence)
+                    confidence_badge = render_confidence_badge(confidence_info, size="small")
+                
                 st.markdown(f"""
                 <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color};">
-                    <strong>Rims:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
+                    <strong>Rims:</strong> <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>{confidence_badge}
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -2426,9 +2576,18 @@ with left_col:
         with col4:
             if vehicle_info.get('catalytic_converters') is not None:
                 cats_count = vehicle_info['catalytic_converters']
+                
+                # Get confidence score for catalytic converters
+                cats_confidence = confidence_scores.get('catalytic_converters', 0.0)
+                confidence_badge = ""
+                if cats_confidence > 0:
+                    from confidence_ui import create_mock_confidence_info, render_confidence_badge
+                    confidence_info = create_mock_confidence_info(cats_confidence)
+                    confidence_badge = render_confidence_badge(confidence_info, size="small")
+                
                 st.markdown(f"""
                 <div style="background: rgba(34, 197, 94, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #22c55e;">
-                    <strong>Cats:</strong> <span style="color: #22c55e; font-weight: 600;">{cats_count}</span>
+                    <strong>Cats:</strong> <span style="color: #22c55e; font-weight: 600;">{cats_count}</span>{confidence_badge}
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -2437,6 +2596,16 @@ with left_col:
                     <strong>Cats:</strong> <span style="color: #6b7280;">Unknown</span>
                 </div>
                 """, unsafe_allow_html=True)
+        
+        # Display validation warnings if present
+        validation_warnings = vehicle_info.get('validation_warnings', [])
+        if validation_warnings:
+            from confidence_ui import render_warning_banner
+            st.markdown("### ⚠️ Data Quality Alerts")
+            for warning in validation_warnings:
+                render_warning_banner([warning])
+        
+        # Source attribution removed - using Gemini Search Grounding for all lookups
 
     # --- Main Form ---
     with st.form(key="vehicle_form"):
@@ -2454,12 +2623,6 @@ with left_col:
     # --- Progress Area ---
     # Create a container for the progress area that can be shown/hidden
     progress_container = st.empty()
-    
-    # Initialize progress tracker in session state if not exists
-    if 'search_progress_tracker' not in st.session_state:
-        st.session_state['search_progress_tracker'] = None
-    if 'show_progress_area' not in st.session_state:
-        st.session_state['show_progress_area'] = False
 
     # --- Processing and Output ---
     if submit_button:
@@ -2485,69 +2648,34 @@ with left_col:
                     
                     # Check if we've already processed this vehicle in this session
                     if st.session_state.get('last_processed_vehicle') != vehicle_id:
-                        # Show progress area and initialize progress tracker
-                        st.session_state['show_progress_area'] = True
-                        specifications = ["curb_weight", "engine_material", "rim_material", "catalytic_converters"]
-                        progress_tracker = SearchProgressTracker(specifications)
-                        st.session_state['search_progress_tracker'] = progress_tracker
-                        
-                        # Create enhanced progress callback function
-                        def progress_callback(phase, spec_name, status, confidence=None, error_message=None):
-                            """Handle enhanced progress updates from vehicle processing."""
-                            # Update current phase if provided
-                            if phase:
-                                progress_tracker.set_phase(phase)
-                            
-                            if spec_name and status:
-                                # Map status strings to SearchStatus enum
-                                status_mapping = {
-                                    "searching": SearchStatus.SEARCHING,
-                                    "found": SearchStatus.FOUND,
-                                    "partial": SearchStatus.PARTIAL,
-                                    "failed": SearchStatus.FAILED
-                                }
-                                
-                                if status in status_mapping:
-                                    progress_tracker.update_status(
-                                        spec_name, 
-                                        status_mapping[status], 
-                                        confidence=confidence,
-                                        error_message=error_message
-                                    )
-                        
-                        # Display progress area
+                        # Show simplified progress indicator
                         with progress_container.container():
-                            progress_tracker.render()
+                            st.markdown("""
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%); border-radius: 12px; padding: 1.5rem; border-left: 4px solid #0ea5e9; box-shadow: 0 4px 16px rgba(14, 165, 233, 0.15); margin-bottom: 1rem;">
+                                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                                    <div style="font-size: 1.5rem; margin-right: 0.75rem;">🔍</div>
+                                    <div style="font-size: 1.1rem; font-weight: 600; color: #0369a1;">Searching the web for vehicle info</div>
+                                </div>
+                                <div style="background: rgba(255, 255, 255, 0.6); border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 0.5rem; position: relative;">
+                                    <div style="background: linear-gradient(90deg, transparent 0%, #0ea5e9 25%, #06b6d4 50%, #14b8a6 75%, transparent 100%); height: 100%; width: 40%; position: absolute; animation: progress-slide 1.5s ease-in-out infinite;"></div>
+                                </div>
+                            </div>
+                            <style>
+                                @keyframes progress-slide {
+                                    0% { 
+                                        left: -40%; 
+                                    }
+                                    100% { 
+                                        left: 100%; 
+                                    }
+                                }
+                            </style>
+                            """, unsafe_allow_html=True)
                         
-                        # Check for retry requests
-                        retry_specs = progress_tracker.get_retry_requests()
-                        if retry_specs:
-                            st.info(f"Retrying search for: {', '.join(retry_specs)}")
-                            for spec in retry_specs:
-                                progress_tracker.reset_spec_for_retry(spec)
+                        # Process vehicle (single API call gets all specs at once)
+                        vehicle_data = process_vehicle(year_int, make_input.strip(), model_input.strip())
                         
-                        with st.spinner(f"Searching for {year_int} {make_input} {model_input}..."):
-                            # Process vehicle with progress tracking
-                            vehicle_data = process_vehicle(year_int, make_input.strip(), model_input.strip(), progress_callback)
-                        
-                        # Show error summary if there were issues
-                        error_summary = progress_tracker.get_error_summary()
-                        if error_summary['has_issues']:
-                            with st.expander("⚠️ Search Issues Summary", expanded=True):
-                                if error_summary['error_count'] > 0:
-                                    st.error(f"Found {error_summary['error_count']} errors during search")
-                                if error_summary['timeout_count'] > 0:
-                                    st.warning(f"{error_summary['timeout_count']} specifications experienced timeouts")
-                                if error_summary['low_confidence_count'] > 0:
-                                    st.info(f"{error_summary['low_confidence_count']} specifications have low confidence results")
-                                
-                                if error_summary['failed_specs']:
-                                    st.markdown("**Failed specifications:** " + ", ".join(error_summary['failed_specs']))
-                                if error_summary['partial_specs']:
-                                    st.markdown("**Partial results:** " + ", ".join(error_summary['partial_specs']))
-                        
-                        # Hide progress area after search completes
-                        st.session_state['show_progress_area'] = False
+                        # Clear progress indicator
                         progress_container.empty()
                         
                         # Mark this vehicle as processed to prevent duplicate processing
@@ -2568,7 +2696,17 @@ with left_col:
                             <strong>Vehicle Not Found:</strong> {year_int} {make_input} {model_input} does not appear to be a real vehicle or was not manufactured in this year. Please check your input.
                         </div>
                         """, unsafe_allow_html=True)
-                    elif vehicle_data and vehicle_data['curb_weight_lbs']:
+                    elif 'error' in vehicle_data and vehicle_data['error']:
+                        # API call failed (503, timeout, etc.)
+                        error_msg = vehicle_data['error']
+                        st.markdown(f"""
+                        <div class="error-message">
+                            <strong>Search Error:</strong> Unable to search for vehicle data due to a temporary issue.
+                        </div>
+                        """, unsafe_allow_html=True)
+                        st.error(f"Error details: {error_msg}")
+                        st.info("💡 **What to do next:**\n- Try again in a few moments (API might be overloaded)\n- Use the Manual Entry option below if you know the vehicle's curb weight")
+                    elif vehicle_data and vehicle_data.get('curb_weight_lbs'):
                         # Display simple success message
                         st.markdown(f"""
                         <div class="success-message">
@@ -2577,6 +2715,12 @@ with left_col:
                         """, unsafe_allow_html=True)
                         
                         # Store the detailed vehicle info for display on the right
+                        # Check if we have confidence information from staged resolver
+                        confidence_info = vehicle_data.get('confidence_scores', {})
+                        validation_warnings = vehicle_data.get('warnings', [])
+                        source_attribution = vehicle_data.get('source_attribution', {})
+                        citations = vehicle_data.get('citations', {})
+                        
                         st.session_state['detailed_vehicle_info'] = {
                             'year': year_int,
                             'make': make_input,
@@ -2584,7 +2728,11 @@ with left_col:
                             'weight': vehicle_data['curb_weight_lbs'],
                             'aluminum_engine': vehicle_data['aluminum_engine'],
                             'aluminum_rims': vehicle_data['aluminum_rims'],
-                            'catalytic_converters': vehicle_data['catalytic_converters']
+                            'catalytic_converters': vehicle_data['catalytic_converters'],
+                            'confidence_scores': confidence_info,
+                            'validation_warnings': validation_warnings,
+                            'source_attribution': source_attribution,
+                            'citations': citations
                         }
                         
                         # Store the data in session state for the cost estimator
@@ -2599,12 +2747,59 @@ with left_col:
                         # Refresh the page to show the updated vehicle details and cost estimate
                         st.rerun()
                     else:
-                        st.markdown("""
-                        <div class="error-message">
-                            <strong>Weight Not Found:</strong> Could not determine the curb weight. 
-                            The result has been stored as 'Inconclusive' to prevent repeated searches.
-                        </div>
-                        """, unsafe_allow_html=True)
+                        # API succeeded but curb weight not found in search results
+                        # Check if we got any other fields successfully
+                        has_partial_data = any([
+                            vehicle_data.get('aluminum_engine') is not None,
+                            vehicle_data.get('aluminum_rims') is not None,
+                            vehicle_data.get('catalytic_converters') is not None
+                        ])
+                        
+                        # Determine if vehicle likely doesn't exist (no data found at all)
+                        # vs. vehicle exists but just missing curb weight
+                        critical_fields_found = sum([
+                            vehicle_data.get('aluminum_engine') is not None,
+                            vehicle_data.get('aluminum_rims') is not None,
+                            vehicle_data.get('catalytic_converters') is not None
+                        ])
+                        
+                        vehicle_likely_doesnt_exist = (critical_fields_found == 0)
+                        
+                        if vehicle_likely_doesnt_exist:
+                            # Vehicle doesn't appear to exist
+                            st.markdown(f"""
+                            <div class="warning-message" style="background-color: #fee2e2; border-left: 4px solid #dc2626;">
+                                <strong>⚠️ Vehicle Not Found:</strong> Unable to find a <strong>{year_int} {make_input} {model_input}</strong> in our search results.
+                                <br><br>
+                                <strong>Please verify:</strong>
+                                <ul style="margin: 0.5rem 0 0 1rem; padding-left: 1rem;">
+                                    <li>Year is correct (this make/model may not have been produced in {year_int})</li>
+                                    <li>Make and model names are spelled correctly</li>
+                                    <li>This vehicle actually exists (not a concept car or unreleased model)</li>
+                                </ul>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            st.info("💡 **Suggestions:**\n- Check if this model was produced in a different year range\n- Try searching for a similar year (e.g., try years +/- 2 years)\n- Verify the spelling of the make and model\n- If you're certain this vehicle exists, use Manual Entry below")
+                        else:
+                            # Vehicle exists but curb weight not found
+                            st.markdown("""
+                            <div class="warning-message">
+                                <strong>Curb Weight Not Found:</strong> The search completed but could not find reliable curb weight data for this vehicle.
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            if has_partial_data:
+                                st.info(f"ℹ️ **Found partial data:**")
+                                cols = st.columns(3)
+                                if vehicle_data.get('aluminum_engine') is not None:
+                                    cols[0].write(f"✓ Aluminum Engine: {vehicle_data['aluminum_engine']}")
+                                if vehicle_data.get('aluminum_rims') is not None:
+                                    cols[1].write(f"✓ Aluminum Rims: {vehicle_data['aluminum_rims']}")
+                                if vehicle_data.get('catalytic_converters') is not None:
+                                    cols[2].write(f"✓ Cat Converters: {vehicle_data['catalytic_converters']}")
+                            
+                            st.info("💡 **What to do next:**\n- Try a different model year (curb weight data may be available for nearby years)\n- Use the Manual Entry option below if you know the vehicle's curb weight")
             except ValueError:
                 st.markdown("""
                 <div class="warning-message">
@@ -3040,83 +3235,6 @@ with right_col:
                         ℹ️ {warning}
                     </div>
                     """, unsafe_allow_html=True)
-            
-            # Enhanced provenance panels with interactive features
-            with st.expander("🔍 View Detailed Source Information & Data Quality", expanded=False):
-                st.markdown("### Resolution Details & Confidence Analysis")
-                st.markdown("""
-                This section provides transparency into how each vehicle specification was determined, 
-                including data sources, confidence levels, and resolution methods used.
-                """)
-                
-                # Data quality summary
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    high_confidence_count = sum(1 for item in weight_based + count_based if "HIGH" in item.get('Commodity', ''))
-                    st.metric("High Confidence Fields", high_confidence_count, help="Fields with >80% confidence score")
-                
-                with col2:
-                    medium_confidence_count = sum(1 for item in weight_based + count_based if "MEDIUM" in item.get('Commodity', ''))
-                    st.metric("Medium Confidence Fields", medium_confidence_count, help="Fields with 60-80% confidence score")
-                
-                with col3:
-                    low_confidence_count = sum(1 for item in weight_based + count_based if "LOW" in item.get('Commodity', ''))
-                    st.metric("Low Confidence Fields", low_confidence_count, help="Fields with <60% confidence score")
-                
-                st.markdown("---")
-                
-                # Mock provenance for key vehicle specifications (would come from resolver in real implementation)
-                if st.session_state.get('last_processed_vehicle'):
-                    # Curb weight provenance with realistic confidence based on data availability
-                    curb_weight_int = st.session_state.get('last_curb_weight', 3600)
-                    curb_weight_confidence = 0.85 if st.session_state.get('last_curb_weight') else 0.60
-                    curb_weight_provenance = create_mock_provenance_info("Curb Weight", curb_weight_int, curb_weight_confidence)
-                    render_detailed_provenance_panel("Curb Weight", curb_weight_provenance)
-                    
-                    # Engine type provenance
-                    engine_confidence = 0.75 if st.session_state.get('last_aluminum_engine') is not None else 0.50
-                    engine_value = 1.0 if st.session_state.get('last_aluminum_engine') else 0.0
-                    engine_type_provenance = create_mock_provenance_info("Engine Material", engine_value, engine_confidence)
-                    render_detailed_provenance_panel("Engine Material Detection", engine_type_provenance)
-                    
-                    # Rim material provenance
-                    rim_confidence = 0.70 if st.session_state.get('last_aluminum_rims') is not None else 0.45
-                    rim_value = 1.0 if st.session_state.get('last_aluminum_rims') else 0.0
-                    rim_provenance = create_mock_provenance_info("Rim Material", rim_value, rim_confidence)
-                    render_detailed_provenance_panel("Rim Material Detection", rim_provenance)
-                    
-                    # Catalytic converters provenance
-                    cats_confidence = 0.65 if st.session_state.get('last_catalytic_converters') else 0.55
-                    cats_value = st.session_state.get('last_catalytic_converters', CATS_PER_CAR)
-                    cats_provenance = create_mock_provenance_info("Catalytic Converters", cats_value, cats_confidence)
-                    render_detailed_provenance_panel("Catalytic Converter Count", cats_provenance)
-                
-                # Resolution methodology explanation
-                st.markdown("### Resolution Methodology")
-                st.markdown("""
-                **Grounded Search**: Vehicle specifications are resolved using Google AI with grounded search to find reliable sources.
-                
-                **Consensus Algorithm**: Multiple candidate values are collected and clustered to identify the most reliable estimate.
-                
-                **Confidence Scoring**: Based on source reliability, agreement between candidates, and data spread.
-                
-                **Fallback Logic**: When grounded search fails, the system uses database lookups and heuristic estimates.
-                """)
-            
-            # Interactive data quality tips (moved outside parent expander)
-            with st.expander("💡 Tips for Improving Data Quality", expanded=False):
-                st.markdown("""
-                **For Higher Accuracy:**
-                - Verify engine material (aluminum vs iron) for high-value vehicles
-                - Check actual catalytic converter count, especially for luxury/performance vehicles  
-                - Confirm rim material - aluminum rims significantly increase scrap value
-                - Consider vehicle trim level variations in specifications
-                
-                **Red Flags to Watch:**
-                - Confidence scores below 60% - consider manual verification
-                - Wide ranges in candidate values - may indicate conflicting sources
-                - Missing specifications for key components
-                """)
             
             # Add visual highlighting for flagged values
             st.markdown("""

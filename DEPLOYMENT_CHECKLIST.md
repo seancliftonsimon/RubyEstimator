@@ -77,7 +77,7 @@ EOF
 ### Step 3: Database Initialization
 ```bash
 # Initialize database schema
-python -c "from resolver import create_resolutions_table; create_resolutions_table()"
+python -c "from database_config import create_tables; create_tables()"
 
 # Verify database connectivity
 python -c "from database_config import test_database_connection; print(test_database_connection())"

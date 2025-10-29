@@ -95,7 +95,6 @@ LOG_FILE=logs/application.log
 
 ```bash
 # Run database initialization
-python -c "from resolver import create_resolutions_table; create_resolutions_table()"
 python -c "from database_config import initialize_database; initialize_database()"
 ```
 
@@ -274,7 +273,7 @@ python -c "from database_config import test_database_connection; print(test_data
 #### API Issues
 ```bash
 # Test API key
-python -c "from resolver import GroundedSearchClient; client = GroundedSearchClient(); print('API Key:', 'Valid' if client.api_key else 'Missing')"
+python -c "import os; print('API Key:', 'Valid' if os.getenv('GEMINI_API_KEY') else 'Missing')"
 ```
 
 #### Performance Issues
@@ -296,9 +295,9 @@ df -h
 - Manual verification for critical vehicles
 
 #### Cache Issues
-- Clear cache: `python -c "from resolver import ProvenanceTracker; tracker = ProvenanceTracker(); tracker.cache.clear()"`
+- Clear Streamlit cache: `streamlit cache clear`
 - Monitor memory usage
-- Adjust cache TTL settings
+- Restart application if needed
 
 #### Database Performance
 - Run VACUUM and ANALYZE

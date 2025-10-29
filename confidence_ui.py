@@ -75,23 +75,7 @@ def render_confidence_badge(confidence_info: ConfidenceInfo, size: str = "normal
     color = colors[confidence_info.level]
     size_style = sizes[size]
     
-    badge_html = f"""
-    <span class="confidence-badge confidence-{confidence_info.level}" 
-          style="
-            background-color: {color['bg']};
-            border: 1px solid {color['border']};
-            color: {color['text']};
-            padding: {size_style['padding']};
-            font-size: {size_style['font_size']};
-            font-weight: 600;
-            border-radius: 4px;
-            display: inline-block;
-            margin-left: 0.5rem;
-          "
-          title="{confidence_info.explanation}">
-        {confidence_info.level.upper()} ({confidence_info.score:.0%})
-    </span>
-    """
+    badge_html = f'<span class="confidence-badge confidence-{confidence_info.level}" style="background-color: {color["bg"]}; border: 1px solid {color["border"]}; color: {color["text"]}; padding: {size_style["padding"]}; font-size: {size_style["font_size"]}; font-weight: 600; border-radius: 4px; display: inline-block; margin-left: 0.5rem;" title="{confidence_info.explanation}">{confidence_info.level.upper()} ({confidence_info.score:.0%})</span>'
     
     return badge_html
 
@@ -235,15 +219,14 @@ def render_detailed_provenance_panel(field_name: str, provenance_info: Provenanc
             </div>
             """, unsafe_allow_html=True)
         
-        # Candidate analysis with outlier detection
-        if provenance_info.candidates:
-            st.markdown("### 📊 Candidate Analysis")
-            
+        # Candidate analysis with outlier detection (only if we have multiple different values)
+        if provenance_info.candidates and len(provenance_info.candidates) > 0:
             # Create enhanced candidates table
             candidates_data = []
             values = [c.get("value", 0) for c in provenance_info.candidates if c.get("value") is not None]
             
-            if values:
+            if values and len(values) > 0:
+                st.markdown("### 📊 Source Analysis")
                 import statistics
                 median_val = statistics.median(values)
                 mean_val = statistics.mean(values)
@@ -270,21 +253,25 @@ def render_detailed_provenance_panel(field_name: str, provenance_info: Provenanc
                 
                 import pandas as pd
                 candidates_df = pd.DataFrame(candidates_data)
-                st.dataframe(candidates_df, use_container_width=True)
+                st.dataframe(candidates_df, use_container_width=True, hide_index=True)
                 
-                # Statistical summary
-                st.markdown("### 📈 Statistical Summary")
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Median", f"{median_val:,.2f}")
-                with col2:
-                    st.metric("Mean", f"{mean_val:,.2f}")
-                with col3:
-                    std_dev = statistics.stdev(values) if len(values) > 1 else 0
-                    st.metric("Std Dev", f"{std_dev:,.2f}")
-                with col4:
-                    range_val = max(values) - min(values) if values else 0
-                    st.metric("Range", f"{range_val:,.2f}")
+                # Statistical summary - only show if we have variation in values
+                if len(set(values)) > 1:
+                    st.markdown("### 📈 Statistical Summary")
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Median", f"{median_val:,.2f}")
+                    with col2:
+                        st.metric("Mean", f"{mean_val:,.2f}")
+                    with col3:
+                        std_dev = statistics.stdev(values) if len(values) > 1 else 0
+                        st.metric("Std Dev", f"{std_dev:,.2f}")
+                    with col4:
+                        range_val = max(values) - min(values) if values else 0
+                        st.metric("Range", f"{range_val:,.2f}")
+                else:
+                    # All sources agree on the same value
+                    st.markdown("**✅ All sources agree on this value**")
         
         # Source reliability and citations
         if provenance_info.sources:

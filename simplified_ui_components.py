@@ -317,6 +317,8 @@ class SearchProgressTracker:
         self.low_confidence_warnings = {}
         self.spec_start_times = {}
         self.timeout_threshold = 30  # seconds
+        self.api_calls_used = 0
+        self.overall_confidence = 0.0
     
     def update_status(self, spec: str, status: SearchStatus, confidence: float = None, error_message: str = None) -> None:
         """Update the status of a specific specification with enhanced feedback."""
@@ -353,6 +355,16 @@ class SearchProgressTracker:
     def set_phase(self, phase: str) -> None:
         """Set the current search phase."""
         self.current_phase = phase
+        self.render()
+    
+    def set_api_call_count(self, count: int) -> None:
+        """Set the total API calls used."""
+        self.api_calls_used = count
+        self.render()
+    
+    def set_overall_confidence(self, confidence: float) -> None:
+        """Set the overall confidence score."""
+        self.overall_confidence = confidence
         self.render()
     
     def add_timeout_warning(self, spec: str, timeout_seconds: int) -> None:
@@ -451,6 +463,16 @@ class SearchProgressTracker:
             html_parts.append(f'''<div style="font-size: 0.875rem; color: #64748b; font-weight: 500;">{progress_completion}</div>''')
             html_parts.append(f'''</div>''')
             html_parts.append(f'''<div style="font-size: 0.875rem; color: #475569; margin-bottom: 0.75rem; font-style: italic;">{current_phase}</div>''')
+            
+            # Show API calls and confidence if available
+            if self.api_calls_used > 0 or self.overall_confidence > 0:
+                html_parts.append(f'''<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(34, 197, 94, 0.1); border-radius: 4px;">''')
+                if self.api_calls_used > 0:
+                    html_parts.append(f'''<div style="font-size: 0.875rem; color: #16a34a; font-weight: 500;">📡 API Calls: {self.api_calls_used}</div>''')
+                if self.overall_confidence > 0:
+                    confidence_color = "#16a34a" if self.overall_confidence >= 0.8 else "#d97706" if self.overall_confidence >= 0.6 else "#dc2626"
+                    html_parts.append(f'''<div style="font-size: 0.875rem; color: {confidence_color}; font-weight: 500;">🎯 Confidence: {self.overall_confidence:.0%}</div>''')
+                html_parts.append(f'''</div>''')
             
             # Create enhanced progress items
             for spec, status in self.progress.specifications.items():

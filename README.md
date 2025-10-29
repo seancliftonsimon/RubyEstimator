@@ -2,13 +2,46 @@
 
 A Streamlit web application that estimates vehicle curb weights and calculates commodity values for automotive recycling.
 
+## 🚀 NEW: Single-Call Gemini Resolution System
+
+This application now uses a **minimal single-call vehicle resolution system** powered by:
+
+- ✅ **Gemini 2.5 Flash** with Google Search Grounding
+- ✅ **Strict JSON output** via `responseSchema` + `responseMimeType: "application/json"`
+- ✅ **Direct citations** from grounding metadata (OEM preferred, or 2 agreeing secondaries)
+- ✅ **No caching** - always fresh, always persisted to DB
+- ✅ **Simple validation** - numeric units normalized (lbs), booleans (true/false), per-field status
+
+📖 **See [DOCUMENTATION.md](DOCUMENTATION.md) for complete documentation.**
+
+### Quick Start
+
+1. **Set API Key** (copy template and edit):
+   ```bash
+   cp .streamlit/secrets.toml.template .streamlit/secrets.toml
+   # Edit .streamlit/secrets.toml and add your GEMINI_API_KEY
+   ```
+2. **Test It**:
+
+   ```bash
+   python test_single_call_gemini.py
+   ```
+
+3. **Run App**:
+   ```bash
+   streamlit run app.py
+   ```
+
+---
+
 ## Features
 
-- **Vehicle Search**: Look up vehicle curb weights using Google's Gemini AI API
+- **Vehicle Search**: Look up vehicle curb weights using Google's Gemini AI API with Search Grounding
 - **Cost Calculator**: Calculate commodity values and profit margins
-- **Database Storage**: PostgreSQL database to cache vehicle information
+- **Database Storage**: PostgreSQL/SQLite database with evidence tracking
 - **Material Detection**: Automatically detect aluminum vs iron engines and rims
 - **Password Protection**: Optional authentication for secure access
+- **Citation Tracking**: Every field value includes source URLs and quotes from grounding
 
 ## Color Palette & Usage
 
@@ -160,18 +193,33 @@ CREATE TABLE vehicles (
 
 ```
 RubyEstimator/
-├── app.py                 # Main Streamlit application
-├── vehicle_data.py        # Vehicle data processing and API calls
-├── auth.py               # Password protection and authentication
-├── database_config.py    # Database connection and setup
-├── requirements.txt      # Python dependencies
-├── Dockerfile           # Container configuration
-├── railway.json         # Railway deployment config
-├── runtime.txt          # Python version specification
+├── app.py                          # Main Streamlit application
+├── vehicle_data.py                 # Vehicle data processing and resolver integration
+├── auth.py                        # Password protection and authentication
+├── database_config.py             # Database connection helpers
+├── confidence_ui.py               # UI components for confidence indicators
+├── simplified_ui_components.py    # Streamlined UI components
+├── canonicalizer.py               # Input alias mapping and validation
+├── source_router.py               # Deterministic source routing
+├── parallel_http_fetcher.py       # Strict HTTP fetching with timeouts
+├── source_parsers.py              # CSS/XPath per-source parsers
+├── candidate_validator.py         # Field-level validation rules
+├── candidate_resolver.py          # Deterministic value selection rules
+├── micro_llm_resolver.py          # Optional micro-LLM conflict resolver
+├── persistence.py                 # Database persistence (vehicles/field_values/evidence/runs)
+├── generate_password.py           # Password hash generator utility
+├── requirements.txt               # Python dependencies
+├── Dockerfile                     # Container configuration
+├── railway.json                   # Railway deployment config
+├── runtime.txt                    # Python version specification
+├── DEPLOYMENT_GUIDE.md            # Detailed deployment instructions
+├── DEPLOYMENT_CHECKLIST.md        # Pre-deployment checklist
 ├── .streamlit/
-│   └── config.toml     # Streamlit configuration
-├── .gitignore          # Git ignore rules
-└── README.md           # This file
+│   └── config.toml               # Streamlit configuration
+├── .kiro/                        # Kiro AI assistant specifications
+│   └── specs/                    # Feature specifications and tasks
+├── .gitignore                    # Git ignore rules
+└── README.md                     # This file
 ```
 
 ## Usage
