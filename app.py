@@ -1479,9 +1479,21 @@ with right_col:
 # --- Footer ---
 st.markdown("---")
 
-# Admin button in bottom left corner
-col1, col2, col3 = st.columns([1, 5, 1])
-with col1:
+# Admin button in bottom left corner with absolute positioning
+st.markdown("""
+<style>
+    .admin-button-container {
+        position: fixed;
+        bottom: 1rem;
+        left: 1rem;
+        z-index: 999;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Use a container for admin button that will be positioned
+admin_container = st.container()
+with admin_container:
     if st.button("⚙️ Admin" if not st.session_state['admin_mode'] else "✕ Close Admin", 
                  key="admin_toggle_btn",
                  help="Access admin settings to configure default values"):

@@ -202,9 +202,9 @@ def generate_input_css() -> str:
         border: 3px solid {Colors.RUBY_BORDER_STRONG} !important;
         border-radius: {BorderRadius.LG} !important;
         padding: 0.75rem !important;
-        font-size: 1.25rem !important;
+        font-size: 1rem !important;
         color: {Colors.GRAY_800} !important;
-        font-weight: 600 !important;
+        font-weight: 500 !important;
         transition: all 0.3s ease !important;
         box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06) !important;
     }}
@@ -314,8 +314,13 @@ def generate_main_app_css() -> str:
     return f"""
 <style>
     /* ========== PROFESSIONAL FONT FAMILY ========== */
-    * {{
+    body, p, h1, h2, h3, h4, h5, h6, span, div, label, input, button, textarea, select {{
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+    }}
+    
+    /* Exclude icon fonts from font override */
+    .material-icons, [class*="icon"], svg, svg * {{
+        font-family: inherit !important;
     }}
     
     /* ========== FORCE LIGHT MODE WITH ENHANCED CONTRAST GRADIENT ========== */
@@ -456,12 +461,12 @@ def generate_main_app_css() -> str:
     /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
     /* Only target buttons within the main content area, not Streamlit's UI chrome */
     /* Matches the exact blue used in vehicle name and total sale value (#1e40af) */
-    .main .stButton button,
-    .main .stButton > button,
-    .main button[kind="primary"],
-    .main button[kind="secondary"],
-    div[data-testid="column"] .stButton button,
-    div[data-testid="column"] button {{
+    .stButton button,
+    .stButton > button,
+    button[kind="primary"],
+    button[kind="secondary"],
+    .stFormSubmitButton button,
+    .stFormSubmitButton > button {{
         background: #1e40af !important;
         background-color: #1e40af !important;
         color: {Colors.WHITE} !important;
@@ -479,9 +484,9 @@ def generate_main_app_css() -> str:
         min-height: 56px !important;
     }}
     
-    .main .stButton button:hover,
-    .main .stButton > button:hover,
-    div[data-testid="column"] .stButton button:hover {{
+    .stButton button:hover,
+    .stButton > button:hover,
+    .stFormSubmitButton button:hover {{
         background: #2563eb !important;
         background-color: #2563eb !important;
         border-color: #1e40af !important;
@@ -491,25 +496,31 @@ def generate_main_app_css() -> str:
     }}
     
     /* Ensure all button text and children are white */
-    .main .stButton button *,
-    .main .stButton > button *,
-    div[data-testid="column"] .stButton button *,
-    div[data-testid="column"] .stButton button span,
-    div[data-testid="column"] .stButton button p,
-    div[data-testid="column"] .stButton button div {{
+    .stButton button *,
+    .stButton > button *,
+    .stFormSubmitButton button *,
+    .stButton button span,
+    .stButton button p,
+    .stButton button div {{
         color: {Colors.WHITE} !important;
         background: transparent !important;
         font-weight: 700 !important;
     }}
     
-    /* Admin button styling - teal background (ONLY teal element) */
+    /* Admin button styling - teal background (ONLY teal element) - positioned bottom left */
     button[key="admin_toggle_btn"],
-    .stButton button[key="admin_toggle_btn"],
-    button:has([key="admin_toggle_btn"]) {{
+    .stButton button[key="admin_toggle_btn"] {{
         background: {Colors.ADMIN_BUTTON} !important;
         background-color: {Colors.ADMIN_BUTTON} !important;
         border-color: {Colors.ADMIN_BUTTON} !important;
         color: {Colors.WHITE} !important;
+        position: fixed !important;
+        bottom: 1rem !important;
+        left: 1rem !important;
+        z-index: 999 !important;
+        padding: 0.75rem 1.5rem !important;
+        font-size: 1rem !important;
+        min-height: auto !important;
     }}
     
     button[key="admin_toggle_btn"]:hover,
@@ -525,14 +536,24 @@ def generate_main_app_css() -> str:
         color: {Colors.WHITE} !important;
     }}
     
-    .main .stButton > button:active,
-    div[data-testid="column"] .stButton button:active {{
+    .stButton > button:active,
+    .stFormSubmitButton button:active {{
         background: {Colors.BUTTON_DARK} !important;
         border-color: {Colors.BUTTON_DARK} !important;
         transform: translateY(0) !important;
     }}
     
     /* ========== INPUT FIELDS ========== */
+    /* Input field labels - make them bigger */
+    .stTextInput > label,
+    [data-testid="stTextInput"] > label,
+    label[data-testid="stWidgetLabel"] {{
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        color: {Colors.GRAY_800} !important;
+        margin-bottom: 0.5rem !important;
+    }}
+    
     {generate_input_css()}
     
     /* ========== TABLES ========== */
@@ -609,6 +630,31 @@ def generate_main_app_css() -> str:
         background: linear-gradient(135deg, {Colors.RUBY_BORDER} 0%, {Colors.RUBY_LIGHT} 100%) !important;
         border-color: {Colors.RUBY_BORDER_STRONG} !important;
         box-shadow: {Shadows.SM} !important;
+    }}
+    
+    /* Fix expander icon rendering */
+    [data-testid="stExpander"] details summary {{
+        list-style-type: none !important;
+    }}
+    
+    [data-testid="stExpander"] details summary::-webkit-details-marker {{
+        display: none !important;
+    }}
+    
+    [data-testid="stExpander"] svg {{
+        display: inline-block !important;
+        width: 1.5rem !important;
+        height: 1.5rem !important;
+        vertical-align: middle !important;
+        fill: {Colors.RUBY_PRIMARY} !important;
+    }}
+    
+    .streamlit-expanderHeader svg {{
+        display: inline-block !important;
+        width: 1.5rem !important;
+        height: 1.5rem !important;
+        vertical-align: middle !important;
+        fill: {Colors.RUBY_PRIMARY} !important;
     }}
     
     .streamlit-expanderContent {{
