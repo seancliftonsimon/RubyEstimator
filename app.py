@@ -804,6 +804,13 @@ with left_col:
 
     # --- Processing and Output ---
     if submit_button:
+        # Store the search inputs
+        st.session_state['pending_search'] = {
+            'year': year_input,
+            'make': make_input,
+            'model': model_input
+        }
+        
         # Clear all previous vehicle data immediately when new search is initiated
         st.session_state['detailed_vehicle_info'] = None
         st.session_state['last_curb_weight'] = None
@@ -814,6 +821,19 @@ with left_col:
         st.session_state['calculation_results'] = None
         st.session_state['last_processed_vehicle'] = None
         st.session_state['auto_calculate'] = False
+        
+        # Rerun to clear the display immediately
+        st.rerun()
+    
+    # Process pending search after rerun
+    if st.session_state.get('pending_search'):
+        search_data = st.session_state['pending_search']
+        year_input = search_data['year']
+        make_input = search_data['make']
+        model_input = search_data['model']
+        
+        # Clear the pending search flag
+        del st.session_state['pending_search']
         
         if not make_input or not model_input:
             st.markdown("""
