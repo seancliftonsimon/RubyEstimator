@@ -663,7 +663,7 @@ left_col, spacer, right_col = st.columns([1, 0.2, 1])
 with left_col:
     st.markdown("""
     <div class="section-header">
-        🚗 Vehicle Search & Estimator
+        🚗 Vehicle Search
     </div>
     """, unsafe_allow_html=True)
 
@@ -1001,6 +1001,9 @@ with left_col:
                 # Format the dataframe for display
                 display_df['Weight'] = display_df['Weight'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "?")
                 
+                # Reset index to remove the index column from display
+                display_df = display_df.reset_index(drop=True)
+                
                 st.table(display_df)
                 st.caption("E = Engine (Al=Aluminum, Fe=Iron), W = Wheels (Al=Aluminum, St=Steel), C = Catalytic Converters")
             else:
@@ -1012,7 +1015,7 @@ with left_col:
 with right_col:
     st.markdown("""
     <div class="section-header">
-        💰 Cost Estimate Results
+        💰 Cost Estimate
     </div>
     """, unsafe_allow_html=True)
     
@@ -1252,6 +1255,9 @@ with right_col:
                 display_df = pd.DataFrame(weight_based)
                 display_df = display_df.drop('is_engine', axis=1)
                 
+                # Reset index to remove the index column from display
+                display_df = display_df.reset_index(drop=True)
+                
                 # Display the table
                 st.table(display_df)
                 
@@ -1270,6 +1276,10 @@ with right_col:
                 
                 # Display count-based commodities
                 count_df = pd.DataFrame(count_based)
+                
+                # Reset index to remove the index column from display
+                count_df = count_df.reset_index(drop=True)
+                
                 st.table(count_df)
             
 
@@ -1296,6 +1306,9 @@ with right_col:
             ]
             
             summary_df = pd.DataFrame(summary_data)
+            
+            # Reset index to remove the index column from display
+            summary_df = summary_df.reset_index(drop=True)
             
             st.table(summary_df)
             

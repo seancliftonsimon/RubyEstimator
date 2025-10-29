@@ -26,10 +26,10 @@ class Colors:
     RUBY_SHADOW_STRONG = "rgba(153, 12, 65, 0.25)"
     
     # Button Colors (Complementary Blue)
-    BUTTON_PRIMARY = "#1e40af"  # Deep blue
-    BUTTON_DARK = "#1e3a8a"
-    BUTTON_HOVER = "#2563eb"
-    BUTTON_SHADOW = "rgba(30, 64, 175, 0.3)"
+    BUTTON_PRIMARY = "#3b82f6"  # Lighter blue
+    BUTTON_DARK = "#2563eb"
+    BUTTON_HOVER = "#60a5fa"
+    BUTTON_SHADOW = "rgba(59, 130, 246, 0.3)"
     
     # Semantic Colors
     SUCCESS = "#16a34a"  # Green for profit, positive values
@@ -154,8 +154,8 @@ def generate_table_css() -> str:
     }}
     
     .stDataFrame th {{
-        background: {Colors.RUBY_GRADIENT} !important;
-        color: {Colors.WHITE} !important;
+        background: {Colors.GRAY_100} !important;
+        color: {Colors.GRAY_800} !important;
         padding: 1rem !important;
         font-weight: 600 !important;
         font-size: 1.1rem !important;
@@ -164,7 +164,7 @@ def generate_table_css() -> str:
     }}
     
     .stDataFrame th * {{
-        color: {Colors.WHITE} !important;
+        color: {Colors.GRAY_800} !important;
         text-align: center !important;
     }}
     
@@ -409,7 +409,7 @@ def generate_main_app_css() -> str:
         font-size: 1.5rem !important;
         font-weight: 700 !important;
         color: {Colors.WHITE} !important;
-        background: {Colors.RUBY_PRIMARY} !important;
+        background: {Colors.RUBY_GRADIENT} !important;
         margin-bottom: 1rem !important;
         padding: 1rem 1.5rem !important;
         border-radius: {BorderRadius.LG} !important;
@@ -460,24 +460,24 @@ def generate_main_app_css() -> str:
     
     /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
     /* Only target buttons within the main content area, not Streamlit's UI chrome */
-    /* Matches the exact blue used in vehicle name and total sale value (#1e40af) */
+    /* Lighter blue color for better visibility */
     .stButton button,
     .stButton > button,
     button[kind="primary"],
     button[kind="secondary"],
     .stFormSubmitButton button,
     .stFormSubmitButton > button {{
-        background: #1e40af !important;
-        background-color: #1e40af !important;
+        background: #3b82f6 !important;
+        background-color: #3b82f6 !important;
         color: {Colors.WHITE} !important;
-        border: 3px solid #1e3a8a !important;
+        border: 3px solid #2563eb !important;
         border-radius: {BorderRadius.LG} !important;
         padding: 1rem 2.5rem !important;
         font-weight: 700 !important;
         font-size: 1.3rem !important;
         letter-spacing: 0.5px !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 6px 16px rgba(30, 64, 175, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
         cursor: pointer !important;
         text-transform: uppercase !important;
@@ -487,11 +487,11 @@ def generate_main_app_css() -> str:
     .stButton button:hover,
     .stButton > button:hover,
     .stFormSubmitButton button:hover {{
-        background: #2563eb !important;
-        background-color: #2563eb !important;
-        border-color: #1e40af !important;
+        background: #60a5fa !important;
+        background-color: #60a5fa !important;
+        border-color: #3b82f6 !important;
         transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 10px 28px rgba(30, 64, 175, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 10px 28px rgba(59, 130, 246, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15) !important;
         color: {Colors.WHITE} !important;
     }}
     
@@ -616,6 +616,13 @@ def generate_main_app_css() -> str:
     }}
     
     /* ========== EXPANDERS ========== */
+    [data-testid="stExpander"] {{
+        position: relative !important;
+        z-index: 1 !important;
+        margin-top: 1rem !important;
+        margin-bottom: 1rem !important;
+    }}
+    
     .streamlit-expanderHeader {{
         background: linear-gradient(135deg, {Colors.RUBY_LIGHT} 0%, {Colors.GRAY_50} 100%) !important;
         border: 2px solid {Colors.RUBY_BORDER_MEDIUM} !important;
@@ -624,6 +631,8 @@ def generate_main_app_css() -> str:
         font-weight: 600 !important;
         color: {Colors.RUBY_PRIMARY} !important;
         transition: all 0.3s ease !important;
+        position: relative !important;
+        z-index: 2 !important;
     }}
     
     .streamlit-expanderHeader:hover {{
@@ -663,6 +672,10 @@ def generate_main_app_css() -> str:
         border-top: none !important;
         border-radius: 0 0 {BorderRadius.LG} {BorderRadius.LG} !important;
         padding: 1rem !important;
+        position: relative !important;
+        z-index: 2 !important;
+        max-height: 400px !important;
+        overflow-y: auto !important;
     }}
     
     /* ========== RESPONSIVE DESIGN ========== */
