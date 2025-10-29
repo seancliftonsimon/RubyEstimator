@@ -475,7 +475,7 @@ def generate_main_app_css() -> str:
     
     /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
     /* Only target buttons within the main content area, not Streamlit's UI chrome */
-    /* Lighter blue color for better visibility */
+    /* Lighter blue color, smaller size, no borders */
     .stButton button,
     .stButton > button,
     button[kind="primary"],
@@ -485,18 +485,19 @@ def generate_main_app_css() -> str:
         background: linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%) !important;
         background-color: #60a5fa !important;
         color: {Colors.WHITE} !important;
-        border: 3px solid #3b82f6 !important;
+        border: none !important;
+        outline: none !important;
         border-radius: {BorderRadius.LG} !important;
-        padding: 1rem 2.5rem !important;
+        padding: 0.75rem 1.5rem !important;
         font-weight: 700 !important;
-        font-size: 1.3rem !important;
+        font-size: 1.1rem !important;
         letter-spacing: 0.5px !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 6px 16px rgba(96, 165, 250, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
         cursor: pointer !important;
         text-transform: uppercase !important;
-        min-height: 56px !important;
+        min-height: 48px !important;
     }}
     
     .stButton button:hover,
@@ -504,10 +505,19 @@ def generate_main_app_css() -> str:
     .stFormSubmitButton button:hover {{
         background: linear-gradient(135deg, #93c5fd 0%, #bfdbfe 100%) !important;
         background-color: #93c5fd !important;
-        border-color: #60a5fa !important;
+        border: none !important;
+        outline: none !important;
         transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 10px 28px rgba(96, 165, 250, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 8px 20px rgba(96, 165, 250, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15) !important;
         color: {Colors.WHITE} !important;
+    }}
+    
+    .stButton button:focus,
+    .stButton > button:focus,
+    .stFormSubmitButton button:focus {{
+        outline: none !important;
+        border: none !important;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2), 0 4px 12px rgba(96, 165, 250, 0.3) !important;
     }}
     
     /* Ensure all button text and children are white */
@@ -681,12 +691,39 @@ def generate_main_app_css() -> str:
         fill: {Colors.RUBY_PRIMARY} !important;
     }}
     
-    /* Hide keyboard shortcut text that Streamlit adds */
+    /* Hide keyboard shortcut text and Material Icons text that Streamlit adds */
     [data-testid="stExpander"] details summary span[data-testid*="shortcut"],
     [data-testid="stExpander"] .shortcuts,
-    [data-testid="stExpander"] kbd {{
+    [data-testid="stExpander"] kbd,
+    [data-testid="stExpander"] span.material-icons,
+    [data-testid="stExpander"] span:contains("keyboard_arrow"),
+    .streamlit-expanderHeader span[class*="icon"],
+    .streamlit-expanderHeader .material-icons,
+    [data-testid="stExpander"] span[style*="font-family"],
+    [data-testid="stExpander"] details summary > span:last-child {{
         display: none !important;
         visibility: hidden !important;
+        font-size: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }}
+    
+    /* Hide any text that contains "keyboard" in expanders */
+    [data-testid="stExpander"] *::before,
+    [data-testid="stExpander"] *::after {{
+        content: none !important;
+    }}
+    
+    /* Force override for expander summary text - only show the actual label */
+    .streamlit-expanderHeader {{
+        overflow: hidden !important;
+    }}
+    
+    [data-testid="stExpander"] details summary {{
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }}
     
     .streamlit-expanderContent {{

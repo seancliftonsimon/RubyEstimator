@@ -643,6 +643,26 @@ add_confidence_css()
 # Apply main app CSS from centralized styles module
 st.markdown(generate_main_app_css(), unsafe_allow_html=True)
 
+# Additional CSS to forcefully hide keyboard arrow text in expanders
+st.markdown("""
+<style>
+    /* Aggressive hiding of keyboard arrow text */
+    [data-testid="stExpander"] details summary span:not(:first-child) {
+        display: none !important;
+    }
+    
+    /* Hide Material Icons font rendering */
+    [data-testid="stExpander"] span[style*="Material Icons"] {
+        display: none !important;
+    }
+    
+    /* Target specific expander labels and truncate to only show the question mark and text */
+    [data-testid="stExpander"] details summary {
+        font-size: 1rem !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Main title with minimal padding
 st.markdown('<div class="main-title">🚗 Ruby GEM</div>', unsafe_allow_html=True)
 
