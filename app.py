@@ -1270,7 +1270,11 @@ with right_col:
                                     'purchase_price': purchase_price_float,
                                     'tow_fee': tow_fee_float
                                 }
-                                st.success("Costs updated and recalculated!")
+                                st.markdown("""
+                                <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
+                                    ✅ <strong>Costs updated and recalculated!</strong>
+                                </div>
+                                """, unsafe_allow_html=True)
                                 st.rerun()
                     except ValueError:
                         st.error("Please enter valid numbers for purchase price and tow fee.")

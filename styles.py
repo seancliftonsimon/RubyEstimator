@@ -325,32 +325,21 @@ def generate_main_app_css() -> str:
     button, .stButton > button, 
     [data-testid="stDataFrame"] th,
     table th,
-    button * {{
+    button *,
+    .main-title,
+    .main-title * {{
         color: {Colors.WHITE} !important;
+    }}
+    
+    /* Exception: main title uses ruby color */
+    .main-title {{
+        color: {Colors.RUBY_PRIMARY} !important;
     }}
     
     /* Force input backgrounds to be white */
     input, textarea, select {{
         background: {Colors.WHITE} !important;
         color: {Colors.GRAY_800} !important;
-    }}
-    
-    /* ========== ADMIN BUTTON - Only Teal Element ========== */
-    button[key="admin_toggle_btn"],
-    button[data-testid*="admin"] {{
-        background: {Colors.ADMIN_BUTTON} !important;
-        border: 2px solid {Colors.ADMIN_BUTTON} !important;
-        color: {Colors.WHITE} !important;
-        font-weight: 600 !important;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-    }}
-    
-    button[key="admin_toggle_btn"]:hover,
-    button[data-testid*="admin"]:hover {{
-        background: {Colors.ADMIN_BUTTON_HOVER} !important;
-        border-color: {Colors.ADMIN_BUTTON_HOVER} !important;
-        color: {Colors.WHITE} !important;
-        transform: translateY(-2px) !important;
     }}
     
     /* ========== TYPOGRAPHY ========== */
@@ -360,10 +349,14 @@ def generate_main_app_css() -> str:
         text-align: center;
         margin-bottom: 0.5rem;
         margin-top: 0.5rem;
-        color: {Colors.RUBY_PRIMARY};
+        color: {Colors.RUBY_PRIMARY} !important;
         text-shadow: 0 4px 8px {Colors.RUBY_SHADOW_STRONG};
         letter-spacing: 0.05em;
         position: relative;
+    }}
+    
+    .main-title * {{
+        color: {Colors.RUBY_PRIMARY} !important;
     }}
     
     .main-title::after {{
@@ -440,6 +433,28 @@ def generate_main_app_css() -> str:
         border-color: {Colors.RUBY_HOVER} !important;
         transform: translateY(-2px) !important;
         box-shadow: {Shadows.HOVER} !important;
+        color: {Colors.WHITE} !important;
+    }}
+    
+    /* Ensure all button text is white */
+    .stButton > button * {{
+        color: {Colors.WHITE} !important;
+    }}
+    
+    /* Admin button styling - teal background */
+    button[key="admin_toggle_btn"] {{
+        background: {Colors.ADMIN_BUTTON} !important;
+        border-color: {Colors.ADMIN_BUTTON} !important;
+        color: {Colors.WHITE} !important;
+    }}
+    
+    button[key="admin_toggle_btn"]:hover {{
+        background: {Colors.ADMIN_BUTTON_HOVER} !important;
+        border-color: {Colors.ADMIN_BUTTON_HOVER} !important;
+        color: {Colors.WHITE} !important;
+    }}
+    
+    button[key="admin_toggle_btn"] * {{
         color: {Colors.WHITE} !important;
     }}
     
