@@ -409,7 +409,8 @@ RETURN JSON:
         # Validate curb_weight
         curb_weight = result.get("curb_weight", {})
         raw_weight = curb_weight.get("value")
-        normalized_weight = self._normalize_weight(raw_weight)
+        raw_unit = curb_weight.get("unit", "lbs")
+        normalized_weight = self._normalize_weight(raw_weight, raw_unit)
         if raw_weight != normalized_weight:
             logger.debug(f"curb_weight: normalized {raw_weight} -> {normalized_weight}")
         validated["curb_weight"] = {
@@ -462,8 +463,8 @@ RETURN JSON:
         logger.debug("✓ Field validation and normalization complete")
         return validated
     
-    def _normalize_weight(self, value: Any) -> Optional[float]:
-        """Normalize weight to lbs. If multiple weights provided, selects the minimum."""
+    def _normalize_weight(self, value: Any, unit: str = "lbs") -> Optional[float]:
+        """Normalize weight to lbs with unit conversion. If multiple weights provided, selects the minimum."""
         if value is None:
             return None
         
@@ -473,10 +474,12 @@ RETURN JSON:
             for v in value:
                 try:
                     w = float(v)
-                    if 1500 <= w <= 10000:
-                        valid_weights.append(w)
+                    # Convert kg to lbs if needed
+                    w_lbs = self._convert_to_lbs(w, unit)
+                    if w_lbs and 1500 <= w_lbs <= 10000:
+                        valid_weights.append(w_lbs)
                     else:
-                        logger.debug(f"Weight {w} lbs outside valid range, skipping")
+                        logger.debug(f"Weight {w_lbs} lbs outside valid range, skipping")
                 except (ValueError, TypeError):
                     logger.debug(f"Could not parse weight value '{v}', skipping")
             
@@ -492,15 +495,46 @@ RETURN JSON:
         # Handle single weight value
         try:
             weight = float(value)
+            # Convert kg to lbs if needed
+            weight_lbs = self._convert_to_lbs(weight, unit)
+            if weight_lbs is None:
+                return None
+            
             # Basic sanity check
-            if 1500 <= weight <= 10000:
-                return weight
+            if 1500 <= weight_lbs <= 10000:
+                return weight_lbs
             else:
-                logger.warning(f"⚠️ Weight {weight} lbs outside valid range (1500-10000), rejecting")
+                logger.warning(f"⚠️ Weight {weight_lbs} lbs outside valid range (1500-10000), rejecting")
                 return None
         except (ValueError, TypeError) as e:
             logger.warning(f"⚠️ Failed to normalize weight value '{value}': {e}")
             return None
+    
+    def _convert_to_lbs(self, weight: float, unit: str) -> Optional[float]:
+        """Convert weight to lbs, handling both kg and lbs units."""
+        if weight is None:
+            return None
+        
+        unit_lower = str(unit).lower().strip()
+        
+        # Already in lbs
+        if unit_lower in ["lbs", "lb", "pounds", "pound"]:
+            return weight
+        
+        # Convert kg to lbs
+        if unit_lower in ["kg", "kgs", "kilogram", "kilograms"]:
+            converted = weight * 2.20462
+            logger.info(f"🔄 Converted {weight} kg to {converted:.1f} lbs")
+            return converted
+        
+        # Auto-detect: if weight is suspiciously low (< 3000), it's likely kg
+        if weight < 3000:
+            converted = weight * 2.20462
+            logger.warning(f"⚠️ Weight {weight} seems too low for lbs, auto-converting from kg to {converted:.1f} lbs")
+            return converted
+        
+        # Assume lbs if unit is unknown but in reasonable range
+        return weight
     
     def _normalize_boolean(self, value: Any) -> Optional[bool]:
         """Normalize to boolean."""

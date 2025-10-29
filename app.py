@@ -804,6 +804,17 @@ with left_col:
 
     # --- Processing and Output ---
     if submit_button:
+        # Clear all previous vehicle data immediately when new search is initiated
+        st.session_state['detailed_vehicle_info'] = None
+        st.session_state['last_curb_weight'] = None
+        st.session_state['last_aluminum_engine'] = None
+        st.session_state['last_aluminum_rims'] = None
+        st.session_state['last_catalytic_converters'] = None
+        st.session_state['last_vehicle_info'] = None
+        st.session_state['calculation_results'] = None
+        st.session_state['last_processed_vehicle'] = None
+        st.session_state['auto_calculate'] = False
+        
         if not make_input or not model_input:
             st.markdown("""
             <div class="warning-message">
