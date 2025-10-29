@@ -646,18 +646,9 @@ st.markdown(generate_main_app_css(), unsafe_allow_html=True)
 # Main title with minimal padding
 st.markdown('<div class="main-title">🚗 Ruby GEM</div>', unsafe_allow_html=True)
 
-# Admin toggle - Button in the top-right corner
+# Admin toggle - Initialize state
 if 'admin_mode' not in st.session_state:
     st.session_state['admin_mode'] = False
-
-# Create a container for the admin button in the top-right corner
-col1, col2, col3 = st.columns([5, 1, 1])
-with col3:
-    if st.button("⚙️ Admin" if not st.session_state['admin_mode'] else "✕ Close Admin", 
-                 key="admin_toggle_btn",
-                 help="Access admin settings to configure default values"):
-        st.session_state['admin_mode'] = not st.session_state['admin_mode']
-        st.rerun()
 
 if st.session_state['admin_mode']:
     # Apply admin-specific CSS for distinct mode styling
@@ -779,7 +770,7 @@ with left_col:
         with col3:
             model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry", key="model_input_main")
 
-        submit_button = st.form_submit_button(label="Search Vehicle & Calculate", use_container_width=True)
+        submit_button = st.form_submit_button(label="Search Vehicle", use_container_width=True)
 
     # --- Progress Area ---
     # Create a container for the progress area that can be shown/hidden
@@ -1487,6 +1478,16 @@ with right_col:
 
 # --- Footer ---
 st.markdown("---")
+
+# Admin button in bottom left corner
+col1, col2, col3 = st.columns([1, 5, 1])
+with col1:
+    if st.button("⚙️ Admin" if not st.session_state['admin_mode'] else "✕ Close Admin", 
+                 key="admin_toggle_btn",
+                 help="Access admin settings to configure default values"):
+        st.session_state['admin_mode'] = not st.session_state['admin_mode']
+        st.rerun()
+
 st.markdown("""
 <div style="text-align: center; color: #475569; padding: 1rem 0;">
     <p style="margin: 0; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">

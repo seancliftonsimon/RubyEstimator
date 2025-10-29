@@ -313,6 +313,11 @@ def generate_main_app_css() -> str:
     """Generate the complete CSS for the main application."""
     return f"""
 <style>
+    /* ========== PROFESSIONAL FONT FAMILY ========== */
+    * {{
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+    }}
+    
     /* ========== FORCE LIGHT MODE WITH ENHANCED CONTRAST GRADIENT ========== */
     .stApp {{
         background: linear-gradient(135deg, {Colors.GRAY_100} 0%, {Colors.GRAY_200} 50%, rgba(153, 12, 65, 0.08) 100%) !important;
