@@ -571,12 +571,14 @@ RETURN JSON:
     
     def _fetch_from_cache(self, vehicle_key: str) -> Optional[VehicleResolution]:
         """Fetch previously resolved data from database cache."""
+        logger.info(f"🔍 Checking database cache for vehicle_key: {vehicle_key}")
         try:
             ensure_schema()
             engine = create_database_engine()
             
             with engine.connect() as conn:
                 # Get vehicle record
+                logger.debug(f"📖 Reading from 'vehicles' table for key: {vehicle_key}")
                 vehicle_row = conn.execute(
                     text("""
                         SELECT year, make, model, updated_at 
@@ -587,13 +589,14 @@ RETURN JSON:
                 ).fetchone()
                 
                 if not vehicle_row:
-                    logger.debug(f"No cached vehicle found for {vehicle_key}")
+                    logger.info(f"❌ No cached vehicle found for {vehicle_key} - will fetch fresh data")
                     return None
                 
                 year, make, model, updated_at = vehicle_row
-                logger.debug(f"Found cached vehicle: {year} {make} {model} (updated: {updated_at})")
+                logger.info(f"✓ Found cached vehicle: {year} {make} {model} (last updated: {updated_at})")
                 
                 # Get field values and construct response
+                logger.debug(f"📖 Reading from 'field_values' table for key: {vehicle_key}")
                 field_rows = conn.execute(
                     text("""
                         SELECT field, value_json 
@@ -604,8 +607,10 @@ RETURN JSON:
                 ).fetchall()
                 
                 if not field_rows or len(field_rows) < 4:
-                    logger.debug(f"Incomplete field data in cache ({len(field_rows) if field_rows else 0}/4 fields)")
+                    logger.warning(f"❌ Incomplete field data in cache ({len(field_rows) if field_rows else 0}/4 fields) - will fetch fresh data")
                     return None
+                
+                logger.info(f"✓ Retrieved {len(field_rows)} field values from cache")
                 
                 # Parse fields
                 fields = {}
@@ -668,6 +673,7 @@ RETURN JSON:
                 
                 cached_run_id = run_row[0] if run_row else self._generate_run_id()
                 
+                logger.info(f"✅ Successfully loaded complete vehicle data from cache for {year} {make} {model}")
                 return VehicleResolution(
                     vehicle_key=vehicle_key,
                     year=year,
@@ -680,7 +686,7 @@ RETURN JSON:
                 )
                 
         except Exception as e:
-            logger.warning(f"Cache lookup failed: {e}")
+            logger.error(f"❌ Cache lookup failed: {e}", exc_info=True)
             return None
     
     def _persist_to_db(
@@ -694,13 +700,13 @@ RETURN JSON:
         latency_ms: float
     ):
         """Persist results and evidence to database."""
-        logger.debug(f"Persisting to database: vehicle_key={vehicle_key}, run_id={run_id}")
+        logger.info(f"💾 Persisting to database: {year} {make} {model} (vehicle_key={vehicle_key}, run_id={run_id})")
         ensure_schema()
         engine = create_database_engine()
         
         with engine.connect() as conn:
             # Insert run record
-            logger.debug(f"Inserting run record: {run_id}, latency={latency_ms:.2f}ms")
+            logger.debug(f"✍️  Writing to 'runs' table: run_id={run_id}, latency={latency_ms:.2f}ms")
             conn.execute(
                 text(
                     "INSERT INTO runs (run_id, started_at, finished_at, total_ms, status) "
@@ -714,10 +720,10 @@ RETURN JSON:
                     "status": "complete"
                 }
             )
-            logger.debug("✓ Run record inserted")
+            logger.info("  ✓ Run record inserted into 'runs' table")
             
             # Insert vehicle record
-            logger.debug(f"Upserting vehicle record: {year} {make} {model}")
+            logger.debug(f"✍️  Writing to 'vehicles' table: {year} {make} {model}")
             conn.execute(
                 text(
                     """
@@ -737,10 +743,10 @@ RETURN JSON:
                     "model": model
                 }
             )
-            logger.debug("✓ Vehicle record upserted")
+            logger.info("  ✓ Vehicle record upserted into 'vehicles' table")
             
             # Insert field values
-            logger.debug(f"Inserting {len(fields)} field values...")
+            logger.info(f"  ✍️  Writing {len(fields)} field values to 'field_values' table...")
             for field_name, field_data in fields.items():
                 value_json = json.dumps({
                     "value": field_data["value"],
@@ -751,7 +757,7 @@ RETURN JSON:
                     "method": "single_call_gemini"
                 })
                 
-                logger.debug(f"  Upserting field '{field_name}': value={field_data['value']}, status={field_data['status']}")
+                logger.debug(f"    • {field_name}: {field_data['value']} (status={field_data['status']}, confidence={field_data['confidence']})")
                 conn.execute(
                     text(
                         """
@@ -772,7 +778,7 @@ RETURN JSON:
                 # Insert evidence rows for each citation
                 citations = field_data.get("citations", [])
                 if citations:
-                    logger.debug(f"  Inserting {len(citations)} citation(s) for '{field_name}'")
+                    logger.debug(f"  ✍️  Writing {len(citations)} citation(s) to 'evidence' table for field '{field_name}'")
                 for citation in citations:
                     evidence_json = json.dumps({
                         "value": field_data["value"],
@@ -828,9 +834,15 @@ RETURN JSON:
                         }
                     )
             
-            logger.debug("Committing transaction...")
+            logger.info("  ✓ All field values written to 'field_values' table")
+            logger.debug("💾 Committing transaction to database...")
             conn.commit()
-            logger.debug("✓ Database transaction committed successfully")
+            logger.info(f"✅ Database write complete! Successfully persisted {year} {make} {model} with {len(fields)} fields")
+            
+            # Log total evidence count
+            total_citations = sum(len(f.get("citations", [])) for f in fields.values())
+            if total_citations > 0:
+                logger.debug(f"  Total evidence citations stored: {total_citations}")
 
 
 # Global instance

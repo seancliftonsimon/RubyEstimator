@@ -643,92 +643,27 @@ add_confidence_css()
 # Apply main app CSS from centralized styles module
 st.markdown(generate_main_app_css(), unsafe_allow_html=True)
 
-# Additional CSS to forcefully hide keyboard arrow text in expanders (CSS only, no JS)
+# Additional CSS to hide keyboard shortcuts but keep expander labels visible
 st.markdown("""
 <style>
-    /* NUCLEAR OPTION: Completely remove all icon text and tooltips from expanders */
-    
-    /* Remove all title/tooltip attributes */
-    [data-testid="stExpander"] *,
-    [data-testid="stExpander"] details summary *,
-    [data-testid="stExpander"] span,
-    [data-testid="stExpander"] svg {
-        pointer-events: auto !important;
-    }
-    
-    /* Hide ALL spans except the very first one that contains the actual label */
-    [data-testid="stExpander"] details summary span:not(:first-child),
-    [data-testid="stExpander"] details summary > span:last-child,
-    [data-testid="stExpander"] details summary > span + span {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        width: 0 !important;
-        height: 0 !important;
-        font-size: 0 !important;
-        line-height: 0 !important;
-        overflow: hidden !important;
-        position: absolute !important;
-        left: -99999px !important;
-        clip: rect(0,0,0,0) !important;
-    }
-    
-    /* Hide any Material Icons font rendering */
-    [data-testid="stExpander"] *[style*="Material Icons"],
-    [data-testid="stExpander"] *[style*="Material-Icons"],
-    [data-testid="stExpander"] *[class*="material"],
-    [data-testid="stExpander"] .material-icons {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-    }
-    
-    /* Remove all pseudo-elements that might contain icon text */
-    [data-testid="stExpander"] details summary *::before,
-    [data-testid="stExpander"] details summary *::after,
-    [data-testid="stExpander"] details summary::before,
-    [data-testid="stExpander"] details summary::after {
-        content: "" !important;
-        display: none !important;
-    }
-    
-    /* Force the summary to only display its first text child */
+    /* Keep expander labels visible and styled */
     [data-testid="stExpander"] details summary {
-        overflow: hidden !important;
-        text-overflow: clip !important;
-        max-height: 3rem !important;
-        position: relative !important;
-    }
-    
-    /* Make only the first span visible and properly sized */
-    [data-testid="stExpander"] details summary > span:first-child {
-        display: inline-block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
+        color: #990C41 !important;
+        font-weight: 600 !important;
         font-size: 1rem !important;
-        position: static !important;
-        clip: auto !important;
+        display: flex !important;
+        align-items: center !important;
     }
     
-    /* Completely disable tooltips on hover for expander elements */
-    [data-testid="stExpander"] [title],
-    [data-testid="stExpander"] *[title] {
-        pointer-events: none !important;
-    }
-    
-    [data-testid="stExpander"] details summary [title]::after {
-        content: "" !important;
+    /* Hide only keyboard shortcut text (not the label) */
+    [data-testid="stExpander"] details summary span[class*="keyboard"],
+    [data-testid="stExpander"] details summary span[aria-label*="keyboard"] {
         display: none !important;
     }
     
-    /* Force hide any tooltip/title popups */
-    [data-testid="stExpander"]:hover [title]::before,
-    [data-testid="stExpander"]:hover [title]::after,
-    [data-testid="stExpander"] *:hover[title]::before,
-    [data-testid="stExpander"] *:hover[title]::after {
+    /* Disable tooltip popups */
+    [data-testid="stExpander"] [title]:hover::after {
         display: none !important;
-        content: "" !important;
-        visibility: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)

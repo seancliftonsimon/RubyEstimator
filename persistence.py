@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import contextmanager
 from typing import List
 
 from sqlalchemy import text
 
 from database_config import create_database_engine, is_sqlite
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -18,9 +22,16 @@ def _connect():
 
 
 def ensure_schema() -> None:
+    """Ensure database schema exists, creating tables if needed."""
+    logger.info("📋 Ensuring database schema exists...")
     with _connect() as conn:
+        db_type = "SQLite" if is_sqlite() else "PostgreSQL"
+        logger.info(f"🗄️  Creating schema for {db_type} database")
+        
         if is_sqlite():
+            logger.debug("Running SQLite schema validation...")
             _ensure_sqlite_schema(conn)
+            logger.debug("Creating SQLite tables (if not exist)...")
             conn.execute(
                 text(
                     """
@@ -82,7 +93,9 @@ def ensure_schema() -> None:
                     """
                 )
             )
+            logger.info("✓ SQLite schema validated/created successfully")
         else:
+            logger.debug("Creating PostgreSQL tables (if not exist) with JSONB support...")
             conn.execute(
                 text(
                     """
@@ -98,6 +111,7 @@ def ensure_schema() -> None:
                     """
                 )
             )
+            logger.debug("  ✓ vehicles table ready")
             conn.execute(
                 text(
                     """
@@ -112,6 +126,7 @@ def ensure_schema() -> None:
                     """
                 )
             )
+            logger.debug("  ✓ field_values table ready")
             conn.execute(
                 text(
                     """
@@ -126,6 +141,7 @@ def ensure_schema() -> None:
                     """
                 )
             )
+            logger.debug("  ✓ runs table ready")
             conn.execute(
                 text(
                     """
@@ -144,8 +160,11 @@ def ensure_schema() -> None:
                     """
                 )
             )
+            logger.debug("  ✓ evidence table ready")
+            logger.info("✓ PostgreSQL (Neon) schema validated/created successfully")
 
         conn.commit()
+        logger.info("✓ Schema commit completed")
 
 
 def _ensure_sqlite_schema(conn) -> None:
