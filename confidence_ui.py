@@ -159,7 +159,7 @@ def render_provenance_panel(provenance_info: ProvenanceInfo, expanded: bool = Fa
             if candidates_df:
                 import pandas as pd
                 df = pd.DataFrame(candidates_df)
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(df, width='stretch', hide_index=True)
         
         # Warnings
         if provenance_info.confidence.warnings:
@@ -262,7 +262,7 @@ def render_detailed_provenance_panel(field_name: str, provenance_info: Provenanc
                 
                 import pandas as pd
                 candidates_df = pd.DataFrame(candidates_data)
-                st.dataframe(candidates_df, use_container_width=True, hide_index=True)
+                st.dataframe(candidates_df, width='stretch', hide_index=True)
                 
                 # Statistical summary - only show if we have variation in values
                 if len(set(values)) > 1:

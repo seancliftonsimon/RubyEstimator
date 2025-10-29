@@ -15,15 +15,23 @@ logger = logging.getLogger(__name__)
 
 # Engine cache for singleton pattern
 _engine_cache = None
+_database_url_cache = None  # Cache URL to prevent repeated logging
 
 
 def get_database_url() -> str:
     """Get database URL from environment or fallback to SQLite."""
+    global _database_url_cache
+    
+    # Return cached URL if available
+    if _database_url_cache is not None:
+        return _database_url_cache
+    
     url = os.getenv("DATABASE_URL")
     if url:
         # Mask password in log
         masked_url = _mask_password(url)
         logger.info(f"🔗 Using DATABASE_URL: {masked_url}")
+        _database_url_cache = url
         return url
 
     host = os.getenv("PGHOST")
@@ -33,13 +41,17 @@ def get_database_url() -> str:
     password = os.getenv("PGPASSWORD")
 
     if all([host, database, username, password]):
+        url = f"postgresql://{username}:{password}@{host}:{port}/{database}"
         logger.info(f"🔗 Using PostgreSQL connection: {username}@{host}:{port}/{database}")
-        return f"postgresql://{username}:{password}@{host}:{port}/{database}"
+        _database_url_cache = url
+        return url
 
     project_root = Path(__file__).resolve().parent
     db_path = project_root / "rubyestimator_local.db"
+    url = f"sqlite:///{db_path.as_posix()}"
     logger.info(f"🔗 Using SQLite database: {db_path}")
-    return f"sqlite:///{db_path.as_posix()}"
+    _database_url_cache = url
+    return url
 
 
 def _mask_password(url: str) -> str:
@@ -84,11 +96,12 @@ def create_database_engine():
 
 def clear_engine_cache():
     """Clear the cached database engine. Useful for testing or reconnection."""
-    global _engine_cache
+    global _engine_cache, _database_url_cache
     if _engine_cache is not None:
         logger.info("🔄 Clearing cached database engine")
         _engine_cache.dispose()
         _engine_cache = None
+    _database_url_cache = None  # Also clear URL cache
 
 
 def test_database_connection():

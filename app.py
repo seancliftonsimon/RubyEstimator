@@ -213,7 +213,7 @@ def render_admin_ui():
                     [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
                 ).sort_values("key").reset_index(drop=True)
             
-            price_df = st.data_editor(price_df, use_container_width=True, num_rows="fixed", hide_index=True)
+            price_df = st.data_editor(price_df, width='stretch', num_rows="fixed", hide_index=True)
 
         with tab_costs:
             col1, col2 = st.columns([3, 1])
@@ -352,7 +352,7 @@ def render_admin_ui():
         st.markdown("### 💾 Save Changes")
         col1, col2, col3 = st.columns([2, 1, 2])
         with col2:
-            save = st.form_submit_button("💾 Save All Changes", use_container_width=True)
+            save = st.form_submit_button("💾 Save All Changes", width='stretch')
         
         if save:
             # Gather updates
@@ -796,7 +796,7 @@ with left_col:
         with col3:
             model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry", key="model_input_main")
 
-        submit_button = st.form_submit_button(label="Search Vehicle", use_container_width=True)
+        submit_button = st.form_submit_button(label="Search Vehicle", width='stretch')
 
     # --- Progress Area ---
     # Create a container for the progress area that can be shown/hidden
@@ -1027,7 +1027,7 @@ with left_col:
                 # Format the dataframe for display
                 display_df['Weight'] = display_df['Weight'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "?")
                 
-                st.dataframe(display_df, use_container_width=True, hide_index=True)
+                st.dataframe(display_df, width='stretch', hide_index=True)
                 st.caption("E = Engine (Al=Aluminum, Fe=Iron), W = Wheels (Al=Aluminum, St=Steel), C = Catalytic Converters")
             else:
                 st.info("No vehicles searched yet.")
@@ -1235,7 +1235,7 @@ with right_col:
                     purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(FLAT_COSTS["PURCHASE"])), key="purchase_adjustment_right")
                 with col2_r:
                     tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(FLAT_COSTS["TOW"])), key="tow_adjustment_right")
-                recalculate_button_r = st.form_submit_button("🔄 Update Costs", use_container_width=True)
+                recalculate_button_r = st.form_submit_button("🔄 Update Costs", width='stretch')
                 if recalculate_button_r:
                     try:
                         purchase_price_float = float(purchase_price_input.strip())
@@ -1279,7 +1279,7 @@ with right_col:
                 display_df = display_df.drop('is_engine', axis=1)
                 
                 # Display the table
-                st.dataframe(display_df, use_container_width=True, hide_index=True)
+                st.dataframe(display_df, width='stretch', hide_index=True)
                 
                 # Check if there are engine commodities and add a small note below the chart
                 engine_commodities = [item for item in weight_based if item.get('is_engine')]
@@ -1297,7 +1297,7 @@ with right_col:
                 # Display count-based commodities
                 count_df = pd.DataFrame(count_based)
                 
-                st.dataframe(count_df, use_container_width=True, hide_index=True)
+                st.dataframe(count_df, width='stretch', hide_index=True)
             
 
             
@@ -1324,7 +1324,7 @@ with right_col:
             
             summary_df = pd.DataFrame(summary_data)
             
-            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+            st.dataframe(summary_df, width='stretch', hide_index=True)
             
             # Add provenance and confidence details section
             st.markdown('<div class="subsection-header">Data Quality & Sources</div>', unsafe_allow_html=True)
@@ -1428,7 +1428,7 @@ with right_col:
                         key="rims_no_vehicle"
                     )
                 
-                manual_calculate_button = st.form_submit_button(label="Calculate Estimate", use_container_width=True)
+                manual_calculate_button = st.form_submit_button(label="Calculate Estimate", width='stretch')
                 
                 # Handle manual calculation
                 if manual_calculate_button:

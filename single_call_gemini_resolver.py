@@ -745,8 +745,9 @@ RETURN JSON:
             )
             logger.info("  ✓ Vehicle record upserted into 'vehicles' table")
             
-            # Insert field values
+            # Insert field values - prepare batch insert for better performance
             logger.info(f"  ✍️  Writing {len(fields)} field values to 'field_values' table...")
+            field_values_batch = []
             for field_name, field_data in fields.items():
                 value_json = json.dumps({
                     "value": field_data["value"],
@@ -758,24 +759,27 @@ RETURN JSON:
                 })
                 
                 logger.debug(f"    • {field_name}: {field_data['value']} (status={field_data['status']}, confidence={field_data['confidence']})")
-                conn.execute(
-                    text(
-                        """
-                        INSERT INTO field_values (vehicle_key, field, value_json, updated_at)
-                        VALUES (:key, :field, :value, CURRENT_TIMESTAMP)
-                        ON CONFLICT(vehicle_key, field) DO UPDATE SET
-                            value_json = excluded.value_json,
-                            updated_at = CURRENT_TIMESTAMP
-                        """
-                    ),
-                    {
-                        "key": vehicle_key,
-                        "field": field_name,
-                        "value": value_json
-                    }
+                field_values_batch.append({
+                    "key": vehicle_key,
+                    "field": field_name,
+                    "value": value_json
+                })
+            
+            # Execute batch insert for field values
+            if field_values_batch:
+                stmt = text(
+                    """
+                    INSERT INTO field_values (vehicle_key, field, value_json, updated_at)
+                    VALUES (:key, :field, :value, CURRENT_TIMESTAMP)
+                    ON CONFLICT(vehicle_key, field) DO UPDATE SET
+                        value_json = excluded.value_json,
+                        updated_at = CURRENT_TIMESTAMP
+                    """
                 )
-                
-                # Insert evidence rows for each citation
+                conn.execute(stmt, field_values_batch)
+            
+            # Insert evidence rows for each field's citations
+            for field_name, field_data in fields.items():
                 citations = field_data.get("citations", [])
                 if citations:
                     logger.debug(f"  ✍️  Writing {len(citations)} citation(s) to 'evidence' table for field '{field_name}'")

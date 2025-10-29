@@ -13,6 +13,9 @@ from database_config import create_database_engine, is_sqlite
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Schema validation cache to prevent redundant checks
+_schema_validated = False
+
 
 @contextmanager
 def _connect():
@@ -23,6 +26,13 @@ def _connect():
 
 def ensure_schema() -> None:
     """Ensure database schema exists, creating tables if needed."""
+    global _schema_validated
+    
+    # Skip if already validated in this session
+    if _schema_validated:
+        logger.debug("♻️  Schema already validated in this session, skipping check")
+        return
+    
     logger.info("📋 Ensuring database schema exists...")
     with _connect() as conn:
         db_type = "SQLite" if is_sqlite() else "PostgreSQL"
@@ -165,6 +175,9 @@ def ensure_schema() -> None:
 
         conn.commit()
         logger.info("✓ Schema commit completed")
+        
+        # Mark as validated for this session
+        _schema_validated = True
 
 
 def _ensure_sqlite_schema(conn) -> None:
