@@ -832,10 +832,12 @@ with left_col:
         make_input = search_data['make']
         model_input = search_data['model']
         
-        # Clear the pending search flag
-        del st.session_state['pending_search']
+        # Don't clear the pending search flag yet - keep it active to prevent old UI from showing
+        # We'll clear it only when we successfully complete the search or encounter an error
         
         if not make_input or not model_input:
+            # Clear pending search on error
+            del st.session_state['pending_search']
             st.markdown("""
             <div class="warning-message">
                 <strong>Missing Information:</strong> Please enter both a make and a model.
@@ -846,6 +848,8 @@ with left_col:
             try:
                 year_int = int(year_input.strip())
                 if year_int < 1900 or year_int > 2050:
+                    # Clear pending search on error
+                    del st.session_state['pending_search']
                     st.markdown("""
                     <div class="warning-message">
                         <strong>Invalid Year:</strong> Please enter a year between 1900 and 2050.
@@ -911,6 +915,9 @@ with left_col:
                     
                     if vehicle_data is None:
                         # Vehicle validation failed - it's fake or doesn't exist
+                        # Clear pending search on error
+                        if 'pending_search' in st.session_state:
+                            del st.session_state['pending_search']
                         st.markdown(f"""
                         <div class="error-message">
                             <strong>Vehicle Not Found:</strong> {year_int} {make_input} {model_input} does not appear to be a real vehicle or was not manufactured in this year. Please check your input.
@@ -918,6 +925,9 @@ with left_col:
                         """, unsafe_allow_html=True)
                     elif 'error' in vehicle_data and vehicle_data['error']:
                         # API call failed (503, timeout, etc.)
+                        # Clear pending search on error
+                        if 'pending_search' in st.session_state:
+                            del st.session_state['pending_search']
                         error_msg = vehicle_data['error']
                         st.markdown(f"""
                         <div class="error-message">
@@ -964,10 +974,17 @@ with left_col:
                         
                         # Auto-populate and calculate the cost estimator
                         st.session_state['auto_calculate'] = True
+                        # Clear pending search before rerun now that we have new data
+                        if 'pending_search' in st.session_state:
+                            del st.session_state['pending_search']
                         # Refresh the page to show the updated vehicle details and cost estimate
                         st.rerun()
                     else:
                         # API succeeded but curb weight not found in search results
+                        # Clear pending search on error
+                        if 'pending_search' in st.session_state:
+                            del st.session_state['pending_search']
+                        
                         # Check if we got any other fields successfully
                         has_partial_data = any([
                             vehicle_data.get('aluminum_engine') is not None,
@@ -1021,6 +1038,9 @@ with left_col:
                             
                             st.info("💡 **What to do next:**\n- Try a different model year (curb weight data may be available for nearby years)\n- Use the Manual Entry option below if you know the vehicle's curb weight")
             except ValueError:
+                # Clear pending search on error
+                if 'pending_search' in st.session_state:
+                    del st.session_state['pending_search']
                 st.markdown("""
                 <div class="warning-message">
                     <strong>Invalid Year:</strong> Please enter a valid year (e.g., 2023).
