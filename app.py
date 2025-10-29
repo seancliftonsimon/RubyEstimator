@@ -1106,7 +1106,7 @@ with right_col:
     # Check if we have vehicle data to show results
     if st.session_state.get('last_curb_weight') is not None:
             # If no calculation results yet, calculate them
-            if 'calculation_results' not in st.session_state:
+            if 'calculation_results' not in st.session_state or st.session_state.get('calculation_results') is None:
                 try:
                     cars_int = 1  # Default to 1 car
                     curb_weight_int = st.session_state.get('last_curb_weight', 3600)
@@ -1151,252 +1151,256 @@ with right_col:
                     st.stop()
             
             # Display calculation results
-            results = st.session_state['calculation_results']
-            commodities = results['commodities']
-            totals = results['totals']
-            
-            # Validate pricing conventions
-            validation_errors = validate_pricing_conventions(commodities, totals)
-            if validation_errors:
-                st.error("Pricing validation errors detected:")
-                for error in validation_errors:
-                    st.error(f"• {error}")
-            
-            # Display summary metrics with semantic colors
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                # Total Sale Value - Blue/Info styling
-                st.markdown(f"""
+            results = st.session_state.get('calculation_results')
+            if results is None:
+                # If results are still None after calculation attempt, skip display
+                st.warning("Unable to calculate results. Please try searching again.")
+            else:
+                commodities = results['commodities']
+                totals = results['totals']
+                
+                # Validate pricing conventions
+                validation_errors = validate_pricing_conventions(commodities, totals)
+                if validation_errors:
+                    st.error("Pricing validation errors detected:")
+                    for error in validation_errors:
+                        st.error(f"• {error}")
+                
+                # Display summary metrics with semantic colors
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    # Total Sale Value - Blue/Info styling
+                    st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
                     <div style="text-align: center;">
                         <div style="font-size: 0.875rem; color: #1e40af; font-weight: 600; margin-bottom: 0.5rem;">💰 Total Sale Value</div>
                         <div style="font-size: 1.5rem; color: #1e40af; font-weight: 700;">{format_currency(totals["total_sale"])}</div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
-            with col2:
-                # Total Costs - Neutral styling
-                st.markdown(f"""
+                    """, unsafe_allow_html=True)
+                with col2:
+                    # Total Costs - Neutral styling
+                    st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #9ca3af; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.2);">
                     <div style="text-align: center;">
                         <div style="font-size: 0.875rem; color: #4b5563; font-weight: 600; margin-bottom: 0.5rem;">📉 Total Costs</div>
                         <div style="font-size: 1.5rem; color: #1f2937; font-weight: 700;">-{format_currency(totals["total_costs"])}</div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
-            with col3:
-                # Net Profit - Dynamic color based on positive/negative
-                profit_colors = get_semantic_colors(totals["net"], "profit")
-                profit_bg = "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)" if totals["net"] >= 0 else "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)"
-                profit_border = "#16a34a" if totals["net"] >= 0 else "#dc2626"
-                profit_text = "#15803d" if totals["net"] >= 0 else "#991b1b"
-                profit_icon = "✅" if totals["net"] >= 0 else "⚠️"
-                st.markdown(f"""
+                    """, unsafe_allow_html=True)
+                with col3:
+                    # Net Profit - Dynamic color based on positive/negative
+                    profit_colors = get_semantic_colors(totals["net"], "profit")
+                    profit_bg = "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)" if totals["net"] >= 0 else "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)"
+                    profit_border = "#16a34a" if totals["net"] >= 0 else "#dc2626"
+                    profit_text = "#15803d" if totals["net"] >= 0 else "#991b1b"
+                    profit_icon = "✅" if totals["net"] >= 0 else "⚠️"
+                    st.markdown(f"""
                 <div style="background: {profit_bg}; padding: 1.5rem; border-radius: 12px; border: 3px solid {profit_border}; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba({profit_colors['text']}, 0.2);">
                     <div style="text-align: center;">
                         <div style="font-size: 0.875rem; color: {profit_text}; font-weight: 600; margin-bottom: 0.5rem;">{profit_icon} Net Profit</div>
                         <div style="font-size: 1.5rem; color: {profit_text}; font-weight: 700;">{format_currency(totals["net"])}</div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
-            
-
-            
-
-            
-            # Separate commodities by estimation method and add confidence indicators
-            weight_based = []
-            count_based = []
-            
-            # Note: Confidence badges will be added later during display rendering
-            # to avoid duplication when creating enhanced display tables
-            for commodity in commodities:
-                
-                if commodity.get("is_count_based"):
-                    count_based.append({
-                        "Commodity": commodity["label"],
-                        "Count": f"{commodity['weight']:.2f}",
-                        "Price/Unit": f"${commodity['unit_price']:.2f}",
-                        "Sale Value": f"${commodity['sale_value']:.2f}"
-                    })
-                elif commodity.get("is_special"):
-                    count_based.append({
-                        "Commodity": commodity["label"],
-                        "Count": f"{commodity['weight']:.0f}",
-                        "Price/Unit": f"${commodity['unit_price']:.2f}",
-                        "Sale Value": f"${commodity['sale_value']:.2f}"
-                    })
-                else:
-                    # Filter out zero-weight engine entries
-                    if commodity.get("is_engine") and commodity["weight"] == 0:
-                        continue
-                    
-                    weight_based.append({
-                        "Commodity": commodity["label"],
-                        "Weight (lb)": f"{commodity['weight']:,.1f}",
-                        "$/lb": f"${commodity['unit_price']:.2f}",
-                        "Sale Value": f"${commodity['sale_value']:.2f}",
-                        "is_engine": commodity.get("is_engine", False)
-                    })
-            
-            # --- Purchase Price and Tow Fee Adjustment ---
-            with st.form(key="cost_adjustment_form_right"):
-                col1_r, col2_r = st.columns(2)
-                with col1_r:
-                    purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(FLAT_COSTS["PURCHASE"])), key="purchase_adjustment_right")
-                with col2_r:
-                    tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(FLAT_COSTS["TOW"])), key="tow_adjustment_right")
-                recalculate_button_r = st.form_submit_button("🔄 Update Costs", width='stretch')
-                if recalculate_button_r:
-                    try:
-                        purchase_price_float = float(purchase_price_input.strip())
-                        tow_fee_float = float(tow_fee_input.strip())
-                        if purchase_price_float < 0 or tow_fee_float < 0:
-                            st.error("Purchase price and tow fee must be non-negative values.")
-                        else:
-                            results = st.session_state.get('calculation_results', {})
-                            if results:
-                                commodities = compute_commodities(results['cars'], results['curb_weight'],
-                                                                st.session_state.get('last_aluminum_engine'),
-                                                                st.session_state.get('last_aluminum_rims'),
-                                                                catalytic_converters=None)
-                                totals = calculate_totals(commodities, results['cars'], results['curb_weight'],
-                                                        purchase_price_float, tow_fee_float)
-                                st.session_state['calculation_results'] = {
-                                    'commodities': commodities,
-                                    'totals': totals,
-                                    'cars': results['cars'],
-                                    'curb_weight': results['curb_weight'],
-                                    'purchase_price': purchase_price_float,
-                                    'tow_fee': tow_fee_float
-                                }
-                                st.markdown("""
-                                <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
-                                    ✅ <strong>Costs updated and recalculated!</strong>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                st.rerun()
-                    except ValueError:
-                        st.error("Please enter valid numbers for purchase price and tow fee.")
-                    except Exception as e:
-                        st.error(f"Error during recalculation: {e}")
-
-            # Display weight-based commodities
-            if weight_based:
-                st.markdown('<div class="subsection-header">Estimated by Weight</div>', unsafe_allow_html=True)
-                
-                # Create display dataframe
-                display_df = pd.DataFrame(weight_based)
-                display_df = display_df.drop('is_engine', axis=1)
-                
-                # Display the table
-                st.dataframe(display_df, width='stretch', hide_index=True)
-                
-                # Check if there are engine commodities and add a small note below the chart
-                engine_commodities = [item for item in weight_based if item.get('is_engine')]
-                if engine_commodities:
-                    info_text = (
-                        f"Engine weight estimated at {ENGINE_WEIGHT_PERCENT*100:.1f}% of curb weight. "
-                        f"For unknown materials, weight is split {UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Al / {100-UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Fe."
-                    )
-                    st.caption(info_text)
-            
-            # Display count-based commodities  
-            if count_based:
-                st.markdown('<div class="subsection-header">Estimated by Count</div>', unsafe_allow_html=True)
-                
-                # Display count-based commodities
-                count_df = pd.DataFrame(count_based)
-                
-                st.dataframe(count_df, width='stretch', hide_index=True)
-            
-
-            
-            # Display detailed cost breakdown
-            st.markdown('<div class="subsection-header">Cost Breakdown</div>', unsafe_allow_html=True)
-            
-            # Determine Nut fee description based on admin setting
-            # Get current config to ensure we have the latest settings
-            current_config = get_config()
-            grounding_settings = current_config["grounding_settings"]
-            nut_fee_applies_to = grounding_settings.get("nut_fee_applies_to", "curb_weight")
-            nut_fee_description = f"Nut Fee ({'ELV' if nut_fee_applies_to == 'elv_weight' else 'Curb'} Weight)"
-            
-            # Create summary DataFrame with better formatting
-            summary_data = [
-                {"Item": "Total Sale", "Amount": format_currency(totals["total_sale"]), "Type": "Revenue"},
-                {"Item": "Purchase Cost", "Amount": format_currency(totals['purchase']), "Type": "Cost"},
-                {"Item": "Tow Fee", "Amount": format_currency(totals['tow']), "Type": "Cost"},
-                {"Item": "Lead Fee", "Amount": format_currency(totals['lead']), "Type": "Cost"},
-                {"Item": nut_fee_description, "Amount": format_currency(totals['nut']), "Type": "Cost"},
-                {"Item": "Total Costs", "Amount": format_currency(totals['total_costs']), "Type": "Cost"},
-                {"Item": "Net Profit", "Amount": format_currency(totals['net']), "Type": "Net"},
-            ]
-            
-            summary_df = pd.DataFrame(summary_data)
-            
-            st.dataframe(summary_df, width='stretch', hide_index=True)
-            
-            # Add provenance and confidence details section
-            st.markdown('<div class="subsection-header">Data Quality & Sources</div>', unsafe_allow_html=True)
-            
-            # Enhanced warning banners with specific guidance
-            low_confidence_warnings = []
-            medium_confidence_warnings = []
-            
-            # Check for specific data quality issues
-            if any('Engine' in item['Commodity'] for item in weight_based):
-                if st.session_state.get('last_aluminum_engine') is None:
-                    low_confidence_warnings.append("Engine material unknown - using 50/50 aluminum/iron split. Consider manual verification for accurate pricing.")
-                else:
-                    medium_confidence_warnings.append("Engine material determined from vehicle specifications - confidence level: medium")
-            
-            if any('Catalytic' in item['Commodity'] for item in count_based):
-                if st.session_state.get('last_catalytic_converters') is None:
-                    medium_confidence_warnings.append("Catalytic converter count estimated from vehicle type averages - actual count may vary by trim level")
-            
-            if any('Rims' in item['Commodity'] for item in weight_based):
-                if st.session_state.get('last_aluminum_rims') is None:
-                    medium_confidence_warnings.append("Rim material unknown - assuming steel rims. Aluminum rims would increase value significantly.")
-            
-            # Display warnings with appropriate severity
-            if low_confidence_warnings:
-                render_warning_banner(low_confidence_warnings)
-            
-            if medium_confidence_warnings:
-                for warning in medium_confidence_warnings:
-                    st.markdown(f"""
-                    <div class="info-banner" style="
-                        background: rgba(59, 130, 246, 0.1);
-                        border: 1px solid #3b82f6;
-                        border-left: 4px solid #3b82f6;
-                        padding: 1rem;
-                        border-radius: 6px;
-                        margin: 0.5rem 0;
-                        color: #1e40af;
-                        font-weight: 500;
-                    ">
-                        ℹ️ {warning}
-                    </div>
                     """, unsafe_allow_html=True)
-            
-            # Add visual highlighting for flagged values
-            st.markdown("""
-            <div class="data-quality-legend" style="
-                background: rgba(248, 250, 252, 0.8);
-                border: 1px solid #e2e8f0;
-                border-radius: 6px;
-                padding: 1rem;
-                margin: 1rem 0;
-            ">
-                <h4 style="margin: 0 0 0.5rem 0; color: #334155;">Confidence Level Guide:</h4>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <span style="color: #16a34a;">🟢 HIGH (80%+)</span>
-                    <span style="color: #d97706;">🟡 MEDIUM (60-80%)</span>
-                    <span style="color: #dc2626;">🔴 LOW (<60%)</span>
+                
+
+                
+
+                
+                # Separate commodities by estimation method and add confidence indicators
+                weight_based = []
+                count_based = []
+                
+                # Note: Confidence badges will be added later during display rendering
+                # to avoid duplication when creating enhanced display tables
+                for commodity in commodities:
+                    
+                    if commodity.get("is_count_based"):
+                        count_based.append({
+                            "Commodity": commodity["label"],
+                            "Count": f"{commodity['weight']:.2f}",
+                            "Price/Unit": f"${commodity['unit_price']:.2f}",
+                            "Sale Value": f"${commodity['sale_value']:.2f}"
+                        })
+                    elif commodity.get("is_special"):
+                        count_based.append({
+                            "Commodity": commodity["label"],
+                            "Count": f"{commodity['weight']:.0f}",
+                            "Price/Unit": f"${commodity['unit_price']:.2f}",
+                            "Sale Value": f"${commodity['sale_value']:.2f}"
+                        })
+                    else:
+                        # Filter out zero-weight engine entries
+                        if commodity.get("is_engine") and commodity["weight"] == 0:
+                            continue
+                        
+                        weight_based.append({
+                            "Commodity": commodity["label"],
+                            "Weight (lb)": f"{commodity['weight']:,.1f}",
+                            "$/lb": f"${commodity['unit_price']:.2f}",
+                            "Sale Value": f"${commodity['sale_value']:.2f}",
+                            "is_engine": commodity.get("is_engine", False)
+                        })
+                
+                # --- Purchase Price and Tow Fee Adjustment ---
+                with st.form(key="cost_adjustment_form_right"):
+                    col1_r, col2_r = st.columns(2)
+                    with col1_r:
+                        purchase_price_input = st.text_input("Purchase Price ($)", value=str(int(FLAT_COSTS["PURCHASE"])), key="purchase_adjustment_right")
+                    with col2_r:
+                        tow_fee_input = st.text_input("Tow Fee ($)", value=str(int(FLAT_COSTS["TOW"])), key="tow_adjustment_right")
+                    recalculate_button_r = st.form_submit_button("🔄 Update Costs", width='stretch')
+                    if recalculate_button_r:
+                        try:
+                            purchase_price_float = float(purchase_price_input.strip())
+                            tow_fee_float = float(tow_fee_input.strip())
+                            if purchase_price_float < 0 or tow_fee_float < 0:
+                                st.error("Purchase price and tow fee must be non-negative values.")
+                            else:
+                                results = st.session_state.get('calculation_results', {})
+                                if results:
+                                    commodities = compute_commodities(results['cars'], results['curb_weight'],
+                                                                    st.session_state.get('last_aluminum_engine'),
+                                                                    st.session_state.get('last_aluminum_rims'),
+                                                                    catalytic_converters=None)
+                                    totals = calculate_totals(commodities, results['cars'], results['curb_weight'],
+                                                            purchase_price_float, tow_fee_float)
+                                    st.session_state['calculation_results'] = {
+                                        'commodities': commodities,
+                                        'totals': totals,
+                                        'cars': results['cars'],
+                                        'curb_weight': results['curb_weight'],
+                                        'purchase_price': purchase_price_float,
+                                        'tow_fee': tow_fee_float
+                                    }
+                                    st.markdown("""
+                                    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
+                                        ✅ <strong>Costs updated and recalculated!</strong>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                    st.rerun()
+                        except ValueError:
+                            st.error("Please enter valid numbers for purchase price and tow fee.")
+                        except Exception as e:
+                            st.error(f"Error during recalculation: {e}")
+
+                # Display weight-based commodities
+                if weight_based:
+                    st.markdown('<div class="subsection-header">Estimated by Weight</div>', unsafe_allow_html=True)
+                    
+                    # Create display dataframe
+                    display_df = pd.DataFrame(weight_based)
+                    display_df = display_df.drop('is_engine', axis=1)
+                    
+                    # Display the table
+                    st.dataframe(display_df, width='stretch', hide_index=True)
+                    
+                    # Check if there are engine commodities and add a small note below the chart
+                    engine_commodities = [item for item in weight_based if item.get('is_engine')]
+                    if engine_commodities:
+                        info_text = (
+                            f"Engine weight estimated at {ENGINE_WEIGHT_PERCENT*100:.1f}% of curb weight. "
+                            f"For unknown materials, weight is split {UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Al / {100-UNKNOWN_ENGINE_SPLIT_AL_PCT*100:.0f}% Fe."
+                        )
+                        st.caption(info_text)
+                
+                # Display count-based commodities  
+                if count_based:
+                    st.markdown('<div class="subsection-header">Estimated by Count</div>', unsafe_allow_html=True)
+                    
+                    # Display count-based commodities
+                    count_df = pd.DataFrame(count_based)
+                    
+                    st.dataframe(count_df, width='stretch', hide_index=True)
+                
+
+                
+                # Display detailed cost breakdown
+                st.markdown('<div class="subsection-header">Cost Breakdown</div>', unsafe_allow_html=True)
+                
+                # Determine Nut fee description based on admin setting
+                # Get current config to ensure we have the latest settings
+                current_config = get_config()
+                grounding_settings = current_config["grounding_settings"]
+                nut_fee_applies_to = grounding_settings.get("nut_fee_applies_to", "curb_weight")
+                nut_fee_description = f"Nut Fee ({'ELV' if nut_fee_applies_to == 'elv_weight' else 'Curb'} Weight)"
+                
+                # Create summary DataFrame with better formatting
+                summary_data = [
+                    {"Item": "Total Sale", "Amount": format_currency(totals["total_sale"]), "Type": "Revenue"},
+                    {"Item": "Purchase Cost", "Amount": format_currency(totals['purchase']), "Type": "Cost"},
+                    {"Item": "Tow Fee", "Amount": format_currency(totals['tow']), "Type": "Cost"},
+                    {"Item": "Lead Fee", "Amount": format_currency(totals['lead']), "Type": "Cost"},
+                    {"Item": nut_fee_description, "Amount": format_currency(totals['nut']), "Type": "Cost"},
+                    {"Item": "Total Costs", "Amount": format_currency(totals['total_costs']), "Type": "Cost"},
+                    {"Item": "Net Profit", "Amount": format_currency(totals['net']), "Type": "Net"},
+                ]
+                
+                summary_df = pd.DataFrame(summary_data)
+                
+                st.dataframe(summary_df, width='stretch', hide_index=True)
+                
+                # Add provenance and confidence details section
+                st.markdown('<div class="subsection-header">Data Quality & Sources</div>', unsafe_allow_html=True)
+                
+                # Enhanced warning banners with specific guidance
+                low_confidence_warnings = []
+                medium_confidence_warnings = []
+                
+                # Check for specific data quality issues
+                if any('Engine' in item['Commodity'] for item in weight_based):
+                    if st.session_state.get('last_aluminum_engine') is None:
+                        low_confidence_warnings.append("Engine material unknown - using 50/50 aluminum/iron split. Consider manual verification for accurate pricing.")
+                    else:
+                        medium_confidence_warnings.append("Engine material determined from vehicle specifications - confidence level: medium")
+                
+                if any('Catalytic' in item['Commodity'] for item in count_based):
+                    if st.session_state.get('last_catalytic_converters') is None:
+                        medium_confidence_warnings.append("Catalytic converter count estimated from vehicle type averages - actual count may vary by trim level")
+                
+                if any('Rims' in item['Commodity'] for item in weight_based):
+                    if st.session_state.get('last_aluminum_rims') is None:
+                        medium_confidence_warnings.append("Rim material unknown - assuming steel rims. Aluminum rims would increase value significantly.")
+                
+                # Display warnings with appropriate severity
+                if low_confidence_warnings:
+                    render_warning_banner(low_confidence_warnings)
+                
+                if medium_confidence_warnings:
+                    for warning in medium_confidence_warnings:
+                        st.markdown(f"""
+                        <div class="info-banner" style="
+                            background: rgba(59, 130, 246, 0.1);
+                            border: 1px solid #3b82f6;
+                            border-left: 4px solid #3b82f6;
+                            padding: 1rem;
+                            border-radius: 6px;
+                            margin: 0.5rem 0;
+                            color: #1e40af;
+                            font-weight: 500;
+                        ">
+                            ℹ️ {warning}
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Add visual highlighting for flagged values
+                st.markdown("""
+                <div class="data-quality-legend" style="
+                    background: rgba(248, 250, 252, 0.8);
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    padding: 1rem;
+                    margin: 1rem 0;
+                ">
+                    <h4 style="margin: 0 0 0.5rem 0; color: #334155;">Confidence Level Guide:</h4>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <span style="color: #16a34a;">🟢 HIGH (80%+)</span>
+                        <span style="color: #d97706;">🟡 MEDIUM (60-80%)</span>
+                        <span style="color: #dc2626;">🔴 LOW (<60%)</span>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
     
     else:
         # Show a message when no vehicle has been searched yet
