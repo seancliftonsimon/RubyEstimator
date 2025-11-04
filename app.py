@@ -2,6 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 import logging
 import sys
+import re
 
 # Configure logging FIRST (before any other imports that might use logging)
 logging.basicConfig(
@@ -36,7 +37,13 @@ st.set_page_config(
 logger.info("✓ Streamlit page configured")
 
 import pandas as pd
-from vehicle_data import process_vehicle, get_last_ten_entries
+from vehicle_data import (
+    process_vehicle, get_last_ten_entries,
+    suggest_make, suggest_model, cross_make_model_hint,
+    filter_make_suggestions, filter_model_suggestions,
+    get_all_makes, get_models_for_make, get_catalog_stats,
+    import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache
+)
 from auth import setup_password_protection
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
 
@@ -191,8 +198,8 @@ def render_admin_ui():
         st.markdown("### 📝 Configuration Settings")
         st.markdown("Adjust values below and click **Save All Changes** at the bottom. Use **Restore to Default** buttons to reset individual sections.")
 
-        tab_prices, tab_costs, tab_weights, tab_assumptions, tab_heuristics, tab_grounding, tab_consensus = st.tabs(
-            ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions", "🔍 Heuristics", "🌐 Grounding", "🤝 Consensus"]
+        tab_prices, tab_costs, tab_weights, tab_assumptions, tab_heuristics, tab_grounding, tab_consensus, tab_catalog = st.tabs(
+            ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions", "🔍 Heuristics", "🌐 Grounding", "🤝 Consensus", "📚 Catalog"]
         )
 
         with tab_prices:
@@ -421,6 +428,122 @@ def render_admin_ui():
             else:
                 st.error("❌ Failed to save one or more configuration groups. Please try again.")
 
+    # Reference Catalog Management (outside the form for file uploads)
+    with tab_catalog:
+        st.markdown("### 📚 Reference Catalog Management")
+        st.markdown("Manage the vehicle make/model reference catalog used for search suggestions and fuzzy matching.")
+
+        # Import section
+        st.markdown("#### 📥 Import Catalog")
+        uploaded_file = st.file_uploader(
+            "Upload JSON catalog file",
+            type=["json"],
+            key="catalog_upload",
+            help="Upload a JSON file containing make/model data with aliases"
+        )
+
+        if uploaded_file is not None:
+            import_col1, import_col2 = st.columns(2)
+
+            with import_col1:
+                if st.button("🔍 Preview", key="preview_catalog", use_container_width=True):
+                    try:
+                        import json
+                        catalog_data = json.load(uploaded_file)
+                        st.session_state['uploaded_catalog'] = catalog_data
+
+                        # Show preview
+                        makes_count = len(catalog_data.get("makes", []))
+                        models_count = sum(len(make.get("models", [])) for make in catalog_data.get("makes", []))
+                        st.success(f"📋 Preview: {makes_count} makes, {models_count} models total")
+
+                        with st.expander("📄 Preview Data"):
+                            st.json(catalog_data)
+                    except Exception as e:
+                        st.error(f"❌ Failed to parse JSON: {e}")
+
+            with import_col2:
+                if st.button("📥 Import", key="import_catalog", use_container_width=True, type="primary"):
+                    if 'uploaded_catalog' in st.session_state:
+                        try:
+                            success = import_catalog_from_json(st.session_state['uploaded_catalog'])
+                            if success:
+                                st.success("✅ Catalog imported successfully!")
+                                invalidate_catalog_cache()
+                                del st.session_state['uploaded_catalog']
+                                st.rerun()
+                            else:
+                                st.error("❌ Catalog import failed")
+                        except Exception as e:
+                            st.error(f"❌ Import error: {e}")
+                    else:
+                        st.warning("⚠️ Please preview the catalog first")
+
+        # Browse & Edit section
+        st.markdown("#### ✏️ Browse & Edit")
+        all_makes = get_all_makes()
+        if all_makes:
+            selected_make = st.selectbox(
+                "Select Make to Edit",
+                options=[""] + all_makes,
+                key="edit_make_select",
+                format_func=lambda x: "Choose a make..." if x == "" else x
+            )
+
+            if selected_make:
+                models = get_models_for_make(selected_make)
+                if models:
+                    st.markdown(f"**Models for {selected_make}:**")
+                    models_df = pd.DataFrame({"Model": models})
+                    st.dataframe(models_df, use_container_width=True, hide_index=True)
+                else:
+                    st.info(f"No models found for {selected_make}")
+        else:
+            st.info("No makes in catalog yet. Import a catalog first.")
+
+        # Export section
+        st.markdown("#### 📤 Export")
+        export_col1, export_col2 = st.columns(2)
+
+        with export_col1:
+            if st.button("📄 Download JSON", key="export_catalog", use_container_width=True):
+                try:
+                    catalog_json = export_catalog_to_json()
+                    if catalog_json.get("makes"):
+                        # Convert to downloadable format
+                        json_str = json.dumps(catalog_json, indent=2)
+                        st.download_button(
+                            label="📥 Save Catalog JSON",
+                            data=json_str,
+                            file_name="reference_catalog.json",
+                            mime="application/json",
+                            key="download_catalog"
+                        )
+                    else:
+                        st.warning("No catalog data to export")
+                except Exception as e:
+                    st.error(f"❌ Export failed: {e}")
+
+        # Diagnostics section
+        st.markdown("#### 🔍 Diagnostics")
+        stats = get_catalog_stats()
+        diag_col1, diag_col2, diag_col3 = st.columns(3)
+
+        with diag_col1:
+            st.metric("Makes", stats["makes"])
+        with diag_col2:
+            st.metric("Models", stats["models"])
+        with diag_col3:
+            st.metric("Aliases", stats["aliases"])
+
+        if st.button("🔄 Rebuild Cache", key="rebuild_cache", use_container_width=True):
+            try:
+                invalidate_catalog_cache()
+                st.success("✅ Cache rebuilt successfully!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Cache rebuild failed: {e}")
+
 # Load current config (fallback to defaults)
 CONFIG = get_config()
 
@@ -631,6 +754,38 @@ def format_currency(amount):
     """Format amount as currency with proper rounding."""
     return f"${round(amount, 2):,.2f}"
 
+def sanitize_input(text):
+    """
+    Clean and standardize user input text.
+    
+    - Strips leading/trailing whitespace
+    - Converts multiple spaces to single spaces
+    - Removes special characters that could cause issues
+    - Returns cleaned string or empty string if None
+    
+    Args:
+        text: Input string to sanitize
+        
+    Returns:
+        Cleaned string with standardized formatting
+    """
+    if text is None:
+        return ""
+    
+    # Convert to string if not already
+    text = str(text)
+    
+    # Strip leading/trailing whitespace
+    text = text.strip()
+    
+    # Replace multiple spaces with single space
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove any non-printable characters
+    text = ''.join(char for char in text if char.isprintable())
+    
+    return text
+
 # --- Streamlit App ---
 
 # Check password protection
@@ -668,10 +823,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Main title with minimal padding
-st.markdown('<div class="main-title">🚗 Ruby G.E.M.</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">General Estimation Model</div>', unsafe_allow_html=True)
-
 # Admin toggle - Initialize state
 if 'admin_mode' not in st.session_state:
     st.session_state['admin_mode'] = False
@@ -693,110 +844,255 @@ with left_col:
     </div>
     """, unsafe_allow_html=True)
 
+    # Create a container for vehicle details that can be cleared
+    vehicle_details_container = st.empty()
+
     # --- Display Current Vehicle Details (if available and not in pending search) ---
     if st.session_state.get('detailed_vehicle_info') and not st.session_state.get('pending_search'):
-        vehicle_info = st.session_state['detailed_vehicle_info']
-        
-        # Display vehicle name with blue styling
-        vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1rem; border-radius: 8px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
-            <div style="margin: 0; color: #1e40af; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5); font-size: 1.25rem;">{vehicle_name}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Display vehicle details in the left column
-        # Display curb weight, engine, and rims info in four side-by-side boxes
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
+        # Use the container to render vehicle details
+        with vehicle_details_container.container():
+            vehicle_info = st.session_state['detailed_vehicle_info']
+            
+            # Display vehicle name with blue styling
+            vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
             st.markdown(f"""
-            <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6; text-align: center;">
-                <strong>Weight</strong><br>
-                <span style="color: #1e40af; font-weight: 600;">{vehicle_info['weight']} lbs</span>
+            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1rem; border-radius: 8px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                <div style="margin: 0; color: #1e40af; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5); font-size: 1.25rem;">{vehicle_name}</div>
             </div>
             """, unsafe_allow_html=True)
-        
-        with col2:
-            if vehicle_info['aluminum_engine'] is not None:
-                engine_status = "Al" if vehicle_info['aluminum_engine'] else "Fe"
-                engine_color = "#14b8a6" if vehicle_info['aluminum_engine'] else "#f59e0b"
-                engine_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_engine'] else "rgba(245, 158, 11, 0.1)"
-                
-                st.markdown(f"""
-                <div style="background: {engine_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color}; text-align: center;">
-                    <strong>Engine</strong><br>
-                    <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
-                    <strong>Engine</strong><br>
-                    <span style="color: #6b7280;">Unknown</span>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        with col3:
-            if vehicle_info['aluminum_rims'] is not None:
-                rims_status = "Al" if vehicle_info['aluminum_rims'] else "Fe"
-                rims_color = "#14b8a6" if vehicle_info['aluminum_rims'] else "#f59e0b"
-                rims_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_rims'] else "rgba(245, 158, 11, 0.1)"
-                
-                st.markdown(f"""
-                <div style="background: {rims_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color}; text-align: center;">
-                    <strong>Rims</strong><br>
-                    <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
-                    <strong>Rims</strong><br>
-                    <span style="color: #6b7280;">Unknown</span>
-                </div>
-                """, unsafe_allow_html=True)
-
-        with col4:
-            if vehicle_info.get('catalytic_converters') is not None:
-                cats_count = vehicle_info['catalytic_converters']
-                
+            
+            # Display vehicle details in the left column
+            # Display curb weight, engine, and rims info in four side-by-side boxes
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
                 st.markdown(f"""
                 <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6; text-align: center;">
-                    <strong>Cats</strong><br>
-                    <span style="color: #1e40af; font-weight: 600;">{cats_count}</span>
+                    <strong>Weight</strong><br>
+                    <span style="color: #1e40af; font-weight: 600;">{vehicle_info['weight']} lbs</span>
                 </div>
                 """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
-                    <strong>Cats</strong><br>
-                    <span style="color: #6b7280;">Unknown</span>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Display validation warnings if present
-        validation_warnings = vehicle_info.get('validation_warnings', [])
-        if validation_warnings:
-            from confidence_ui import render_warning_banner
-            st.markdown("### ⚠️ Data Quality Alerts")
-            for warning in validation_warnings:
-                render_warning_banner([warning])
+            
+            with col2:
+                if vehicle_info['aluminum_engine'] is not None:
+                    engine_status = "Al" if vehicle_info['aluminum_engine'] else "Fe"
+                    engine_color = "#14b8a6" if vehicle_info['aluminum_engine'] else "#f59e0b"
+                    engine_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_engine'] else "rgba(245, 158, 11, 0.1)"
+                    
+                    st.markdown(f"""
+                    <div style="background: {engine_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color}; text-align: center;">
+                        <strong>Engine</strong><br>
+                        <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
+                        <strong>Engine</strong><br>
+                        <span style="color: #6b7280;">Unknown</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            with col3:
+                if vehicle_info['aluminum_rims'] is not None:
+                    rims_status = "Al" if vehicle_info['aluminum_rims'] else "Fe"
+                    rims_color = "#14b8a6" if vehicle_info['aluminum_rims'] else "#f59e0b"
+                    rims_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_rims'] else "rgba(245, 158, 11, 0.1)"
+                    
+                    st.markdown(f"""
+                    <div style="background: {rims_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color}; text-align: center;">
+                        <strong>Rims</strong><br>
+                        <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
+                        <strong>Rims</strong><br>
+                        <span style="color: #6b7280;">Unknown</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            with col4:
+                if vehicle_info.get('catalytic_converters') is not None:
+                    cats_count = vehicle_info['catalytic_converters']
+                    
+                    st.markdown(f"""
+                    <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6; text-align: center;">
+                        <strong>Cats</strong><br>
+                        <span style="color: #1e40af; font-weight: 600;">{cats_count}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
+                        <strong>Cats</strong><br>
+                        <span style="color: #6b7280;">Unknown</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Display validation warnings if present
+            validation_warnings = vehicle_info.get('validation_warnings', [])
+            if validation_warnings:
+                from confidence_ui import render_warning_banner
+                st.markdown("### ⚠️ Data Quality Alerts")
+                for warning in validation_warnings:
+                    render_warning_banner([warning])
         
         # Source attribution removed - using Gemini Search Grounding for all lookups
 
     # --- Main Form ---
-    with st.form(key="vehicle_form"):
-        # Add small gaps between columns to prevent rendering issues
-        col1, gap1, col2, gap2, col3 = st.columns([3, 0.2, 3, 0.2, 3])
-        with col1:
-            year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013", key="year_input_main")
-        with col2:
-            make_input = st.text_input("Make", placeholder="e.g., Toyota", value="Toyota", key="make_input_main")
-        with col3:
-            model_input = st.text_input("Model", placeholder="e.g., Camry", value="Camry", key="model_input_main")
+    # Add small gaps between columns to prevent rendering issues
+    col1, gap1, col2, gap2, col3 = st.columns([3, 0.2, 3, 0.2, 3])
 
-        submit_button = st.form_submit_button(label="Search Vehicle", width='stretch')
+    # Year input (simple text input, no suggestions needed)
+    with col1:
+        year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013", key="year_input_main")
+
+    # Make input with suggestions and fuzzy matching
+    with col2:
+        make_input = st.text_input("Make", placeholder="e.g., Toyota", key="make_input_main")
+
+        # Show suggestions if user has typed something
+        if make_input:
+            suggestions = filter_make_suggestions(make_input)
+            if suggestions:
+                selected_suggestion = st.selectbox(
+                    "Suggestions",
+                    [""] + suggestions,
+                    key="make_suggestions",
+                    format_func=lambda x: "Choose a suggestion..." if x == "" else x
+                )
+                if selected_suggestion:
+                    st.session_state['make_input_accepted'] = selected_suggestion
+                    st.info(f"✅ Using: {selected_suggestion}")
+
+    # Model input with make-scoped suggestions
+    with col3:
+        # Get accepted make if available
+        accepted_make = st.session_state.get('make_input_accepted', make_input if make_input else None)
+
+        model_input = st.text_input("Model", placeholder="e.g., Camry", key="model_input_main")
+
+        # Show model suggestions if we have a make and user has typed something
+        if accepted_make and model_input:
+            suggestions = filter_model_suggestions(accepted_make, model_input)
+            if suggestions:
+                selected_suggestion = st.selectbox(
+                    f"Models for {accepted_make}",
+                    [""] + suggestions,
+                    key="model_suggestions",
+                    format_func=lambda x: "Choose a suggestion..." if x == "" else x
+                )
+                if selected_suggestion:
+                    st.session_state['model_input_accepted'] = selected_suggestion
+                    st.info(f"✅ Using: {selected_suggestion}")
+
+    # Submit button (moved outside form for dynamic enabling)
+    submit_disabled = (
+        st.session_state.get('make_prompt_pending', False) or
+        st.session_state.get('model_prompt_pending', False)
+    )
+
+    if submit_disabled:
+        st.warning("⚠️ Please answer the 'Did you mean?' questions above before submitting.")
+
+    submit_button = st.button(
+        "Search Vehicle",
+        disabled=submit_disabled,
+        use_container_width=True,
+        key="submit_vehicle_search"
+    )
+
+    # --- Fuzzy Matching Prompts ---
+    # Check for make fuzzy matches
+    current_make_input = st.session_state.get('make_input_accepted', make_input)
+    if (current_make_input and
+        not st.session_state.get('make_prompt_answered', False) and
+        not st.session_state.get('make_prompt_pending', False)):
+
+        fuzzy_make = suggest_make(current_make_input)
+        if fuzzy_make and fuzzy_make.lower() != current_make_input.lower():
+            st.session_state['make_suggestion'] = fuzzy_make
+            st.session_state['make_prompt_pending'] = True
+
+    # Show make "did you mean?" prompt
+    if st.session_state.get('make_prompt_pending'):
+        st.markdown("---")
+        col_y, col_n = st.columns(2)
+        with col_y:
+            if st.button(f"✅ Yes, use '{st.session_state['make_suggestion']}'",
+                        key="make_yes", use_container_width=True):
+                st.session_state['make_input_accepted'] = st.session_state['make_suggestion']
+                st.session_state['make_prompt_answered'] = True
+                st.session_state['make_prompt_pending'] = False
+                st.rerun()
+        with col_n:
+            if st.button("❌ No, keep what I typed", key="make_no", use_container_width=True):
+                st.session_state['make_input_accepted'] = current_make_input
+                st.session_state['make_prompt_answered'] = True
+                st.session_state['make_prompt_pending'] = False
+                st.rerun()
+
+    # Check for model fuzzy matches (only if we have a confirmed make)
+    confirmed_make = st.session_state.get('make_input_accepted')
+    current_model_input = st.session_state.get('model_input_accepted', model_input)
+    if (confirmed_make and current_model_input and
+        not st.session_state.get('model_prompt_answered', False) and
+        not st.session_state.get('model_prompt_pending', False)):
+
+        fuzzy_model = suggest_model(confirmed_make, current_model_input)
+        if fuzzy_model and fuzzy_model.lower() != current_model_input.lower():
+            st.session_state['model_suggestion'] = fuzzy_model
+            st.session_state['model_prompt_pending'] = True
+
+        # Also check for cross-make hints
+        cross_make_hints = cross_make_model_hint(current_model_input)
+        if cross_make_hints:
+            # Take the first (best) hint
+            hint_make, hint_model = cross_make_hints[0]
+            st.session_state['cross_make_hint'] = (hint_make, hint_model)
+            st.session_state['model_prompt_pending'] = True
+
+    # Show model "did you mean?" prompt
+    if st.session_state.get('model_prompt_pending'):
+        st.markdown("---")
+        if 'cross_make_hint' in st.session_state:
+            hint_make, hint_model = st.session_state['cross_make_hint']
+            st.info(f"💡 '{current_model_input}' is typically a {hint_make} model. Did you mean to change Make to {hint_make}?")
+
+            col_y, col_n = st.columns(2)
+            with col_y:
+                if st.button(f"✅ Yes, switch to {hint_make}",
+                            key="model_cross_make_yes", use_container_width=True):
+                    st.session_state['make_input_accepted'] = hint_make
+                    st.session_state['model_input_accepted'] = hint_model
+                    st.session_state['model_prompt_answered'] = True
+                    st.session_state['model_prompt_pending'] = False
+                    del st.session_state['cross_make_hint']
+                    st.rerun()
+            with col_n:
+                if st.button("❌ No, keep current make", key="model_cross_make_no", use_container_width=True):
+                    st.session_state['model_input_accepted'] = current_model_input
+                    st.session_state['model_prompt_answered'] = True
+                    st.session_state['model_prompt_pending'] = False
+                    del st.session_state['cross_make_hint']
+                    st.rerun()
+        elif 'model_suggestion' in st.session_state:
+            col_y, col_n = st.columns(2)
+            with col_y:
+                if st.button(f"✅ Yes, use '{st.session_state['model_suggestion']}'",
+                            key="model_yes", use_container_width=True):
+                    st.session_state['model_input_accepted'] = st.session_state['model_suggestion']
+                    st.session_state['model_prompt_answered'] = True
+                    st.session_state['model_prompt_pending'] = False
+                    st.rerun()
+            with col_n:
+                if st.button("❌ No, keep what I typed", key="model_no", use_container_width=True):
+                    st.session_state['model_input_accepted'] = current_model_input
+                    st.session_state['model_prompt_answered'] = True
+                    st.session_state['model_prompt_pending'] = False
+                    st.rerun()
 
     # --- Progress Area ---
     # Create a container for the progress area that can be shown/hidden
@@ -804,6 +1100,11 @@ with left_col:
 
     # --- Processing and Output ---
     if submit_button:
+        # Use accepted values (from suggestions/"did you mean?" confirmations)
+        year_input = sanitize_input(year_input)
+        make_input = sanitize_input(st.session_state.get('make_input_accepted', make_input))
+        model_input = sanitize_input(st.session_state.get('model_input_accepted', model_input))
+
         # Store the search inputs
         st.session_state['pending_search'] = {
             'year': year_input,
@@ -821,16 +1122,27 @@ with left_col:
         st.session_state['calculation_results'] = None
         st.session_state['last_processed_vehicle'] = None
         st.session_state['auto_calculate'] = False
+
+        # Reset reference catalog prompt states for new search
+        st.session_state['make_prompt_pending'] = False
+        st.session_state['make_prompt_answered'] = False
+        st.session_state['model_prompt_pending'] = False
+        st.session_state['model_prompt_answered'] = False
+        # Clear any stored suggestions and hints
+        for key in ['make_suggestion', 'model_suggestion', 'cross_make_hint']:
+            if key in st.session_state:
+                del st.session_state[key]
         
         # Rerun to clear the display immediately
+        # The containers will be cleared by conditional rendering based on pending_search flag
         st.rerun()
     
     # Process pending search after rerun
     if st.session_state.get('pending_search'):
         search_data = st.session_state['pending_search']
-        year_input = search_data['year']
-        make_input = search_data['make']
-        model_input = search_data['model']
+        year_input = sanitize_input(search_data['year'])
+        make_input = sanitize_input(search_data['make'])
+        model_input = sanitize_input(search_data['model'])
         
         # Don't clear the pending search flag yet - keep it active to prevent old UI from showing
         # We'll clear it only when we successfully complete the search or encounter an error
@@ -846,7 +1158,7 @@ with left_col:
         else:
             # Convert year to integer and validate
             try:
-                year_int = int(year_input.strip())
+                year_int = int(year_input)
                 if year_int < 1900 or year_int > 2050:
                     # Clear pending search on error
                     del st.session_state['pending_search']
@@ -857,7 +1169,7 @@ with left_col:
                     """, unsafe_allow_html=True)
                 else:
                     # Create a unique identifier for this vehicle search
-                    vehicle_id = f"{year_int}_{make_input.strip()}_{model_input.strip()}"
+                    vehicle_id = f"{year_int}_{make_input}_{model_input}"
                     
                     # Check if we've already processed this vehicle in this session
                     if st.session_state.get('last_processed_vehicle') != vehicle_id:
@@ -897,7 +1209,7 @@ with left_col:
                             """, unsafe_allow_html=True)
                         
                         # Process vehicle (single API call gets all specs at once)
-                        vehicle_data = process_vehicle(year_int, make_input.strip(), model_input.strip())
+                        vehicle_data = process_vehicle(year_int, make_input, model_input)
                         
                         # Clear progress indicator
                         progress_container.empty()
@@ -1093,9 +1405,13 @@ with right_col:
     </div>
     """, unsafe_allow_html=True)
     
+    # Create a container for cost estimate results that can be cleared
+    cost_estimate_container = st.empty()
+    
     # Skip display entirely if we're in pending search state
     if st.session_state.get('pending_search'):
-        st.info("Searching for vehicle...")
+        with cost_estimate_container.container():
+            st.info("Searching for vehicle...")
     else:
         # Auto-calculate if vehicle was just searched and we have valid data
         if st.session_state.get('auto_calculate', False) and st.session_state.get('last_curb_weight') is not None:
@@ -1590,10 +1906,14 @@ with admin_container:
         st.session_state['admin_mode'] = not st.session_state['admin_mode']
         st.rerun()
 
+# Add title at bottom in smaller format
 st.markdown("""
-<div style="text-align: center; color: #475569; padding: 1rem 0;">
-    <p style="margin: 0; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">
-        Built with Streamlit | Ruby GEM v1.0
+<div style="text-align: center; margin-top: 2rem;">
+    <p style="margin: 0; font-size: 0.85rem; color: #990C41; font-weight: 600;">
+        🚗 Ruby G.E.M. <span style="font-weight: 400; color: #6b7280;">· General Estimation Model</span>
+    </p>
+    <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: #9ca3af;">
+        Built with Streamlit | v1.0
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -1606,6 +1926,29 @@ if 'db_created' not in st.session_state:
         if success:
             print("✅ Database connection successful")
             st.session_state['db_created'] = True
+
+            # Auto-load seed catalog if database is empty
+            try:
+                from vehicle_data import get_catalog_stats, import_catalog_from_json
+                stats = get_catalog_stats()
+                if stats['makes'] == 0:
+                    print("📚 No catalog data found, loading seed data...")
+                    import json
+                    import os
+                    seed_file = os.path.join(os.path.dirname(__file__), 'seed_catalog.json')
+                    if os.path.exists(seed_file):
+                        with open(seed_file, 'r') as f:
+                            seed_data = json.load(f)
+                        success = import_catalog_from_json(seed_data)
+                        if success:
+                            print("✅ Seed catalog loaded successfully")
+                        else:
+                            print("❌ Failed to load seed catalog")
+                    else:
+                        print("⚠️ seed_catalog.json not found, skipping auto-load")
+            except Exception as e:
+                print(f"⚠️ Error loading seed catalog: {e}")
+
         else:
             print(f"❌ Database connection failed: {message}")
             st.error(f"Database connection failed: {message}")

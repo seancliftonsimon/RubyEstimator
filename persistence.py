@@ -60,6 +60,71 @@ def ensure_schema() -> None:
             conn.execute(
                 text(
                     """
+                    CREATE TABLE IF NOT EXISTS ref_makes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL UNIQUE,
+                        name_norm TEXT NOT NULL UNIQUE,
+                        aliases_json TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_ref_makes_name_norm ON ref_makes(name_norm)
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS ref_models (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        make_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        name_norm TEXT NOT NULL,
+                        aliases_json TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (make_id) REFERENCES ref_makes(id) ON DELETE CASCADE,
+                        UNIQUE(make_id, name_norm)
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_ref_models_make_id_name_norm ON ref_models(make_id, name_norm)
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS ref_aliases (
+                        alias_norm TEXT NOT NULL,
+                        target_type TEXT NOT NULL,
+                        target_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (alias_norm, target_type)
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_ref_aliases_norm_type ON ref_aliases(alias_norm, target_type)
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
                     CREATE TABLE IF NOT EXISTS field_values (
                         vehicle_key TEXT NOT NULL,
                         field TEXT NOT NULL,
@@ -122,6 +187,74 @@ def ensure_schema() -> None:
                 )
             )
             logger.debug("  ✓ vehicles table ready")
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS ref_makes (
+                        id SERIAL PRIMARY KEY,
+                        name TEXT NOT NULL UNIQUE,
+                        name_norm TEXT NOT NULL UNIQUE,
+                        aliases_json JSONB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_ref_makes_name_norm ON ref_makes(name_norm)
+                    """
+                )
+            )
+            logger.debug("  ✓ ref_makes table ready")
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS ref_models (
+                        id SERIAL PRIMARY KEY,
+                        make_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        name_norm TEXT NOT NULL,
+                        aliases_json JSONB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (make_id) REFERENCES ref_makes(id) ON DELETE CASCADE,
+                        UNIQUE(make_id, name_norm)
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_ref_models_make_id_name_norm ON ref_models(make_id, name_norm)
+                    """
+                )
+            )
+            logger.debug("  ✓ ref_models table ready")
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS ref_aliases (
+                        alias_norm TEXT NOT NULL,
+                        target_type TEXT NOT NULL,
+                        target_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (alias_norm, target_type)
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_ref_aliases_norm_type ON ref_aliases(alias_norm, target_type)
+                    """
+                )
+            )
+            logger.debug("  ✓ ref_aliases table ready")
             conn.execute(
                 text(
                     """
@@ -198,6 +331,9 @@ def _ensure_sqlite_schema(conn) -> None:
         ("field_values", ["vehicle_key", "field", "value_json"]),
         ("runs", ["run_id", "started_at", "status"]),
         ("evidence", ["run_id", "vehicle_key", "field", "value_json", "source_hash"]),
+        ("ref_makes", ["id", "name", "name_norm", "aliases_json"]),
+        ("ref_models", ["id", "make_id", "name", "name_norm", "aliases_json"]),
+        ("ref_aliases", ["alias_norm", "target_type", "target_id"]),
     ]
 
     for table_name, required_columns in drop_targets:
