@@ -198,8 +198,8 @@ def render_admin_ui():
         st.markdown("### 📝 Configuration Settings")
         st.markdown("Adjust values below and click **Save All Changes** at the bottom. Use **Restore to Default** buttons to reset individual sections.")
 
-        tab_prices, tab_costs, tab_weights, tab_assumptions, tab_heuristics, tab_grounding, tab_consensus, tab_catalog = st.tabs(
-            ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions", "🔍 Heuristics", "🌐 Grounding", "🤝 Consensus", "📚 Catalog"]
+        tab_prices, tab_costs, tab_weights, tab_assumptions, tab_heuristics, tab_grounding, tab_consensus = st.tabs(
+            ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions", "🔍 Heuristics", "🌐 Grounding", "🤝 Consensus"]
         )
 
         with tab_prices:
@@ -429,8 +429,9 @@ def render_admin_ui():
                 st.error("❌ Failed to save one or more configuration groups. Please try again.")
 
     # Reference Catalog Management (outside the form for file uploads)
-    with tab_catalog:
-        st.markdown("### 📚 Reference Catalog Management")
+    # Create catalog tab separately since it needs buttons outside the form
+    st.markdown("---")
+    with st.expander("📚 Reference Catalog Management", expanded=False):
         st.markdown("Manage the vehicle make/model reference catalog used for search suggestions and fuzzy matching.")
 
         # Import section
@@ -477,7 +478,7 @@ def render_admin_ui():
                         except Exception as e:
                             st.error(f"❌ Import error: {e}")
                     else:
-                        st.warning("⚠️ Please preview the catalog first")
+                        st.warning("Please preview the catalog first")
 
         # Browse & Edit section
         st.markdown("#### ✏️ Browse & Edit")
@@ -543,6 +544,9 @@ def render_admin_ui():
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ Cache rebuild failed: {e}")
+
+    # Keep the tab_catalog variable for backwards compatibility but don't use it
+    tab_catalog = None
 
 # Load current config (fallback to defaults)
 CONFIG = get_config()
@@ -1927,25 +1931,37 @@ if 'db_created' not in st.session_state:
             print("✅ Database connection successful")
             st.session_state['db_created'] = True
 
-            # Auto-load seed catalog if database is empty
+            # Auto-load seed catalog (always reload to ensure latest version is used)
             try:
                 from vehicle_data import get_catalog_stats, import_catalog_from_json
-                stats = get_catalog_stats()
-                if stats['makes'] == 0:
-                    print("📚 No catalog data found, loading seed data...")
-                    import json
-                    import os
-                    seed_file = os.path.join(os.path.dirname(__file__), 'seed_catalog.json')
-                    if os.path.exists(seed_file):
-                        with open(seed_file, 'r') as f:
-                            seed_data = json.load(f)
-                        success = import_catalog_from_json(seed_data)
-                        if success:
-                            print("✅ Seed catalog loaded successfully")
-                        else:
-                            print("❌ Failed to load seed catalog")
+                from database_config import create_database_engine
+                from sqlalchemy import text
+                print("📚 Loading/refreshing seed catalog data...")
+
+                # Clear existing catalog data first
+                engine = create_database_engine()
+                with engine.connect() as conn:
+                    print("  Clearing existing catalog data...")
+                    conn.execute(text("DELETE FROM ref_aliases"))
+                    conn.execute(text("DELETE FROM ref_models"))
+                    conn.execute(text("DELETE FROM ref_makes"))
+                    conn.commit()
+                    print("  ✓ Existing catalog data cleared")
+
+                # Now load the fresh seed data
+                import json
+                import os
+                seed_file = os.path.join(os.path.dirname(__file__), 'seed_catalog.json')
+                if os.path.exists(seed_file):
+                    with open(seed_file, 'r') as f:
+                        seed_data = json.load(f)
+                    success = import_catalog_from_json(seed_data)
+                    if success:
+                        print("✅ Seed catalog loaded/refreshed successfully")
                     else:
-                        print("⚠️ seed_catalog.json not found, skipping auto-load")
+                        print("❌ Failed to load seed catalog")
+                else:
+                    print("⚠️ seed_catalog.json not found, skipping auto-load")
             except Exception as e:
                 print(f"⚠️ Error loading seed catalog: {e}")
 
