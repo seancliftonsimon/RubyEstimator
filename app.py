@@ -842,6 +842,13 @@ left_col, spacer, right_col = st.columns([1, 0.2, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
+    # Visual indicator for dropdown system
+    st.markdown("""
+    <div style="background: linear-gradient(90deg, #10b981, #059669); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
+        🎯 Now with Dropdowns!
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("""
     <div class="section-header">
         🚗 Vehicle Search
