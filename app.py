@@ -487,8 +487,7 @@ def render_admin_ui():
             selected_make = st.selectbox(
                 "Select Make to Edit",
                 options=[""] + all_makes,
-                key="edit_make_select",
-                format_func=lambda x: "Choose a make..." if x == "" else x
+                key="edit_make_select"
             )
 
             if selected_make:
@@ -972,13 +971,12 @@ with left_col:
         if current_make_value and current_make_value in make_options:
             make_index = make_options.index(current_make_value)
         
-        # Selectbox shows dropdown immediately on click and supports typing to filter
+        # Selectbox allows clicking and typing to filter options
         make_input = st.selectbox(
             "Make",
             options=make_options,
             index=make_index,
-            key="make_input_main",
-            format_func=lambda x: "Choose a make..." if x == "" else x
+            key="make_input_main"
         )
         
         # Store selected make
@@ -1006,14 +1004,13 @@ with left_col:
         if current_model_value and current_model_value in model_options:
             model_index = model_options.index(current_model_value)
         
-        # Selectbox shows dropdown immediately on click and supports typing to filter
+        # Selectbox allows clicking and typing to filter options
         model_label = f"Model" + (f" ({accepted_make})" if accepted_make else "")
         model_input = st.selectbox(
             model_label,
             options=model_options,
             index=model_index,
             key="model_input_main",
-            format_func=lambda x: "Choose a model..." if x == "" else x,
             disabled=not accepted_make
         )
         

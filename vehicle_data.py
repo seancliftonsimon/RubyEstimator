@@ -555,19 +555,35 @@ def get_catalog_version() -> int:
 
 def load_reference_catalog() -> Dict[str, Any]:
     """
-    Load and build the complete reference catalog cache structure.
+    Load and build the complete reference catalog cache structure from JSON file.
 
     Returns:
         Dict: Cached catalog data with indices
     """
-    logger.info("🔄 Loading reference catalog into cache")
+    logger.info("🔄 Loading reference catalog into cache from JSON file")
 
     try:
-        ensure_schema()
-        engine = create_database_engine()
+        import os
+
+        # Load from seed_catalog.json file
+        seed_file = os.path.join(os.path.dirname(__file__), 'seed_catalog.json')
+        if not os.path.exists(seed_file):
+            logger.error(f"❌ seed_catalog.json not found at {seed_file}")
+            return {
+                "ref_version": 0,
+                "make_index": {
+                    "all_makes": [],
+                    "make_by_norm": {},
+                    "make_alias_to_canonical": {}
+                },
+                "model_index_by_make": {}
+            }
+
+        with open(seed_file, 'r') as f:
+            json_data = json.load(f)
 
         cache_data = {
-            "ref_version": get_catalog_version(),
+            "ref_version": 1,  # Static version for JSON file
             "make_index": {
                 "all_makes": [],
                 "make_by_norm": {},
@@ -576,60 +592,40 @@ def load_reference_catalog() -> Dict[str, Any]:
             "model_index_by_make": {}
         }
 
-        with engine.connect() as conn:
-            # Load makes
-            makes_result = conn.execute(
-                text("""
-                    SELECT id, name, name_norm, aliases_json
-                    FROM ref_makes
-                    ORDER BY name
-                """)
-            )
+        # Process makes and models from JSON
+        for make_data in json_data.get("makes", []):
+            make_name = make_data["make"]
+            make_norm_data = normalize_catalog_string(make_name)
+            aliases = make_data.get("aliases", [])
 
-            for make_row in makes_result:
-                make_id, make_name, make_norm, aliases_json = make_row
+            # Add to all_makes list
+            cache_data["make_index"]["all_makes"].append(make_name)
 
-                # Add to all_makes list
-                cache_data["make_index"]["all_makes"].append(make_name)
+            # Add to make_by_norm dict
+            cache_data["make_index"]["make_by_norm"][make_norm_data["norm"]] = {
+                "id": len(cache_data["make_index"]["all_makes"]),  # Use index as ID
+                "name": make_name,
+                "aliases": aliases
+            }
 
-                # Add to make_by_norm dict
-                cache_data["make_index"]["make_by_norm"][make_norm] = {
-                    "id": make_id,
-                    "name": make_name,
-                    "aliases": json.loads(aliases_json) if aliases_json else []
-                }
+            # Add aliases to alias map
+            for alias in aliases:
+                if alias and alias.strip():
+                    norm_alias = alias.strip().lower()
+                    cache_data["make_index"]["make_alias_to_canonical"][norm_alias] = make_name
 
-                # Add aliases to alias map
-                if aliases_json:
-                    try:
-                        aliases = json.loads(aliases_json)
-                        for alias in aliases:
-                            if alias and alias.strip():
-                                norm_alias = alias.strip().lower()
-                                cache_data["make_index"]["make_alias_to_canonical"][norm_alias] = make_name
-                    except json.JSONDecodeError:
-                        pass
+            # Initialize model index for this make
+            cache_data["model_index_by_make"][make_name] = {
+                "all_models": [],
+                "model_by_norm": {},
+                "alias_to_canonical": {}
+            }
 
-            # Load models grouped by make
-            models_result = conn.execute(
-                text("""
-                    SELECT m.name as make_name, md.id, md.name, md.name_norm, md.aliases_json
-                    FROM ref_models md
-                    JOIN ref_makes m ON m.id = md.make_id
-                    ORDER BY m.name, md.name
-                """)
-            )
-
-            for model_row in models_result:
-                make_name, model_id, model_name, model_norm, aliases_json = model_row
-
-                # Initialize make entry if not exists
-                if make_name not in cache_data["model_index_by_make"]:
-                    cache_data["model_index_by_make"][make_name] = {
-                        "all_models": [],
-                        "model_by_norm": {},
-                        "alias_to_canonical": {}
-                    }
+            # Process models for this make
+            for model_data in make_data.get("models", []):
+                model_name = model_data["name"]
+                model_norm_data = normalize_catalog_string(model_name)
+                model_aliases = model_data.get("aliases", [])
 
                 make_models = cache_data["model_index_by_make"][make_name]
 
@@ -637,28 +633,24 @@ def load_reference_catalog() -> Dict[str, Any]:
                 make_models["all_models"].append(model_name)
 
                 # Add to model_by_norm dict
-                make_models["model_by_norm"][model_norm] = {
-                    "id": model_id,
+                make_models["model_by_norm"][model_norm_data["norm"]] = {
+                    "id": len(make_models["all_models"]),  # Use index as ID
                     "name": model_name,
-                    "aliases": json.loads(aliases_json) if aliases_json else []
+                    "aliases": model_aliases
                 }
 
                 # Add aliases to alias map
-                if aliases_json:
-                    try:
-                        aliases = json.loads(aliases_json)
-                        for alias in aliases:
-                            if alias and alias.strip():
-                                norm_alias = alias.strip().lower()
-                                make_models["alias_to_canonical"][norm_alias] = model_name
-                    except json.JSONDecodeError:
-                        pass
+                for alias in model_aliases:
+                    if alias and alias.strip():
+                        norm_alias = alias.strip().lower()
+                        make_models["alias_to_canonical"][norm_alias] = model_name
 
-        logger.info(f"✓ Loaded catalog with {len(cache_data['make_index']['all_makes'])} makes")
+        logger.info(f"✅ Loaded {len(cache_data['make_index']['all_makes'])} makes from JSON catalog")
         return cache_data
 
     except Exception as e:
-        logger.error(f"❌ Failed to load reference catalog: {e}", exc_info=True)
+        logger.error(f"❌ Error loading reference catalog from JSON: {e}", exc_info=True)
+        # Return empty cache on error
         return {
             "ref_version": 0,
             "make_index": {
