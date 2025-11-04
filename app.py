@@ -953,44 +953,68 @@ with left_col:
     with col1:
         year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013", key="year_input_main")
 
-    # Make input with suggestions and fuzzy matching
+    # Make input with dropdown - shows all makes immediately on click
     with col2:
-        make_input = st.text_input("Make", placeholder="e.g., Toyota", key="make_input_main")
-
-        # Show suggestions if user has typed something
+        # Get all makes for dropdown
+        all_makes_list = get_all_makes()
+        make_options = [""] + (all_makes_list if all_makes_list else [])
+        
+        # Get current selection
+        current_make_value = st.session_state.get('make_input_accepted', "")
+        make_index = 0
+        if current_make_value and current_make_value in make_options:
+            make_index = make_options.index(current_make_value)
+        
+        # Selectbox shows dropdown immediately on click and supports typing to filter
+        make_input = st.selectbox(
+            "Make",
+            options=make_options,
+            index=make_index,
+            key="make_input_main",
+            format_func=lambda x: "Choose a make..." if x == "" else x
+        )
+        
+        # Store selected make
         if make_input:
-            suggestions = filter_make_suggestions(make_input)
-            if suggestions:
-                selected_suggestion = st.selectbox(
-                    "Suggestions",
-                    [""] + suggestions,
-                    key="make_suggestions",
-                    format_func=lambda x: "Choose a suggestion..." if x == "" else x
-                )
-                if selected_suggestion:
-                    st.session_state['make_input_accepted'] = selected_suggestion
-                    st.info(f"✅ Using: {selected_suggestion}")
+            st.session_state['make_input_accepted'] = make_input
+        elif not make_input and 'make_input_accepted' in st.session_state:
+            del st.session_state['make_input_accepted']
 
-    # Model input with make-scoped suggestions
+    # Model input with dropdown - shows models for selected make
     with col3:
-        # Get accepted make if available
+        # Get the accepted make
         accepted_make = st.session_state.get('make_input_accepted', make_input if make_input else None)
 
-        model_input = st.text_input("Model", placeholder="e.g., Camry", key="model_input_main")
-
-        # Show model suggestions if we have a make and user has typed something
-        if accepted_make and model_input:
-            suggestions = filter_model_suggestions(accepted_make, model_input)
-            if suggestions:
-                selected_suggestion = st.selectbox(
-                    f"Models for {accepted_make}",
-                    [""] + suggestions,
-                    key="model_suggestions",
-                    format_func=lambda x: "Choose a suggestion..." if x == "" else x
-                )
-                if selected_suggestion:
-                    st.session_state['model_input_accepted'] = selected_suggestion
-                    st.info(f"✅ Using: {selected_suggestion}")
+        # Get models for the selected make
+        if accepted_make:
+            model_options_list = get_models_for_make(accepted_make)
+        else:
+            model_options_list = []
+            
+        model_options = [""] + (model_options_list if model_options_list else [])
+        
+        # Get current selection
+        current_model_value = st.session_state.get('model_input_accepted', "")
+        model_index = 0
+        if current_model_value and current_model_value in model_options:
+            model_index = model_options.index(current_model_value)
+        
+        # Selectbox shows dropdown immediately on click and supports typing to filter
+        model_label = f"Model" + (f" ({accepted_make})" if accepted_make else "")
+        model_input = st.selectbox(
+            model_label,
+            options=model_options,
+            index=model_index,
+            key="model_input_main",
+            format_func=lambda x: "Choose a model..." if x == "" else x,
+            disabled=not accepted_make
+        )
+        
+        # Store selected model
+        if model_input:
+            st.session_state['model_input_accepted'] = model_input
+        elif not model_input and 'model_input_accepted' in st.session_state:
+            del st.session_state['model_input_accepted']
 
     # Submit button (moved outside form for dynamic enabling)
     submit_disabled = (
