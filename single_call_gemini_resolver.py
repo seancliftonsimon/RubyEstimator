@@ -175,14 +175,16 @@ class SingleCallGeminiResolver:
         return f"""Find specs for {year} {make} {model}. Return JSON ONLY.
 
 FIND 4 FIELDS:
-1. curb_weight (lbs, use minimum if multiple trims)
+1. curb_weight (lbs, determine the most likely and sensible value based on available data - use base trim if identifiable, or most common value)
 2. aluminum_engine (true/false, needs explicit "aluminum")
 3. aluminum_rims (true/false, "aluminum" or "alloy")
-4. catalytic_converters (count, integer)
+4. catalytic_converters (count, integer, determine the most likely and sensible number)
 
-SOURCES: Prefer OEM (mark "oem"), else 2+ secondary sources (mark "secondary"). Include URL + quote.
+SOURCES: Use any available sources (mark "oem" for manufacturer sites, "secondary" for others). Include URL + quote.
 
 STATUS: "found" (has data), "not_found" (no data, value=null), "conflicting" (unclear, value=null)
+
+IMPORTANT: If the vehicle does not appear to exist or cannot be verified, set status to "not_found" for all fields and return null values.
 
 RETURN JSON:
 {{
@@ -495,15 +497,23 @@ RETURN JSON:
             "confidence": self._calculate_confidence(catalytic_converters)
         }
         
+        # Check if vehicle appears to not exist (all fields are "not_found")
+        all_not_found = all(
+            field_data.get("status") == "not_found" 
+            for field_data in validated.values()
+        )
+        if all_not_found:
+            logger.warning("⚠️ Vehicle may not exist - all fields returned 'not_found' status")
+        
         logger.debug("✓ Field validation and normalization complete")
         return validated
     
     def _normalize_weight(self, value: Any) -> Optional[float]:
-        """Normalize weight to lbs. If multiple weights provided, selects the minimum."""
+        """Normalize weight to lbs. If multiple weights provided, determines the most sensible value."""
         if value is None:
             return None
         
-        # Handle lists/arrays of weights - select minimum valid weight
+        # Handle lists/arrays of weights - determine most sensible value
         if isinstance(value, (list, tuple)):
             valid_weights = []
             for v in value:
@@ -517,10 +527,21 @@ RETURN JSON:
                     logger.debug(f"Could not parse weight value '{v}', skipping")
             
             if valid_weights:
-                min_weight = min(valid_weights)
+                # Use median as most sensible value (better than min for base trim estimation)
+                sorted_weights = sorted(valid_weights)
+                if len(sorted_weights) == 1:
+                    selected_weight = sorted_weights[0]
+                elif len(sorted_weights) % 2 == 0:
+                    # Even number - use average of two middle values
+                    mid = len(sorted_weights) // 2
+                    selected_weight = (sorted_weights[mid - 1] + sorted_weights[mid]) / 2
+                else:
+                    # Odd number - use middle value
+                    selected_weight = sorted_weights[len(sorted_weights) // 2]
+                
                 if len(valid_weights) > 1:
-                    logger.info(f"Multiple weights found: {valid_weights}, selecting minimum: {min_weight} lbs")
-                return min_weight
+                    logger.info(f"Multiple weights found: {valid_weights}, selecting median (most sensible): {selected_weight} lbs")
+                return selected_weight
             else:
                 logger.warning(f"⚠️ No valid weights found in list: {value}")
                 return None

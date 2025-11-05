@@ -997,7 +997,7 @@ with left_col:
     with col1:
         year_input = st.text_input("Year", placeholder="e.g., 2013", value="", key="year_input_main")
 
-    # Make input with text field and dropdown list
+    # Make input with dropdown list and text field
     with col2:
         # Get all makes for dropdown (already alphabetized)
         all_makes_list = get_all_makes()
@@ -1005,13 +1005,7 @@ with left_col:
         # Get current accepted value for display
         current_make_value = st.session_state.get('make_input_accepted', "")
 
-
-        # Text input field for make - use value from session state to sync with dropdown
-        # Use a dynamic key to force update when value changes
-        make_input_key = f"make_input_text_{current_make_value}"
-        make_input = st.text_input("Make", value=current_make_value, key=make_input_key)
-        
-        # Dropdown list below text input - "Choose from list" as first option
+        # Dropdown list above text input - "Choose from list" as first option
         make_dropdown_options = ["Choose from list"] + (all_makes_list.copy() if all_makes_list else [])
         make_dropdown_index = 0  # Default to "Choose from list"
         if current_make_value and current_make_value in all_makes_list:
@@ -1025,6 +1019,11 @@ with left_col:
             key="make_input_dropdown",
             label_visibility="hidden"
         )
+
+        # Text input field for make - use value from session state to sync with dropdown
+        # Use a dynamic key to force update when value changes
+        make_input_key = f"make_input_text_{current_make_value}"
+        make_input = st.text_input("Make", value=current_make_value, key=make_input_key)
         
         # Track previous dropdown selection to detect changes
         previous_dropdown_selection = st.session_state.get('make_dropdown_previous', None)
@@ -1187,29 +1186,8 @@ with left_col:
                     del st.session_state['model_prompt_pending']
                 if 'model_suggestion' in st.session_state:
                     del st.session_state['model_suggestion']
-        
-        # Show fuzzy match prompt if pending
-        if st.session_state.get('make_prompt_pending'):
-            st.info(f"💡 Did you mean **'{st.session_state['make_suggestion']}'** instead of '{make_input}'?")
-            col_y, col_n = st.columns([2, 3])
-            with col_y:
-                if st.button("Yes", key="make_yes"):
-                    st.session_state['make_input_accepted'] = st.session_state['make_suggestion']
-                    if 'model_input_accepted' in st.session_state:
-                        del st.session_state['model_input_accepted']
-                    del st.session_state['make_prompt_pending']
-                    del st.session_state['make_suggestion']
-                    st.rerun()
-            with col_n:
-                if st.button("No, keep what I typed", key="make_no"):
-                    # Keep the typed value
-                    if make_input:
-                        st.session_state['make_input_accepted'] = make_input
-                    del st.session_state['make_prompt_pending']
-                    del st.session_state['make_suggestion']
-                    st.rerun()
 
-    # Model input with text field and dropdown list
+    # Model input with dropdown list and text field
     with col3:
         # Get the accepted make
         accepted_make = st.session_state.get('make_input_accepted', None)
@@ -1223,17 +1201,7 @@ with left_col:
         # Get current accepted value for display
         current_model_value = st.session_state.get('model_input_accepted', "")
         
-        # Text input field for model (disabled until make is selected) - use value from session state to sync with dropdown
-        # Use a dynamic key to force update when value changes
-        model_input_key = f"model_input_text_{current_model_value}_{accepted_make}"
-        model_input = st.text_input(
-            "Model" + (f" ({accepted_make})" if accepted_make else ""),
-            value=current_model_value,
-            key=model_input_key,
-            disabled=not accepted_make
-        )
-        
-        # Dropdown list below text input - "Choose from list" as first option
+        # Dropdown list above text input - "Choose from list" as first option
         model_dropdown_options = ["Choose from list"] + (model_options_list.copy() if model_options_list else [])
         model_dropdown_index = 0  # Default to "Choose from list"
         if current_model_value and current_model_value in model_options_list:
@@ -1247,6 +1215,27 @@ with left_col:
             key="model_input_dropdown",
             disabled=not accepted_make,
             label_visibility="hidden"
+        )
+        
+        # Show fuzzy match suggestion above text input
+        if st.session_state.get('model_prompt_pending'):
+            suggested_model = st.session_state.get('model_suggestion', '')
+            if suggested_model:
+                st.markdown(f"💡 Did you mean **{suggested_model}**?")
+                if st.button("Use suggested model", key="model_use_suggestion"):
+                    st.session_state['model_input_accepted'] = suggested_model
+                    del st.session_state['model_prompt_pending']
+                    del st.session_state['model_suggestion']
+                    st.rerun()
+        
+        # Text input field for model (disabled until make is selected) - use value from session state to sync with dropdown
+        # Use a dynamic key to force update when value changes
+        model_input_key = f"model_input_text_{current_model_value}_{accepted_make}"
+        model_input = st.text_input(
+            "Model" + (f" ({accepted_make})" if accepted_make else ""),
+            value=current_model_value,
+            key=model_input_key,
+            disabled=not accepted_make
         )
         
         # Track previous dropdown selection to detect changes
@@ -1340,25 +1329,6 @@ with left_col:
                     del st.session_state['model_prompt_pending']
                 if 'model_suggestion' in st.session_state:
                     del st.session_state['model_suggestion']
-        
-        # Show fuzzy match prompt if pending
-        if st.session_state.get('model_prompt_pending'):
-            st.info(f"💡 Did you mean **'{st.session_state['model_suggestion']}'** instead of '{model_input}'?")
-            col_y, col_n = st.columns([2, 3])
-            with col_y:
-                if st.button("Yes", key="model_yes"):
-                    st.session_state['model_input_accepted'] = st.session_state['model_suggestion']
-                    del st.session_state['model_prompt_pending']
-                    del st.session_state['model_suggestion']
-                    st.rerun()
-            with col_n:
-                if st.button("No, keep what I typed", key="model_no"):
-                    # Keep the typed value
-                    if model_input:
-                        st.session_state['model_input_accepted'] = model_input
-                    del st.session_state['model_prompt_pending']
-                    del st.session_state['model_suggestion']
-                    st.rerun()
 
     # Submit button (moved outside form for dynamic enabling)
     # Check if year, make and model are all filled
