@@ -740,7 +740,7 @@ def get_all_makes() -> List[str]:
         List[str]: Sorted list of make names
     """
     cache = ensure_catalog_cached()
-    return cache["make_index"]["all_makes"]
+    return sorted(cache["make_index"]["all_makes"])
 
 
 def get_models_for_make(make_name: str) -> List[str]:
@@ -755,7 +755,7 @@ def get_models_for_make(make_name: str) -> List[str]:
     """
     cache = ensure_catalog_cached()
     make_data = cache["model_index_by_make"].get(make_name, {})
-    return make_data.get("all_models", [])
+    return sorted(make_data.get("all_models", []))
 
 
 def get_catalog_stats() -> Dict[str, int]:
@@ -960,7 +960,7 @@ def filter_make_suggestions(raw_input: str, max_suggestions: int = 10) -> List[s
     try:
         if not raw_input or not raw_input.strip():
             cache = ensure_catalog_cached()
-            return cache["make_index"]["all_makes"][:max_suggestions]
+            return sorted(cache["make_index"]["all_makes"])[:max_suggestions]
 
         input_lower = raw_input.strip().lower()
         cache = ensure_catalog_cached()
@@ -970,7 +970,7 @@ def filter_make_suggestions(raw_input: str, max_suggestions: int = 10) -> List[s
             if input_lower in make_name.lower():
                 matches.append(make_name)
 
-        return matches[:max_suggestions]
+        return sorted(matches)[:max_suggestions]
 
     except Exception as e:
         logger.error(f"❌ Error in filter_make_suggestions: {e}", exc_info=True)
@@ -997,7 +997,7 @@ def filter_model_suggestions(make: str, raw_input: str, max_suggestions: int = 1
             return []
 
         if not raw_input or not raw_input.strip():
-            return make_data["all_models"][:max_suggestions]
+            return sorted(make_data["all_models"])[:max_suggestions]
 
         input_lower = raw_input.strip().lower()
         matches = []
@@ -1006,7 +1006,7 @@ def filter_model_suggestions(make: str, raw_input: str, max_suggestions: int = 1
             if input_lower in model_name.lower():
                 matches.append(model_name)
 
-        return matches[:max_suggestions]
+        return sorted(matches)[:max_suggestions]
 
     except Exception as e:
         logger.error(f"❌ Error in filter_model_suggestions: {e}", exc_info=True)

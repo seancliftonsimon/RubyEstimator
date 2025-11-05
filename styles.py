@@ -595,6 +595,43 @@ def generate_main_app_css() -> str:
     
     {generate_input_css()}
     
+    /* ========== SELECTBOX (DROPDOWN) STYLING ========== */
+    /* Hide dropdown arrows */
+    .stSelectbox [data-baseweb="select"] svg,
+    [data-testid="stSelectbox"] [data-baseweb="select"] svg,
+    .stSelectbox [data-baseweb="select"] > div > svg,
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div > svg {{
+        display: none !important;
+    }}
+    
+    /* Fix text selection highlight - override white background */
+    ::selection {{
+        background: rgba(153, 12, 65, 0.2) !important;
+        color: {Colors.GRAY_800} !important;
+    }}
+    
+    ::-moz-selection {{
+        background: rgba(153, 12, 65, 0.2) !important;
+        color: {Colors.GRAY_800} !important;
+    }}
+    
+    /* Apply selection styles to input and selectbox elements */
+    input::selection,
+    select::selection,
+    textarea::selection,
+    [data-baseweb="select"] input::selection {{
+        background: rgba(153, 12, 65, 0.2) !important;
+        color: {Colors.GRAY_800} !important;
+    }}
+    
+    input::-moz-selection,
+    select::-moz-selection,
+    textarea::-moz-selection,
+    [data-baseweb="select"] input::-moz-selection {{
+        background: rgba(153, 12, 65, 0.2) !important;
+        color: {Colors.GRAY_800} !important;
+    }}
+    
     /* ========== TABLES ========== */
     {generate_table_css()}
     
