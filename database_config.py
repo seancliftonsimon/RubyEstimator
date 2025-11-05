@@ -7,7 +7,6 @@ import logging
 import os
 from typing import Any, Dict
 
-from pathlib import Path
 from sqlalchemy import create_engine as _create_engine, text
 
 # Configure logging
@@ -19,7 +18,7 @@ _database_url_cache = None  # Cache URL to prevent repeated logging
 
 
 def get_database_url() -> str:
-    """Get database URL from environment or fallback to SQLite."""
+    """Get database URL from environment variables. Requires DATABASE_URL or PostgreSQL connection settings."""
     global _database_url_cache
     
     # Return cached URL if available
@@ -46,12 +45,14 @@ def get_database_url() -> str:
         _database_url_cache = url
         return url
 
-    project_root = Path(__file__).resolve().parent
-    db_path = project_root / "rubyestimator_local.db"
-    url = f"sqlite:///{db_path.as_posix()}"
-    logger.info(f"🔗 Using SQLite database: {db_path}")
-    _database_url_cache = url
-    return url
+    # No database configuration found - raise error
+    error_msg = (
+        "DATABASE_URL environment variable is required. "
+        "Please set DATABASE_URL in your Streamlit Cloud secrets or environment variables. "
+        "Example: DATABASE_URL=postgresql://user:pass@host.neon.tech/dbname?sslmode=require"
+    )
+    logger.error(f"❌ {error_msg}")
+    raise ValueError(error_msg)
 
 
 def _mask_password(url: str) -> str:
@@ -69,7 +70,8 @@ def _mask_password(url: str) -> str:
 
 
 def is_sqlite() -> bool:
-    return get_database_url().startswith("sqlite:")
+    """Always returns False - SQLite support has been removed. Only PostgreSQL/Neon is supported."""
+    return False
 
 
 def create_database_engine():
@@ -83,8 +85,11 @@ def create_database_engine():
     
     # Create new engine
     url = get_database_url()
-    db_type = "PostgreSQL (Neon)" if url.startswith("postgresql://") else "SQLite"
-    logger.info(f"⚙️  Creating database engine for {db_type}")
+    if not url.startswith("postgresql://"):
+        error_msg = f"Invalid database URL. Only PostgreSQL connections are supported. URL starts with: {url[:10]}"
+        logger.error(f"❌ {error_msg}")
+        raise ValueError(error_msg)
+    logger.info(f"⚙️  Creating database engine for PostgreSQL (Neon)")
     try:
         _engine_cache = _create_engine(url, echo=False, pool_pre_ping=True)
         logger.info(f"✓ Database engine created successfully (cached for reuse)")

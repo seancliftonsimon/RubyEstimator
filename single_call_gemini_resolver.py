@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from google import genai
 from sqlalchemy import text
 
-from database_config import create_database_engine, is_sqlite
+from database_config import create_database_engine
 from persistence import ensure_schema
 
 
@@ -797,32 +797,22 @@ RETURN JSON:
                         f"{citation.get('url', '')}_{citation.get('quote', '')}".encode()
                     ).hexdigest()
                     
-                    if is_sqlite():
-                        stmt = text(
-                            """
-                            INSERT OR REPLACE INTO evidence (
-                                run_id, vehicle_key, field, value_json, quote, source_url, source_hash, fetched_at
-                            ) VALUES (
-                                :run_id, :vehicle_key, :field, :value, :quote, :source_url, :source_hash, :fetched_at
-                            )
-                            """
+                    # PostgreSQL version with ON CONFLICT
+                    stmt = text(
+                        """
+                        INSERT INTO evidence (
+                            run_id, vehicle_key, field, value_json, quote, source_url, source_hash, fetched_at
+                        ) VALUES (
+                            :run_id, :vehicle_key, :field, CAST(:value AS JSONB), :quote, :source_url, :source_hash, :fetched_at
                         )
-                    else:
-                        stmt = text(
-                            """
-                            INSERT INTO evidence (
-                                run_id, vehicle_key, field, value_json, quote, source_url, source_hash, fetched_at
-                            ) VALUES (
-                                :run_id, :vehicle_key, :field, CAST(:value AS JSONB), :quote, :source_url, :source_hash, :fetched_at
-                            )
-                            ON CONFLICT (run_id, field) DO UPDATE SET
-                                value_json = EXCLUDED.value_json,
-                                quote = EXCLUDED.quote,
-                                source_url = EXCLUDED.source_url,
-                                source_hash = EXCLUDED.source_hash,
-                                fetched_at = EXCLUDED.fetched_at
-                            """
-                        )
+                        ON CONFLICT (run_id, field) DO UPDATE SET
+                            value_json = EXCLUDED.value_json,
+                            quote = EXCLUDED.quote,
+                            source_url = EXCLUDED.source_url,
+                            source_hash = EXCLUDED.source_hash,
+                            fetched_at = EXCLUDED.fetched_at
+                        """
+                    )
                     
                     conn.execute(
                         stmt,

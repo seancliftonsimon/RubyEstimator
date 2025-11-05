@@ -266,6 +266,11 @@ def import_catalog_from_json(json_data: Dict[str, Any]) -> bool:
             logger.info("✓ Cleared existing catalog data")
 
             # Import makes and models
+            total_makes = 0
+            total_models = 0
+            skipped_duplicates = 0
+            skipped_conflicts = 0
+            
             for make_data in json_data.get("makes", []):
                 make_name = make_data["make"]
                 make_norm = normalize_catalog_string(make_name)
@@ -285,27 +290,60 @@ def import_catalog_from_json(json_data: Dict[str, Any]) -> bool:
                     }
                 )
                 make_id = make_result.fetchone()[0]
-                logger.info(f"✓ Imported make: {make_name} (ID: {make_id})")
+                total_makes += 1
+                logger.debug(f"✓ Imported make: {make_name} (ID: {make_id})")
 
                 # Insert models for this make
+                # Track seen models to avoid duplicates within the same make
+                seen_models = set()
+                make_model_count = 0
+                
                 for model_data in make_data.get("models", []):
                     model_name = model_data["name"]
                     model_norm = normalize_catalog_string(model_name)
+                    
+                    # Skip if we've already seen this normalized model name
+                    if model_norm["norm"] in seen_models:
+                        skipped_duplicates += 1
+                        logger.debug(f"  ⚠ Skipping duplicate model: {model_name} (normalized: {model_norm['norm']})")
+                        continue
+                    
+                    seen_models.add(model_norm["norm"])
                     model_aliases = model_data.get("aliases", [])
 
-                    conn.execute(
-                        text("""
-                            INSERT INTO ref_models (make_id, name, name_norm, aliases_json)
-                            VALUES (:make_id, :name, :name_norm, :aliases_json)
-                        """),
-                        {
-                            "make_id": make_id,
-                            "name": model_norm["display"],
-                            "name_norm": model_norm["norm"],
-                            "aliases_json": json.dumps(model_aliases)
-                        }
-                    )
-                    logger.info(f"  ✓ Imported model: {model_name}")
+                    try:
+                        # Use ON CONFLICT for PostgreSQL
+                        # PostgreSQL supports ON CONFLICT (columns) DO NOTHING syntax
+                        conn.execute(
+                            text("""
+                                INSERT INTO ref_models (make_id, name, name_norm, aliases_json)
+                                VALUES (:make_id, :name, :name_norm, :aliases_json)
+                                ON CONFLICT (make_id, name_norm) DO NOTHING
+                            """),
+                            {
+                                "make_id": make_id,
+                                "name": model_norm["display"],
+                                "name_norm": model_norm["norm"],
+                                "aliases_json": json.dumps(model_aliases)
+                            }
+                        )
+                        make_model_count += 1
+                        total_models += 1
+                        logger.debug(f"  ✓ Imported model: {model_name}")
+                    except Exception as e:
+                        skipped_conflicts += 1
+                        logger.warning(f"  ⚠ Skipped model {model_name} due to conflict: {e}")
+                
+                # Log summary per make (only if there are models)
+                if make_model_count > 0:
+                    logger.debug(f"  {make_name}: {make_model_count} models imported")
+            
+            # Log final summary
+            logger.info(f"✓ Imported {total_makes} makes and {total_models} models")
+            if skipped_duplicates > 0:
+                logger.info(f"  ⚠ Skipped {skipped_duplicates} duplicate models")
+            if skipped_conflicts > 0:
+                logger.warning(f"  ⚠ Skipped {skipped_conflicts} models due to conflicts")
 
             # Rebuild aliases table
             if not rebuild_alias_table():
@@ -336,88 +374,46 @@ def export_catalog_to_json() -> Dict[str, Any]:
     logger.info("📤 Exporting catalog to JSON")
 
     try:
-        from database_config import is_sqlite
         ensure_schema()
         engine = create_database_engine()
 
         with engine.connect() as conn:
-            if is_sqlite():
-                # SQLite version - use simpler queries
-                makes_result = conn.execute(
-                    text("""
-                        SELECT m.id, m.name, m.aliases_json
-                        FROM ref_makes m
-                        ORDER BY m.name
-                    """)
-                )
+            # PostgreSQL version with JSON functions
+            makes_result = conn.execute(
+                text("""
+                    SELECT m.id, m.name, m.aliases_json,
+                           json_agg(
+                               json_build_object(
+                                   'name', md.name,
+                                   'aliases', md.aliases_json::json
+                               )
+                           ) as models
+                    FROM ref_makes m
+                    LEFT JOIN ref_models md ON md.make_id = m.id
+                    GROUP BY m.id, m.name, m.aliases_json
+                    ORDER BY m.name
+                """)
+            )
 
-                makes = []
-                for make_row in makes_result:
-                    make_id, make_name, make_aliases_json = make_row
+            makes = []
+            for row in makes_result:
+                make_data = {
+                    "make": row[1],  # name
+                    "aliases": json.loads(row[2]) if row[2] else [],  # aliases_json
+                    "models": []
+                }
 
-                    make_data = {
-                        "make": make_name,
-                        "aliases": json.loads(make_aliases_json) if make_aliases_json else [],
-                        "models": []
-                    }
+                # Process models
+                if row[3]:  # models JSON array
+                    for model_json in row[3]:
+                        if model_json:  # Skip null models
+                            model_data = {
+                                "name": model_json["name"],
+                                "aliases": model_json["aliases"] if model_json["aliases"] else []
+                            }
+                            make_data["models"].append(model_data)
 
-                    # Get models for this make
-                    models_result = conn.execute(
-                        text("""
-                            SELECT name, aliases_json
-                            FROM ref_models
-                            WHERE make_id = ?
-                            ORDER BY name
-                        """),
-                        (make_id,)
-                    )
-
-                    for model_row in models_result:
-                        model_name, model_aliases_json = model_row
-                        model_data = {
-                            "name": model_name,
-                            "aliases": json.loads(model_aliases_json) if model_aliases_json else []
-                        }
-                        make_data["models"].append(model_data)
-
-                    makes.append(make_data)
-            else:
-                # PostgreSQL version with JSON functions
-                makes_result = conn.execute(
-                    text("""
-                        SELECT m.id, m.name, m.aliases_json,
-                               json_agg(
-                                   json_build_object(
-                                       'name', md.name,
-                                       'aliases', md.aliases_json::json
-                                   )
-                               ) as models
-                        FROM ref_makes m
-                        LEFT JOIN ref_models md ON md.make_id = m.id
-                        GROUP BY m.id, m.name, m.aliases_json
-                        ORDER BY m.name
-                    """)
-                )
-
-                makes = []
-                for row in makes_result:
-                    make_data = {
-                        "make": row[1],  # name
-                        "aliases": json.loads(row[2]) if row[2] else [],  # aliases_json
-                        "models": []
-                    }
-
-                    # Process models
-                    if row[3]:  # models JSON array
-                        for model_json in row[3]:
-                            if model_json:  # Skip null models
-                                model_data = {
-                                    "name": model_json["name"],
-                                    "aliases": model_json["aliases"] if model_json["aliases"] else []
-                                }
-                                make_data["models"].append(model_data)
-
-                    makes.append(make_data)
+                makes.append(make_data)
 
             result = {"makes": makes}
             logger.info(f"✓ Exported {len(makes)} makes")
@@ -440,7 +436,6 @@ def rebuild_alias_table() -> bool:
     logger.info("🔄 Rebuilding alias table")
 
     try:
-        from database_config import is_sqlite
         ensure_schema()
         engine = create_database_engine()
 
@@ -448,84 +443,40 @@ def rebuild_alias_table() -> bool:
             # Clear existing aliases
             conn.execute(text("DELETE FROM ref_aliases"))
 
-            if is_sqlite():
-                # SQLite version - process aliases manually
-                # Process make aliases
-                makes_result = conn.execute(
-                    text("SELECT id, aliases_json FROM ref_makes WHERE aliases_json IS NOT NULL AND aliases_json != ''")
-                )
+            # PostgreSQL version with JSON functions
+            # Insert make aliases
+            conn.execute(
+                text("""
+                    INSERT INTO ref_aliases (alias_norm, target_type, target_id)
+                    SELECT
+                        LOWER(TRIM(value)) as alias_norm,
+                        'make' as target_type,
+                        id as target_id
+                    FROM ref_makes,
+                    json_array_elements_text(
+                        CASE WHEN aliases_json IS NULL OR aliases_json = '' THEN '[]'::json
+                             ELSE aliases_json::json END
+                    ) as value
+                    WHERE TRIM(value) != ''
+                """)
+            )
 
-                for make_row in makes_result:
-                    make_id, aliases_json = make_row
-                    try:
-                        aliases = json.loads(aliases_json)
-                        for alias in aliases:
-                            if alias and alias.strip():
-                                conn.execute(
-                                    text("""
-                                        INSERT INTO ref_aliases (alias_norm, target_type, target_id)
-                                        VALUES (?, 'make', ?)
-                                    """),
-                                    (alias.strip().lower(), make_id)
-                                )
-                    except json.JSONDecodeError:
-                        continue
-
-                # Process model aliases
-                models_result = conn.execute(
-                    text("SELECT id, aliases_json FROM ref_models WHERE aliases_json IS NOT NULL AND aliases_json != ''")
-                )
-
-                for model_row in models_result:
-                    model_id, aliases_json = model_row
-                    try:
-                        aliases = json.loads(aliases_json)
-                        for alias in aliases:
-                            if alias and alias.strip():
-                                conn.execute(
-                                    text("""
-                                        INSERT INTO ref_aliases (alias_norm, target_type, target_id)
-                                        VALUES (?, 'model', ?)
-                                    """),
-                                    (alias.strip().lower(), model_id)
-                                )
-                    except json.JSONDecodeError:
-                        continue
-            else:
-                # PostgreSQL version with JSON functions
-                # Insert make aliases
-                conn.execute(
-                    text("""
-                        INSERT INTO ref_aliases (alias_norm, target_type, target_id)
-                        SELECT
-                            LOWER(TRIM(value)) as alias_norm,
-                            'make' as target_type,
-                            id as target_id
-                        FROM ref_makes,
-                        json_array_elements_text(
-                            CASE WHEN aliases_json IS NULL OR aliases_json = '' THEN '[]'::json
-                                 ELSE aliases_json::json END
-                        ) as value
-                        WHERE TRIM(value) != ''
-                    """)
-                )
-
-                # Insert model aliases
-                conn.execute(
-                    text("""
-                        INSERT INTO ref_aliases (alias_norm, target_type, target_id)
-                        SELECT
-                            LOWER(TRIM(value)) as alias_norm,
-                            'model' as target_type,
-                            id as target_id
-                        FROM ref_models,
-                        json_array_elements_text(
-                            CASE WHEN aliases_json IS NULL OR aliases_json = '' THEN '[]'::json
-                                 ELSE aliases_json::json END
-                        ) as value
-                        WHERE TRIM(value) != ''
-                    """)
-                )
+            # Insert model aliases
+            conn.execute(
+                text("""
+                    INSERT INTO ref_aliases (alias_norm, target_type, target_id)
+                    SELECT
+                        LOWER(TRIM(value)) as alias_norm,
+                        'model' as target_type,
+                        id as target_id
+                    FROM ref_models,
+                    json_array_elements_text(
+                        CASE WHEN aliases_json IS NULL OR aliases_json = '' THEN '[]'::json
+                             ELSE aliases_json::json END
+                    ) as value
+                    WHERE TRIM(value) != ''
+                """)
+            )
 
             conn.commit()
             logger.info("✓ Alias table rebuilt successfully")
@@ -560,7 +511,7 @@ def load_reference_catalog() -> Dict[str, Any]:
     Returns:
         Dict: Cached catalog data with indices
     """
-    logger.info("🔄 Loading reference catalog into cache from JSON file")
+    logger.debug("🔄 Loading reference catalog into cache from JSON file")
 
     try:
         import os
@@ -645,7 +596,7 @@ def load_reference_catalog() -> Dict[str, Any]:
                         norm_alias = alias.strip().lower()
                         make_models["alias_to_canonical"][norm_alias] = model_name
 
-        logger.info(f"✅ Loaded {len(cache_data['make_index']['all_makes'])} makes from JSON catalog")
+        logger.debug(f"✅ Loaded {len(cache_data['make_index']['all_makes'])} makes from JSON catalog")
         return cache_data
 
     except Exception as e:
@@ -676,7 +627,7 @@ def ensure_catalog_cached() -> Dict[str, Any]:
         cached_version = st.session_state.get("ref_version", 0)
 
         if current_version != cached_version or "make_index" not in st.session_state:
-            logger.info(f"🔄 Cache version mismatch ({cached_version} vs {current_version}), reloading")
+            logger.debug(f"🔄 Cache version mismatch ({cached_version} vs {current_version}), reloading")
             cache_data = load_reference_catalog()
             st.session_state.update(cache_data)
             return cache_data
