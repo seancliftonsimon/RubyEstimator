@@ -129,7 +129,11 @@ def _merge_dicts(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, An
 
 @st.cache_data(show_spinner=False)
 def load_db_config() -> Dict[str, Any]:
-    return get_app_config() or {}
+    try:
+        return get_app_config() or {}
+    except Exception as e:
+        st.warning(f"Database connection failed, using default configuration: {e}")
+        return {}
 
 def get_config() -> Dict[str, Any]:
     db_cfg = load_db_config()
@@ -976,9 +980,12 @@ with left_col:
         
         # Get current accepted value for display
         current_make_value = st.session_state.get('make_input_accepted', "")
-        
+
+
         # Text input field for make - use value from session state to sync with dropdown
-        make_input = st.text_input("Make", value=current_make_value, key="make_input_text")
+        # Use a dynamic key to force update when value changes
+        make_input_key = f"make_input_text_{current_make_value}"
+        make_input = st.text_input("Make", value=current_make_value, key=make_input_key)
         
         # Dropdown list below text input - "Choose from list" as first option
         make_dropdown_options = ["Choose from list"] + (all_makes_list.copy() if all_makes_list else [])
@@ -1175,10 +1182,12 @@ with left_col:
         current_model_value = st.session_state.get('model_input_accepted', "")
         
         # Text input field for model (disabled until make is selected) - use value from session state to sync with dropdown
+        # Use a dynamic key to force update when value changes
+        model_input_key = f"model_input_text_{current_model_value}_{accepted_make}"
         model_input = st.text_input(
             "Model" + (f" ({accepted_make})" if accepted_make else ""),
             value=current_model_value,
-            key="model_input_text",
+            key=model_input_key,
             disabled=not accepted_make
         )
         
