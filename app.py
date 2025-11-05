@@ -966,8 +966,8 @@ with left_col:
 
     # --- Main Form ---
     # Add small gaps between columns to prevent rendering issues
-    # Year is 2/3 of previous size, Make is 3/4 of previous size, reduced gap between Year and Make
-    col1, gap1, col2, gap2, col3 = st.columns([1.0, 0.05, 2.25, 0.1, 3])
+    # Year is 2/3 of previous size, Make and Model are 2/3 of previous size, reduced gap between Year and Make
+    col1, gap1, col2, gap2, col3 = st.columns([1.0, 0.05, 1.5, 0.1, 2])
 
     # Year input (simple text input, no suggestions needed)
     with col1:
@@ -1782,7 +1782,7 @@ with right_col:
                 <div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #9ca3af; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.2);">
                     <div style="text-align: center;">
                         <div style="font-size: 0.875rem; color: #4b5563; font-weight: 600; margin-bottom: 0.5rem;">📉 Total Costs</div>
-                        <div style="font-size: 1.5rem; color: #1f2937; font-weight: 700;">-{format_currency(totals["total_costs"])}</div>
+                        <div style="font-size: 1.5rem; color: #1f2937; font-weight: 700;">{format_currency(totals["total_costs"])}</div>
                     </div>
                 </div>
                     """, unsafe_allow_html=True)

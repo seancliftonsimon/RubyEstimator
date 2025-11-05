@@ -156,6 +156,38 @@ def test_retry_logic_with_503():
             print("[OK] Retry logic test passed (succeeded on 3rd attempt)")
 
 
+def test_status_value_consistency_fix():
+    """Test that inconsistent status/value combinations are fixed during validation."""
+    from single_call_gemini_resolver import SingleCallGeminiResolver
+
+    resolver = SingleCallGeminiResolver(api_key='test')
+
+    # Test data with inconsistent status/value combinations (like the bug we fixed)
+    inconsistent_result = {
+        "curb_weight": {"value": 3230.0, "status": "not_found", "citations": [], "confidence": 0.7},  # Should be None
+        "aluminum_engine": {"value": False, "status": "not_found", "citations": [], "confidence": 0.0},  # Should be None
+        "aluminum_rims": {"value": True, "status": "found", "citations": [{"url": "test.com"}], "confidence": 0.7},  # Should stay True
+        "catalytic_converters": {"value": 2, "status": "conflicting", "citations": [{"url": "test1.com"}, {"url": "test2.com"}], "confidence": 0.4}  # Should be None
+    }
+
+    validated = resolver._validate_and_normalize(inconsistent_result)
+
+    # Check that not_found/conflicting statuses result in None values
+    assert validated["curb_weight"]["value"] is None, f"curb_weight should be None for status='not_found', got {validated['curb_weight']['value']}"
+    assert validated["curb_weight"]["status"] == "not_found"
+
+    assert validated["aluminum_engine"]["value"] is None, f"aluminum_engine should be None for status='not_found', got {validated['aluminum_engine']['value']}"
+    assert validated["aluminum_engine"]["status"] == "not_found"
+
+    assert validated["aluminum_rims"]["value"] is True, f"aluminum_rims should stay True for status='found', got {validated['aluminum_rims']['value']}"
+    assert validated["aluminum_rims"]["status"] == "found"
+
+    assert validated["catalytic_converters"]["value"] is None, f"catalytic_converters should be None for status='conflicting', got {validated['catalytic_converters']['value']}"
+    assert validated["catalytic_converters"]["status"] == "conflicting"
+
+    print("[OK] Status/value consistency fix test passed")
+
+
 if __name__ == "__main__":
     print("Running error handling tests...\n")
     
@@ -164,6 +196,7 @@ if __name__ == "__main__":
         test_data_not_found_returns_none_values()
         test_success_case()
         test_retry_logic_with_503()
+        test_status_value_consistency_fix()
         
         print("\n[SUCCESS] All tests passed!")
     except AssertionError as e:

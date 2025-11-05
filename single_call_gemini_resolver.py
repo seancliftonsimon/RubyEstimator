@@ -409,13 +409,22 @@ RETURN JSON:
         # Validate curb_weight
         curb_weight = result.get("curb_weight", {})
         raw_weight = curb_weight.get("value")
-        normalized_weight = self._normalize_weight(raw_weight)
-        if raw_weight != normalized_weight:
-            logger.debug(f"curb_weight: normalized {raw_weight} -> {normalized_weight}")
+        status = curb_weight.get("status", "not_found")
+
+        # Fix inconsistency: if status indicates no data, value should be None
+        if status in ("not_found", "conflicting"):
+            normalized_weight = None
+            if raw_weight is not None:
+                logger.debug(f"curb_weight: status='{status}' but value provided, setting to None")
+        else:
+            normalized_weight = self._normalize_weight(raw_weight)
+            if raw_weight != normalized_weight:
+                logger.debug(f"curb_weight: normalized {raw_weight} -> {normalized_weight}")
+
         validated["curb_weight"] = {
             "value": normalized_weight,
             "unit": "lbs",
-            "status": curb_weight.get("status", "not_found"),
+            "status": status,
             "citations": curb_weight.get("citations", []),
             "confidence": self._calculate_confidence(curb_weight)
         }
@@ -423,12 +432,21 @@ RETURN JSON:
         # Validate aluminum_engine
         aluminum_engine = result.get("aluminum_engine", {})
         raw_engine = aluminum_engine.get("value")
-        normalized_engine = self._normalize_boolean(raw_engine)
-        if raw_engine != normalized_engine:
-            logger.debug(f"aluminum_engine: normalized {raw_engine} -> {normalized_engine}")
+        status = aluminum_engine.get("status", "not_found")
+
+        # Fix inconsistency: if status indicates no data, value should be None
+        if status in ("not_found", "conflicting"):
+            normalized_engine = None
+            if raw_engine is not None:
+                logger.debug(f"aluminum_engine: status='{status}' but value provided, setting to None")
+        else:
+            normalized_engine = self._normalize_boolean(raw_engine)
+            if raw_engine != normalized_engine:
+                logger.debug(f"aluminum_engine: normalized {raw_engine} -> {normalized_engine}")
+
         validated["aluminum_engine"] = {
             "value": normalized_engine,
-            "status": aluminum_engine.get("status", "not_found"),
+            "status": status,
             "citations": aluminum_engine.get("citations", []),
             "confidence": self._calculate_confidence(aluminum_engine)
         }
@@ -436,12 +454,21 @@ RETURN JSON:
         # Validate aluminum_rims
         aluminum_rims = result.get("aluminum_rims", {})
         raw_rims = aluminum_rims.get("value")
-        normalized_rims = self._normalize_boolean(raw_rims)
-        if raw_rims != normalized_rims:
-            logger.debug(f"aluminum_rims: normalized {raw_rims} -> {normalized_rims}")
+        status = aluminum_rims.get("status", "not_found")
+
+        # Fix inconsistency: if status indicates no data, value should be None
+        if status in ("not_found", "conflicting"):
+            normalized_rims = None
+            if raw_rims is not None:
+                logger.debug(f"aluminum_rims: status='{status}' but value provided, setting to None")
+        else:
+            normalized_rims = self._normalize_boolean(raw_rims)
+            if raw_rims != normalized_rims:
+                logger.debug(f"aluminum_rims: normalized {raw_rims} -> {normalized_rims}")
+
         validated["aluminum_rims"] = {
             "value": normalized_rims,
-            "status": aluminum_rims.get("status", "not_found"),
+            "status": status,
             "citations": aluminum_rims.get("citations", []),
             "confidence": self._calculate_confidence(aluminum_rims)
         }
@@ -449,12 +476,21 @@ RETURN JSON:
         # Validate catalytic_converters
         catalytic_converters = result.get("catalytic_converters", {})
         raw_cats = catalytic_converters.get("value")
-        normalized_cats = self._normalize_count(raw_cats)
-        if raw_cats != normalized_cats:
-            logger.debug(f"catalytic_converters: normalized {raw_cats} -> {normalized_cats}")
+        status = catalytic_converters.get("status", "not_found")
+
+        # Fix inconsistency: if status indicates no data, value should be None
+        if status in ("not_found", "conflicting"):
+            normalized_cats = None
+            if raw_cats is not None:
+                logger.debug(f"catalytic_converters: status='{status}' but value provided, setting to None")
+        else:
+            normalized_cats = self._normalize_count(raw_cats)
+            if raw_cats != normalized_cats:
+                logger.debug(f"catalytic_converters: normalized {raw_cats} -> {normalized_cats}")
+
         validated["catalytic_converters"] = {
             "value": normalized_cats,
-            "status": catalytic_converters.get("status", "not_found"),
+            "status": status,
             "citations": catalytic_converters.get("citations", []),
             "confidence": self._calculate_confidence(catalytic_converters)
         }
