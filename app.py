@@ -227,12 +227,12 @@ def validate_make_year_compatibility(make: str, year: int) -> tuple[bool, str]:
     
     # Check if year is before start_year
     if year < start_year:
-        warning_msg = f"⚠️ Are you sure that date is from before the production time of {make_info['make']}? {make_info['make']} started production in {start_year}, but you entered {year}."
+        warning_msg = f"⚠️ Are you sure that date is from before the production time of {make_info['make']}?<br>{make_info['make']} started production in {start_year}, but you entered {year}."
         return (False, warning_msg)
     
     # Check if year is after end_year (only if end_year is not None)
     if end_year is not None and year > end_year:
-        warning_msg = f"⚠️ Are you sure that date is from after the production time of {make_info['make']}? {make_info['make']} ended production in {end_year}, but you entered {year}."
+        warning_msg = f"⚠️ Are you sure that date is from after the production time of {make_info['make']}?<br>{make_info['make']} ended production in {end_year}, but you entered {year}."
         return (False, warning_msg)
     
     # Year is within valid range
@@ -1458,9 +1458,32 @@ with left_col:
                     # Validate make-year compatibility
                     is_valid, warning_message = validate_make_year_compatibility(make_input, year_int)
                     if not is_valid:
-                        # Clear pending search on validation failure
+                        # Clear pending search to prevent automatic search
                         del st.session_state['pending_search']
-                        st.warning(warning_message)
+                        
+                        # Store search data for "Search anyway" button
+                        st.session_state['pending_search_after_warning'] = {
+                            'year': year_input,
+                            'make': make_input,
+                            'model': model_input
+                        }
+                        
+                        # Display warning with line breaks and "Search anyway" button
+                        st.markdown(f"""
+                        <div class="warning-message">
+                            {warning_message}
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Add "Search anyway" button
+                        col1, col2, col3 = st.columns([1, 1, 1])
+                        with col2:
+                            if st.button("Search anyway", key="search_anyway_button", use_container_width=True):
+                                # Restore pending search to proceed with search
+                                if 'pending_search_after_warning' in st.session_state:
+                                    st.session_state['pending_search'] = st.session_state['pending_search_after_warning']
+                                    del st.session_state['pending_search_after_warning']
+                                st.rerun()
                     else:
                         # Create a unique identifier for this vehicle search
                         vehicle_id = f"{year_int}_{make_input}_{model_input}"
