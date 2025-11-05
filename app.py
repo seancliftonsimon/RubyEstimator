@@ -961,67 +961,63 @@ with left_col:
 
     # Make input with dropdown - dynamic options with custom entry support
     with col2:
-        # Initialize raw input tracking if not exists
-        if 'make_raw_input' not in st.session_state:
-            st.session_state['make_raw_input'] = ""
         
         # Get all makes for dropdown (already alphabetized)
         all_makes_list = get_all_makes()
         
-        # Get current accepted value or raw input
-        make_raw = st.session_state.get('make_raw_input', "")
-        current_make_value = st.session_state.get('make_input_accepted', make_raw if make_raw else "")
+        # Get current accepted value
+        current_make_value = st.session_state.get('make_input_accepted', "")
 
-        # Build dynamic options list
-        # Always include custom text if it exists and isn't in the standard list
-        if make_raw and make_raw.strip() and make_raw not in all_makes_list:
-            # User has custom text - put their text first, then filtered suggestions
-            filtered_makes = filter_make_suggestions(make_raw, max_suggestions=15)
-            # Remove the user's exact text from filtered list if it's there
-            filtered_makes = [m for m in filtered_makes if m.lower() != make_raw.strip().lower()]
-            make_options = [""] + [make_raw] + filtered_makes
+        # Build filtered options list based on current input
+        if make_input and make_input.strip():
+            # Filter suggestions based on typed text
+            make_options = filter_make_suggestions(make_input, max_suggestions=15)
         else:
-            # No custom input or it's a standard option - show all makes
-            make_options = [""] + (all_makes_list if all_makes_list else [])
+            # Show all makes when no input
+            make_options = (all_makes_list if all_makes_list else [])
         
         # Find index of current value
-        make_index = 0
+        make_index = None
         if current_make_value and current_make_value in make_options:
             make_index = make_options.index(current_make_value)
         
-        # Selectbox allows clicking and typing to filter options
-        make_input = st.selectbox(
+        # Text input allows custom values to persist
+        make_input = st.text_input(
             "Make",
-            options=make_options,
-            index=make_index,
+            value=current_make_value,
             key="make_input_main"
         )
 
-        # Store custom input immediately if it's not in the standard list
-        if make_input and make_input not in all_makes_list:
-            st.session_state['make_raw_input'] = make_input
-        elif make_input in all_makes_list:
-            # Standard selection - clear raw input
-            st.session_state['make_raw_input'] = ""
-        
-        # Store selected make (will be either standard or custom entry)
+        # Show filtered suggestions below if there are options and user hasn't selected a custom value
+        if make_options and make_input not in make_options:
+            make_suggestion = st.selectbox(
+                "Suggestions (click to select)",
+                options=make_options,
+                index=None,
+                key="make_suggestions",
+                help="Select from suggestions or continue typing for custom entry"
+            )
+            # If user selected a suggestion, update the text input
+            if make_suggestion:
+                st.session_state['make_input_main'] = make_suggestion
+                st.rerun()
+
+        # Store selected make
         previous_make = st.session_state.get('make_input_accepted', "")
         if make_input:
             st.session_state['make_input_accepted'] = make_input
-            # If make changed, clear model raw input
+            # If make changed, clear model
             if previous_make != make_input:
-                st.session_state['model_raw_input'] = ""
+                if 'model_input_accepted' in st.session_state:
+                    del st.session_state['model_input_accepted']
         elif not make_input and 'make_input_accepted' in st.session_state:
             del st.session_state['make_input_accepted']
-            st.session_state['make_raw_input'] = ""
-            # Clear model raw input when make is cleared
-            st.session_state['model_raw_input'] = ""
+            # Clear model when make is cleared
+            if 'model_input_accepted' in st.session_state:
+                del st.session_state['model_input_accepted']
 
     # Model input with dropdown - dynamic options with custom entry support
     with col3:
-        # Initialize raw input tracking if not exists
-        if 'model_raw_input' not in st.session_state:
-            st.session_state['model_raw_input'] = ""
         
         # Get the accepted make
         accepted_make = st.session_state.get('make_input_accepted', make_input if make_input else None)
@@ -1032,50 +1028,53 @@ with left_col:
         else:
             model_options_list = []
         
-        # Get current accepted value or raw input
-        model_raw = st.session_state.get('model_raw_input', "")
-        current_model_value = st.session_state.get('model_input_accepted', model_raw if model_raw else "")
+        # Get current accepted value
+        current_model_value = st.session_state.get('model_input_accepted', "")
         
-        # Build dynamic options list
-        # If user has typed something custom, put it first, then filtered matches
-        if model_raw and model_raw.strip() and model_raw not in model_options_list and accepted_make:
-            # User has custom text - put their text first, then filtered suggestions
-            filtered_models = filter_model_suggestions(accepted_make, model_raw, max_suggestions=15)
-            # Remove the user's exact text from filtered list if it's there
-            filtered_models = [m for m in filtered_models if m.lower() != model_raw.strip().lower()]
-            model_options = [""] + [model_raw] + filtered_models
+        # Build filtered options list based on current input
+        if accepted_make:
+            if model_input and model_input.strip():
+                # Filter suggestions based on typed text
+                model_options = filter_model_suggestions(accepted_make, model_input, max_suggestions=15)
+            else:
+                # Show all models when no input
+                model_options = (model_options_list if model_options_list else [])
         else:
-            # No custom input or it's a standard option - show all models
-            model_options = [""] + (model_options_list if model_options_list else [])
+            model_options = []
         
         # Find index of current value
-        model_index = 0
+        model_index = None
         if current_model_value and current_model_value in model_options:
             model_index = model_options.index(current_model_value)
         
-        # Selectbox allows clicking and typing to filter options
+        # Text input allows custom values to persist
         model_label = f"Model" + (f" ({accepted_make})" if accepted_make else "")
-        model_input = st.selectbox(
+        model_input = st.text_input(
             model_label,
-            options=model_options,
-            index=model_index,
+            value=current_model_value,
             key="model_input_main",
             disabled=not accepted_make
         )
 
-        # Store custom input immediately if it's not in the standard list
-        if model_input and accepted_make and model_input not in model_options_list:
-            st.session_state['model_raw_input'] = model_input
-        elif model_input and accepted_make and model_input in model_options_list:
-            # Standard selection - clear raw input
-            st.session_state['model_raw_input'] = ""
-        
-        # Store selected model (will be either standard or custom entry)
+        # Show filtered suggestions below if there are options and user hasn't selected a custom value
+        if model_options and accepted_make and model_input not in model_options:
+            model_suggestion = st.selectbox(
+                "Suggestions (click to select)",
+                options=model_options,
+                index=None,
+                key="model_suggestions",
+                help="Select from suggestions or continue typing for custom entry"
+            )
+            # If user selected a suggestion, update the text input
+            if model_suggestion:
+                st.session_state['model_input_main'] = model_suggestion
+                st.rerun()
+
+        # Store selected model
         if model_input:
             st.session_state['model_input_accepted'] = model_input
         elif not model_input and 'model_input_accepted' in st.session_state:
             del st.session_state['model_input_accepted']
-            st.session_state['model_raw_input'] = ""
 
     # Submit button (moved outside form for dynamic enabling)
     submit_disabled = (
