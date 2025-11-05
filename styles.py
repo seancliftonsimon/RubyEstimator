@@ -946,9 +946,16 @@ def generate_admin_mode_css() -> str:
 
 def format_currency(value: float, show_cents: bool = True) -> str:
     """Format value as currency."""
-    if show_cents:
-        return f"${value:,.2f}"
-    return f"${value:,.0f}"
+    if value < 0:
+        # For negative values, place the negative sign before the dollar sign
+        if show_cents:
+            return f"-${abs(value):,.2f}"
+        return f"-${abs(value):,.0f}"
+    else:
+        # For positive values, normal formatting
+        if show_cents:
+            return f"${value:,.2f}"
+        return f"${value:,.0f}"
 
 
 def format_weight(value: float) -> str:

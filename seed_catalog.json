@@ -1788,6 +1788,435 @@
           ]
         }
       ]
+    },
+    {
+      "make": "Hummer",
+      "aliases": [
+        "Hummer Division"
+      ],
+      "models": [
+        {
+          "name": "H2",
+          "aliases": []
+        },
+        {
+          "name": "H3",
+          "aliases": []
+        },
+        {
+          "name": "H3T",
+          "aliases": []
+        },
+        {
+          "name": "H1",
+          "aliases": []
+        }
+      ]
+    },
+    {
+      "make": "Mercury",
+      "aliases": [
+        "Mercury Division"
+      ],
+      "models": [
+        {
+          "name": "Grand Marquis",
+          "aliases": [
+            "GrandMarquis",
+            "Grand-Marquis"
+          ]
+        },
+        {
+          "name": "Sable",
+          "aliases": []
+        },
+        {
+          "name": "Mountaineer",
+          "aliases": []
+        },
+        {
+          "name": "Mariner",
+          "aliases": []
+        },
+        {
+          "name": "Milan",
+          "aliases": []
+        },
+        {
+          "name": "Cougar",
+          "aliases": []
+        },
+        {
+          "name": "Villager",
+          "aliases": []
+        },
+        {
+          "name": "Town Car",
+          "aliases": [
+            "TownCar",
+            "Town-Car"
+          ]
+        },
+        {
+          "name": "Mystique",
+          "aliases": []
+        },
+        {
+          "name": "Tracer",
+          "aliases": []
+        }
+      ]
+    },
+    {
+      "make": "Oldsmobile",
+      "aliases": [
+        "Oldsmobile Division"
+      ],
+      "models": [
+        {
+          "name": "Cutlass",
+          "aliases": []
+        },
+        {
+          "name": "Cutlass Supreme",
+          "aliases": [
+            "CutlassSupreme",
+            "Cutlass-Supreme"
+          ]
+        },
+        {
+          "name": "Alero",
+          "aliases": []
+        },
+        {
+          "name": "Aurora",
+          "aliases": []
+        },
+        {
+          "name": "Intrigue",
+          "aliases": []
+        },
+        {
+          "name": "Bravada",
+          "aliases": []
+        },
+        {
+          "name": "88",
+          "aliases": []
+        },
+        {
+          "name": "98",
+          "aliases": []
+        },
+        {
+          "name": "Silhouette",
+          "aliases": []
+        },
+        {
+          "name": "Achieva",
+          "aliases": []
+        }
+      ]
+    },
+    {
+      "make": "Plymouth",
+      "aliases": [
+        "Plymouth Division"
+      ],
+      "models": [
+        {
+          "name": "Voyager",
+          "aliases": []
+        },
+        {
+          "name": "Neon",
+          "aliases": []
+        },
+        {
+          "name": "Breeze",
+          "aliases": []
+        },
+        {
+          "name": "Prowler",
+          "aliases": []
+        },
+        {
+          "name": "Acclaim",
+          "aliases": []
+        },
+        {
+          "name": "Sundance",
+          "aliases": []
+        },
+        {
+          "name": "Horizon",
+          "aliases": []
+        },
+        {
+          "name": "Reliant",
+          "aliases": []
+        },
+        {
+          "name": "Laser",
+          "aliases": []
+        }
+      ]
+    },
+    {
+      "make": "Pontiac",
+      "aliases": [
+        "Pontiac Motor"
+      ],
+      "models": [
+        {
+          "name": "Grand Prix",
+          "aliases": [
+            "GrandPrix",
+            "Grand-Prix"
+          ]
+        },
+        {
+          "name": "Grand Am",
+          "aliases": [
+            "GrandAm",
+            "Grand-Am"
+          ]
+        },
+        {
+          "name": "Bonneville",
+          "aliases": []
+        },
+        {
+          "name": "G6",
+          "aliases": []
+        },
+        {
+          "name": "G5",
+          "aliases": []
+        },
+        {
+          "name": "G8",
+          "aliases": []
+        },
+        {
+          "name": "Firebird",
+          "aliases": []
+        },
+        {
+          "name": "Trans Am",
+          "aliases": [
+            "TransAm",
+            "Trans-Am"
+          ]
+        },
+        {
+          "name": "GTO",
+          "aliases": []
+        },
+        {
+          "name": "Sunfire",
+          "aliases": []
+        },
+        {
+          "name": "Vibe",
+          "aliases": []
+        },
+        {
+          "name": "Aztek",
+          "aliases": []
+        },
+        {
+          "name": "Torrent",
+          "aliases": []
+        }
+      ]
+    },
+    {
+      "make": "Saab",
+      "aliases": [
+        "Saab Automobile"
+      ],
+      "models": [
+        {
+          "name": "9-3",
+          "aliases": [
+            "93"
+          ]
+        },
+        {
+          "name": "9-5",
+          "aliases": [
+            "95"
+          ]
+        },
+        {
+          "name": "900",
+          "aliases": []
+        },
+        {
+          "name": "9000",
+          "aliases": []
+        },
+        {
+          "name": "9-7X",
+          "aliases": [
+            "97X"
+          ]
+        },
+        {
+          "name": "9-2X",
+          "aliases": [
+            "92X"
+          ]
+        }
+      ]
+    },
+    {
+      "make": "Saturn",
+      "aliases": [
+        "Saturn Corporation"
+      ],
+      "models": [
+        {
+          "name": "S-Series",
+          "aliases": [
+            "SSeries"
+          ]
+        },
+        {
+          "name": "SL",
+          "aliases": []
+        },
+        {
+          "name": "SW",
+          "aliases": []
+        },
+        {
+          "name": "SC",
+          "aliases": []
+        },
+        {
+          "name": "Vue",
+          "aliases": []
+        },
+        {
+          "name": "Ion",
+          "aliases": []
+        },
+        {
+          "name": "Aura",
+          "aliases": []
+        },
+        {
+          "name": "Outlook",
+          "aliases": []
+        },
+        {
+          "name": "Sky",
+          "aliases": []
+        },
+        {
+          "name": "Relay",
+          "aliases": []
+        },
+        {
+          "name": "L-Series",
+          "aliases": [
+            "LSeries"
+          ]
+        }
+      ]
+    },
+    {
+      "make": "Scion",
+      "aliases": [
+        "Scion (Toyota)"
+      ],
+      "models": [
+        {
+          "name": "xB",
+          "aliases": []
+        },
+        {
+          "name": "tC",
+          "aliases": []
+        },
+        {
+          "name": "xD",
+          "aliases": []
+        },
+        {
+          "name": "xA",
+          "aliases": []
+        },
+        {
+          "name": "FR-S",
+          "aliases": [
+            "FRS"
+          ]
+        },
+        {
+          "name": "iA",
+          "aliases": []
+        },
+        {
+          "name": "iM",
+          "aliases": []
+        }
+      ]
+    },
+    {
+      "make": "Suzuki",
+      "aliases": [
+        "Suzuki Motor"
+      ],
+      "models": [
+        {
+          "name": "Grand Vitara",
+          "aliases": [
+            "GrandVitara",
+            "Grand-Vitara"
+          ]
+        },
+        {
+          "name": "Vitara",
+          "aliases": []
+        },
+        {
+          "name": "SX4",
+          "aliases": []
+        },
+        {
+          "name": "Kizashi",
+          "aliases": []
+        },
+        {
+          "name": "Equator",
+          "aliases": []
+        },
+        {
+          "name": "Samurai",
+          "aliases": []
+        },
+        {
+          "name": "Sidekick",
+          "aliases": []
+        },
+        {
+          "name": "XL-7",
+          "aliases": [
+            "XL7"
+          ]
+        },
+        {
+          "name": "Esteem",
+          "aliases": []
+        },
+        {
+          "name": "Aerio",
+          "aliases": []
+        }
+      ]
     }
   ]
 }
