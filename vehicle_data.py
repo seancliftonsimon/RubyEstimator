@@ -445,6 +445,8 @@ def rebuild_alias_table() -> bool:
 
             # PostgreSQL version with JSON functions
             # Insert make aliases
+            # Handle JSONB: use COALESCE to default to empty array for NULL values
+            # json_array_elements_text safely handles empty arrays
             conn.execute(
                 text("""
                     INSERT INTO ref_aliases (alias_norm, target_type, target_id)
@@ -454,14 +456,9 @@ def rebuild_alias_table() -> bool:
                         id as target_id
                     FROM ref_makes,
                     json_array_elements_text(
-                        CASE 
-                            WHEN aliases_json IS NULL THEN '[]'::json
-                            WHEN TRIM(aliases_json::text) = '' THEN '[]'::json
-                            WHEN aliases_json::text = 'null' THEN '[]'::json
-                            ELSE aliases_json::json 
-                        END
+                        COALESCE(aliases_json, '[]'::jsonb)
                     ) as value
-                    WHERE TRIM(value) != ''
+                    WHERE TRIM(value) != '' AND value IS NOT NULL
                 """)
             )
 
@@ -475,14 +472,9 @@ def rebuild_alias_table() -> bool:
                         id as target_id
                     FROM ref_models,
                     json_array_elements_text(
-                        CASE 
-                            WHEN aliases_json IS NULL THEN '[]'::json
-                            WHEN TRIM(aliases_json::text) = '' THEN '[]'::json
-                            WHEN aliases_json::text = 'null' THEN '[]'::json
-                            ELSE aliases_json::json 
-                        END
+                        COALESCE(aliases_json, '[]'::jsonb)
                     ) as value
-                    WHERE TRIM(value) != ''
+                    WHERE TRIM(value) != '' AND value IS NOT NULL
                 """)
             )
 
