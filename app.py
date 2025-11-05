@@ -152,6 +152,11 @@ def refresh_config_cache():
 
 def render_admin_ui():
     """Render the admin configuration UI with restore to default functionality."""
+    # Back button to return to main page
+    if st.button("← Back to Main Page", key="admin_back_button", use_container_width=False):
+        st.session_state['admin_mode'] = False
+        st.rerun()
+    
     st.markdown('<div class="main-title">⚙️ Admin Configuration</div>', unsafe_allow_html=True)
     
     # Info banner
@@ -425,124 +430,6 @@ def render_admin_ui():
             else:
                 st.error("❌ Failed to save one or more configuration groups. Please try again.")
 
-    # Reference Catalog Management (outside the form for file uploads)
-    # Create catalog tab separately since it needs buttons outside the form
-    st.markdown("---")
-    with st.expander("📚 Reference Catalog Management", expanded=False):
-        st.markdown("Manage the vehicle make/model reference catalog used for search suggestions and fuzzy matching.")
-
-        # Import section
-        st.markdown("#### 📥 Import Catalog")
-        uploaded_file = st.file_uploader(
-            "Upload JSON catalog file",
-            type=["json"],
-            key="catalog_upload",
-            help="Upload a JSON file containing make/model data with aliases"
-        )
-
-        if uploaded_file is not None:
-            import_col1, import_col2 = st.columns(2)
-
-            with import_col1:
-                if st.button("🔍 Preview", key="preview_catalog", use_container_width=True):
-                    try:
-                        import json
-                        catalog_data = json.load(uploaded_file)
-                        st.session_state['uploaded_catalog'] = catalog_data
-
-                        # Show preview
-                        makes_count = len(catalog_data.get("makes", []))
-                        models_count = sum(len(make.get("models", [])) for make in catalog_data.get("makes", []))
-                        st.success(f"📋 Preview: {makes_count} makes, {models_count} models total")
-
-                        with st.expander("📄 Preview Data"):
-                            st.json(catalog_data)
-                    except Exception as e:
-                        st.error(f"❌ Failed to parse JSON: {e}")
-
-            with import_col2:
-                if st.button("📥 Import", key="import_catalog", use_container_width=True, type="primary"):
-                    if 'uploaded_catalog' in st.session_state:
-                        try:
-                            success = import_catalog_from_json(st.session_state['uploaded_catalog'])
-                            if success:
-                                st.success("✅ Catalog imported successfully!")
-                                invalidate_catalog_cache()
-                                del st.session_state['uploaded_catalog']
-                                st.rerun()
-                            else:
-                                st.error("❌ Catalog import failed")
-                        except Exception as e:
-                            st.error(f"❌ Import error: {e}")
-                    else:
-                        st.warning("Please preview the catalog first")
-
-        # Browse & Edit section
-        st.markdown("#### ✏️ Browse & Edit")
-        all_makes = get_all_makes()
-        if all_makes:
-            selected_make = st.selectbox(
-                "Select Make to Edit",
-                options=[""] + all_makes,
-                key="edit_make_select"
-            )
-
-            if selected_make:
-                models = get_models_for_make(selected_make)
-                if models:
-                    st.markdown(f"**Models for {selected_make}:**")
-                    models_df = pd.DataFrame({"Model": models})
-                    st.dataframe(models_df, use_container_width=True, hide_index=True)
-                else:
-                    st.info(f"No models found for {selected_make}")
-        else:
-            st.info("No makes in catalog yet. Import a catalog first.")
-
-        # Export section
-        st.markdown("#### 📤 Export")
-        export_col1, export_col2 = st.columns(2)
-
-        with export_col1:
-            if st.button("📄 Download JSON", key="export_catalog", use_container_width=True):
-                try:
-                    catalog_json = export_catalog_to_json()
-                    if catalog_json.get("makes"):
-                        # Convert to downloadable format
-                        json_str = json.dumps(catalog_json, indent=2)
-                        st.download_button(
-                            label="📥 Save Catalog JSON",
-                            data=json_str,
-                            file_name="reference_catalog.json",
-                            mime="application/json",
-                            key="download_catalog"
-                        )
-                    else:
-                        st.warning("No catalog data to export")
-                except Exception as e:
-                    st.error(f"❌ Export failed: {e}")
-
-        # Diagnostics section
-        st.markdown("#### 🔍 Diagnostics")
-        stats = get_catalog_stats()
-        diag_col1, diag_col2, diag_col3 = st.columns(3)
-
-        with diag_col1:
-            st.metric("Makes", stats["makes"])
-        with diag_col2:
-            st.metric("Models", stats["models"])
-        with diag_col3:
-            st.metric("Aliases", stats["aliases"])
-
-        if st.button("🔄 Rebuild Cache", key="rebuild_cache", use_container_width=True):
-            try:
-                invalidate_catalog_cache()
-                st.success("✅ Cache rebuilt successfully!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ Cache rebuild failed: {e}")
-
-    # Keep the tab_catalog variable for backwards compatibility but don't use it
-    tab_catalog = None
 
 # Load current config (fallback to defaults)
 CONFIG = get_config()
@@ -971,7 +858,7 @@ with left_col:
 
     # Year input (simple text input, no suggestions needed)
     with col1:
-        year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013", key="year_input_main")
+        year_input = st.text_input("Year", placeholder="e.g., 2013", value="", key="year_input_main")
 
     # Make input with text field and dropdown list
     with col2:
@@ -1313,13 +1200,18 @@ with left_col:
                     st.rerun()
 
     # Submit button (moved outside form for dynamic enabling)
+    # Check if year, make and model are all filled
+    year_input_value = year_input.strip() if year_input else ""
+    make_accepted = st.session_state.get('make_input_accepted', "")
+    model_accepted = st.session_state.get('model_input_accepted', "")
+    
     submit_disabled = (
         st.session_state.get('make_prompt_pending', False) or
-        st.session_state.get('model_prompt_pending', False)
+        st.session_state.get('model_prompt_pending', False) or
+        not year_input_value or
+        not make_accepted or
+        not model_accepted
     )
-
-    if submit_disabled:
-        st.warning("Please answer the questions above before submitting.")
 
     submit_button = st.button(
         "Search Vehicle",
@@ -1594,12 +1486,12 @@ with left_col:
                 """, unsafe_allow_html=True)
 
     # --- Display Recent Entries (Minimized) ---
-    with st.expander("Recently Searched Vehicles (Last 5)", expanded=False, icon="📋"):
+    with st.expander("Recently Searched Vehicles (Last 20)", expanded=False, icon="📋"):
         try:
             recent_entries_df = get_last_ten_entries()
             if not recent_entries_df.empty:
-                # Take only the last 5 entries
-                recent_entries_df = recent_entries_df.head(5)
+                # Take only the last 20 entries
+                recent_entries_df = recent_entries_df.head(20)
                 
                 # Format the aluminum columns for better display
                 def format_aluminum(value):
@@ -1765,29 +1657,7 @@ with right_col:
                             st.error(f"• {error}")
                     
                     # Display summary metrics with semantic colors
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        # Total Sale Value - Blue/Info styling
-                        st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
-                    <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: #1e40af; font-weight: 600; margin-bottom: 0.5rem;">💰 Total Sale Value</div>
-                        <div style="font-size: 1.5rem; color: #1e40af; font-weight: 700;">{format_currency(totals["total_sale"])}</div>
-                    </div>
-                </div>
-                    """, unsafe_allow_html=True)
-                with col2:
-                    # Total Costs - Neutral styling
-                    st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #9ca3af; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.2);">
-                    <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: #4b5563; font-weight: 600; margin-bottom: 0.5rem;">📉 Total Costs</div>
-                        <div style="font-size: 1.5rem; color: #1f2937; font-weight: 700;">{format_currency(totals["total_costs"])}</div>
-                    </div>
-                </div>
-                    """, unsafe_allow_html=True)
-                with col3:
-                    # Net Profit - Dynamic color based on positive/negative
+                    # Row 1: Net Profit (full width)
                     profit_colors = get_semantic_colors(totals["net"], "profit")
                     profit_bg = "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)" if totals["net"] >= 0 else "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)"
                     profit_border = "#16a34a" if totals["net"] >= 0 else "#dc2626"
@@ -1797,7 +1667,30 @@ with right_col:
                 <div style="background: {profit_bg}; padding: 1.5rem; border-radius: 12px; border: 3px solid {profit_border}; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba({profit_colors['text']}, 0.2);">
                     <div style="text-align: center;">
                         <div style="font-size: 0.875rem; color: {profit_text}; font-weight: 600; margin-bottom: 0.5rem;">{profit_icon} Net Profit</div>
-                        <div style="font-size: 1.5rem; color: {profit_text}; font-weight: 700;">{format_currency(totals["net"])}</div>
+                        <div style="font-size: 1.5rem; color: {profit_text}; font-weight: 700; white-space: nowrap;">{format_currency(totals["net"])}</div>
+                    </div>
+                </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Row 2: Total Sale Value and Total Costs (side by side)
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        # Total Sale Value - Blue/Info styling
+                        st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.875rem; color: #1e40af; font-weight: 600; margin-bottom: 0.5rem;">💰 Total Sale Value</div>
+                        <div style="font-size: 1.5rem; color: #1e40af; font-weight: 700; white-space: nowrap;">{format_currency(totals["total_sale"])}</div>
+                    </div>
+                </div>
+                    """, unsafe_allow_html=True)
+                    with col2:
+                        # Total Costs - Neutral styling
+                        st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #9ca3af; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.2);">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.875rem; color: #4b5563; font-weight: 600; margin-bottom: 0.5rem;">📉 Total Costs</div>
+                        <div style="font-size: 1.5rem; color: #1f2937; font-weight: 700; white-space: nowrap;">{format_currency(totals["total_costs"])}</div>
                     </div>
                 </div>
                     """, unsafe_allow_html=True)
@@ -1938,67 +1831,6 @@ with right_col:
                 summary_df = pd.DataFrame(summary_data)
                 
                 st.dataframe(summary_df, width='stretch', hide_index=True)
-                
-                # Add provenance and confidence details section
-                st.markdown('<div class="subsection-header">Data Quality & Sources</div>', unsafe_allow_html=True)
-                
-                # Enhanced warning banners with specific guidance
-                low_confidence_warnings = []
-                medium_confidence_warnings = []
-                
-                # Check for specific data quality issues
-                if any('Engine' in item['Commodity'] for item in weight_based):
-                    if st.session_state.get('last_aluminum_engine') is None:
-                        low_confidence_warnings.append("Engine material unknown - using 50/50 aluminum/iron split. Consider manual verification for accurate pricing.")
-                    else:
-                        medium_confidence_warnings.append("Engine material determined from vehicle specifications - confidence level: medium")
-                
-                if any('Catalytic' in item['Commodity'] for item in count_based):
-                    if st.session_state.get('last_catalytic_converters') is None:
-                        medium_confidence_warnings.append("Catalytic converter count estimated from vehicle type averages - actual count may vary by trim level")
-                
-                if any('Rims' in item['Commodity'] for item in weight_based):
-                    if st.session_state.get('last_aluminum_rims') is None:
-                        medium_confidence_warnings.append("Rim material unknown - assuming steel rims. Aluminum rims would increase value significantly.")
-                
-                # Display warnings with appropriate severity
-                if low_confidence_warnings:
-                    render_warning_banner(low_confidence_warnings)
-                
-                if medium_confidence_warnings:
-                    for warning in medium_confidence_warnings:
-                        st.markdown(f"""
-                        <div class="info-banner" style="
-                            background: rgba(59, 130, 246, 0.1);
-                            border: 1px solid #3b82f6;
-                            border-left: 4px solid #3b82f6;
-                            padding: 1rem;
-                            border-radius: 6px;
-                            margin: 0.5rem 0;
-                            color: #1e40af;
-                            font-weight: 500;
-                        ">
-                            ℹ️ {warning}
-                        </div>
-                        """, unsafe_allow_html=True)
-                
-                # Add visual highlighting for flagged values
-                st.markdown("""
-                <div class="data-quality-legend" style="
-                    background: rgba(248, 250, 252, 0.8);
-                    border: 1px solid #e2e8f0;
-                    border-radius: 6px;
-                    padding: 1rem;
-                    margin: 1rem 0;
-                ">
-                    <h4 style="margin: 0 0 0.5rem 0; color: #334155;">Confidence Level Guide:</h4>
-                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                        <span style="color: #16a34a;">🟢 HIGH (80%+)</span>
-                        <span style="color: #d97706;">🟡 MEDIUM (60-80%)</span>
-                        <span style="color: #dc2626;">🔴 LOW (<60%)</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
         
         else:
             # Show a message when no vehicle has been searched yet
@@ -2009,7 +1841,8 @@ with right_col:
             """, unsafe_allow_html=True)
             
             # Show manual entry option when no vehicle is selected
-            with st.expander("❓ Unknown make/model? Enter curb weight manually", expanded=False, icon="❓"):
+            st.markdown('<div style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0;">Enter curb weight manually</div>', unsafe_allow_html=True)
+            with st.expander("Enter curb weight manually", expanded=False):
                 with st.form(key="manual_calc_form_no_vehicle"):
                     col1, col2 = st.columns(2)
                     with col1:

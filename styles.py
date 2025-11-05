@@ -348,6 +348,25 @@ def generate_main_app_css() -> str:
     [data-testid="stHeader"] {{
         background: {Colors.WHITE} !important;
         border-bottom: 3px solid {Colors.RUBY_PRIMARY} !important;
+        padding: 0.25rem 0 !important;
+        min-height: 2rem !important;
+        max-height: 2rem !important;
+    }}
+    
+    /* Hide Streamlit header elements to reduce top spacing */
+    [data-testid="stHeader"] > div:first-child {{
+        padding: 0 !important;
+        margin: 0 !important;
+    }}
+    
+    /* Minimize top padding on main content area */
+    [data-testid="stAppViewContainer"] > div:first-child {{
+        padding-top: 0.5rem !important;
+    }}
+    
+    .main .block-container {{
+        padding-top: 0.5rem !important;
+        padding-bottom: 1rem !important;
     }}
     
     .main {{
@@ -437,8 +456,9 @@ def generate_main_app_css() -> str:
         font-weight: 700 !important;
         color: {Colors.WHITE} !important;
         background: {Colors.RUBY_GRADIENT} !important;
+        margin-top: 0 !important;
         margin-bottom: 1rem !important;
-        padding: 1rem 1.5rem !important;
+        padding: 0.75rem 1.5rem !important;
         border-radius: {BorderRadius.LG} !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
         box-shadow: 0 6px 16px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15) !important;
