@@ -986,21 +986,39 @@ with left_col:
                     # Check for fuzzy match
                     fuzzy_make = suggest_make(make_input)
                     if fuzzy_make and fuzzy_make.lower() != sanitize_input(make_input).lower():
-                        # Show fuzzy match prompt if not already shown
-                        if not st.session_state.get('make_prompt_pending'):
+                        # Update suggestion if it changed or if no prompt is pending
+                        current_suggestion = st.session_state.get('make_suggestion')
+                        prompt_pending = st.session_state.get('make_prompt_pending', False)
+                        
+                        # Update suggestion if it changed or if no prompt is pending
+                        if not prompt_pending or current_suggestion != fuzzy_make:
+                            # Update accepted make temporarily so model list updates
+                            previous_make = st.session_state.get('make_input_accepted', "")
+                            st.session_state['make_input_accepted'] = make_input
+                            # Clear model if make changed
+                            if previous_make != make_input:
+                                if 'model_input_accepted' in st.session_state:
+                                    del st.session_state['model_input_accepted']
+                                if 'model_prompt_pending' in st.session_state:
+                                    del st.session_state['model_prompt_pending']
+                                if 'model_suggestion' in st.session_state:
+                                    del st.session_state['model_suggestion']
+                            # Set prompt state and rerun to show the prompt immediately
                             st.session_state['make_suggestion'] = fuzzy_make
                             st.session_state['make_prompt_pending'] = True
-                        # Update accepted make temporarily so model list updates
-                        previous_make = st.session_state.get('make_input_accepted', "")
-                        st.session_state['make_input_accepted'] = make_input
-                        # Clear model if make changed
-                        if previous_make != make_input:
-                            if 'model_input_accepted' in st.session_state:
-                                del st.session_state['model_input_accepted']
-                            if 'model_prompt_pending' in st.session_state:
-                                del st.session_state['model_prompt_pending']
-                            if 'model_suggestion' in st.session_state:
-                                del st.session_state['model_suggestion']
+                            st.rerun()
+                        else:
+                            # Prompt already pending with same suggestion - just update accepted make
+                            previous_make = st.session_state.get('make_input_accepted', "")
+                            st.session_state['make_input_accepted'] = make_input
+                            # Clear model if make changed
+                            if previous_make != make_input:
+                                if 'model_input_accepted' in st.session_state:
+                                    del st.session_state['model_input_accepted']
+                                if 'model_prompt_pending' in st.session_state:
+                                    del st.session_state['model_prompt_pending']
+                                if 'model_suggestion' in st.session_state:
+                                    del st.session_state['model_suggestion']
                     else:
                         # No match - accept typed value but don't rerun (let user continue typing)
                         previous_make = st.session_state.get('make_input_accepted', "")
@@ -1035,7 +1053,7 @@ with left_col:
         
         # Show fuzzy match prompt if pending
         if st.session_state.get('make_prompt_pending'):
-            st.caption(f"Did you mean '{st.session_state['make_suggestion']}'?")
+            st.info(f"💡 Did you mean **'{st.session_state['make_suggestion']}'** instead of '{make_input}'?")
             col_y, col_n = st.columns([2, 3])
             with col_y:
                 if st.button("Yes", key="make_yes"):
@@ -1159,10 +1177,16 @@ with left_col:
                     # Check for fuzzy match
                     fuzzy_model = suggest_model(accepted_make, model_input)
                     if fuzzy_model and fuzzy_model.lower() != sanitize_input(model_input).lower():
-                        # Show fuzzy match prompt if not already shown
-                        if not st.session_state.get('model_prompt_pending'):
+                        # Update suggestion if it changed or if no prompt is pending
+                        current_suggestion = st.session_state.get('model_suggestion')
+                        prompt_pending = st.session_state.get('model_prompt_pending', False)
+                        
+                        # Update suggestion if it changed or if no prompt is pending
+                        if not prompt_pending or current_suggestion != fuzzy_model:
                             st.session_state['model_suggestion'] = fuzzy_model
                             st.session_state['model_prompt_pending'] = True
+                            # Rerun to show the prompt immediately
+                            st.rerun()
                     else:
                         # No match - accept typed value but don't rerun (let user continue typing)
                         st.session_state['model_input_accepted'] = model_input
@@ -1182,7 +1206,7 @@ with left_col:
         
         # Show fuzzy match prompt if pending
         if st.session_state.get('model_prompt_pending'):
-            st.caption(f"Did you mean '{st.session_state['model_suggestion']}'?")
+            st.info(f"💡 Did you mean **'{st.session_state['model_suggestion']}'** instead of '{model_input}'?")
             col_y, col_n = st.columns([2, 3])
             with col_y:
                 if st.button("Yes", key="model_yes"):
@@ -1415,6 +1439,20 @@ with left_col:
                         # Clear pending search before rerun now that we have new data
                         if 'pending_search' in st.session_state:
                             del st.session_state['pending_search']
+                        
+                        # Reset input fields after successful search
+                        if 'year_input_main' in st.session_state:
+                            del st.session_state['year_input_main']
+                        if 'make_input_accepted' in st.session_state:
+                            del st.session_state['make_input_accepted']
+                        if 'model_input_accepted' in st.session_state:
+                            del st.session_state['model_input_accepted']
+                        # Clear dropdown previous values to reset dropdowns
+                        if 'make_dropdown_previous' in st.session_state:
+                            del st.session_state['make_dropdown_previous']
+                        if 'model_dropdown_previous' in st.session_state:
+                            del st.session_state['model_dropdown_previous']
+                        
                         # Refresh the page to show the updated vehicle details and cost estimate
                         st.rerun()
                     else:
