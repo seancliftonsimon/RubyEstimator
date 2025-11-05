@@ -999,6 +999,9 @@ with left_col:
 
     # Make input with dropdown list and text field
     with col2:
+        # Label for Make
+        st.markdown("**Make**")
+        
         # Get all makes for dropdown (already alphabetized)
         all_makes_list = get_all_makes()
         
@@ -1013,10 +1016,11 @@ with left_col:
             make_dropdown_index = all_makes_list.index(current_make_value) + 1
         
         make_dropdown_selection = st.selectbox(
-            "Make",
+            "",
             options=make_dropdown_options,
             index=make_dropdown_index,
-            key="make_input_dropdown"
+            key="make_input_dropdown",
+            label_visibility="collapsed"
         )
 
         # Text input field for make - use value from session state to sync with dropdown
@@ -1190,6 +1194,10 @@ with left_col:
     with col3:
         # Get the accepted make
         accepted_make = st.session_state.get('make_input_accepted', None)
+        
+        # Label for Model
+        model_label = "Model" + (f" ({accepted_make})" if accepted_make else "")
+        st.markdown(f"**{model_label}**")
 
         # Get models for the selected make (already alphabetized)
         if accepted_make:
@@ -1208,11 +1216,12 @@ with left_col:
             model_dropdown_index = model_options_list.index(current_model_value) + 1
         
         model_dropdown_selection = st.selectbox(
-            "Model" + (f" ({accepted_make})" if accepted_make else ""),
+            "",
             options=model_dropdown_options,
             index=model_dropdown_index,
             key="model_input_dropdown",
-            disabled=not accepted_make
+            disabled=not accepted_make,
+            label_visibility="collapsed"
         )
         
         # Show fuzzy match suggestion above text input
