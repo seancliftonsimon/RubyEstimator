@@ -946,9 +946,60 @@ def cross_make_model_hint(raw_model: str) -> List[Tuple[str, str]]:
         return []
 
 
+def matches_left_to_right(search_term: str, text: str) -> bool:
+    """
+    Check if search_term matches text from left to right (sequential matching from start).
+    
+    The search term must appear sequentially from the start of the text.
+    For example:
+    - "TO" matches "TOyota" (starts with "TO")
+    - "TO" matches "T O yota" (sequential from start, with space)
+    - "TO" does NOT match "Aston Martin" (has "ton" but doesn't start with "T")
+    
+    Args:
+        search_term: The search term to match
+        text: The text to search in
+        
+    Returns:
+        bool: True if the search term matches from left to right
+    """
+    if not search_term:
+        return True
+    
+    search_lower = search_term.lower()
+    text_lower = text.lower()
+    
+    # Check if it starts with the search term (prefix match)
+    if text_lower.startswith(search_lower):
+        return True
+    
+    # Check for sequential left-to-right matching from the start
+    # The characters of search_term must appear in order starting from the beginning
+    # This means the first character must be at position 0, then subsequent chars appear sequentially
+    search_idx = 0
+    
+    for text_pos, char in enumerate(text_lower):
+        if search_idx < len(search_lower):
+            if char == search_lower[search_idx]:
+                # If this is the first character, it must be at the start (position 0)
+                if search_idx == 0 and text_pos > 0:
+                    # First char found but not at start - doesn't match from start
+                    return False
+                search_idx += 1
+                
+                if search_idx == len(search_lower):
+                    # All characters matched sequentially from the start
+                    return True
+            elif search_idx == 0 and text_pos == 0:
+                # First character at position 0 doesn't match - won't match from start
+                return False
+    
+    return False
+
+
 def filter_make_suggestions(raw_input: str, max_suggestions: int = 10) -> List[str]:
     """
-    Filter make suggestions based on user input (prefix/substring matching).
+    Filter make suggestions based on user input (left-to-right matching).
 
     Args:
         raw_input: Raw user input
@@ -967,7 +1018,7 @@ def filter_make_suggestions(raw_input: str, max_suggestions: int = 10) -> List[s
 
         matches = []
         for make_name in cache["make_index"]["all_makes"]:
-            if input_lower in make_name.lower():
+            if matches_left_to_right(input_lower, make_name):
                 matches.append(make_name)
 
         return sorted(matches)[:max_suggestions]
@@ -979,7 +1030,7 @@ def filter_make_suggestions(raw_input: str, max_suggestions: int = 10) -> List[s
 
 def filter_model_suggestions(make: str, raw_input: str, max_suggestions: int = 10) -> List[str]:
     """
-    Filter model suggestions based on user input within a specific make.
+    Filter model suggestions based on user input within a specific make (left-to-right matching).
 
     Args:
         make: Canonical make name
@@ -1003,7 +1054,7 @@ def filter_model_suggestions(make: str, raw_input: str, max_suggestions: int = 1
         matches = []
 
         for model_name in make_data["all_models"]:
-            if input_lower in model_name.lower():
+            if matches_left_to_right(input_lower, model_name):
                 matches.append(model_name)
 
         return sorted(matches)[:max_suggestions]

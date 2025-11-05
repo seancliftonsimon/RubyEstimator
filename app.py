@@ -42,7 +42,8 @@ from vehicle_data import (
     suggest_make, suggest_model, cross_make_model_hint,
     filter_make_suggestions, filter_model_suggestions,
     get_all_makes, get_models_for_make, get_catalog_stats,
-    import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache
+    import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache,
+    matches_left_to_right
 )
 from auth import setup_password_protection
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
@@ -978,19 +979,39 @@ with left_col:
         # Get current accepted value for display
         current_make_value = st.session_state.get('make_input_accepted', "")
         
-        # Build options list - include custom value if it exists and isn't in the list
-        make_options = all_makes_list.copy() if all_makes_list else []
-        if current_make_value and current_make_value not in make_options:
-            # Add custom value to options list if it exists
-            make_options.insert(0, current_make_value)
+        # Get the current value from selectbox (if it exists) to preserve user typing
+        # This helps us track what the user is typing even if it doesn't match
+        current_selectbox_value = st.session_state.get('make_input_main', current_make_value)
         
-        # Find index of current value
+        # Pre-filter options using left-to-right matching if user has typed something
+        if current_selectbox_value and current_selectbox_value.strip():
+            # Filter options based on what user typed (left-to-right matching)
+            filtered_makes = filter_make_suggestions(current_selectbox_value, max_suggestions=1000)
+            # Always include the current typed value as the first option (even if no matches)
+            # This allows users to click their typed text as their selection
+            if current_selectbox_value not in filtered_makes:
+                make_options = [current_selectbox_value] + filtered_makes
+            else:
+                # Move current value to front if it's already in the list
+                filtered_makes.remove(current_selectbox_value)
+                make_options = [current_selectbox_value] + filtered_makes
+        else:
+            # No filter - show all makes
+            make_options = all_makes_list.copy() if all_makes_list else []
+            # If there's an accepted value that's not in the list, add it
+            if current_make_value and current_make_value not in make_options:
+                make_options.insert(0, current_make_value)
+        
+        # Find index of current value - should always be 0 if user has typed something
         make_index = None
         if make_options:
-            if current_make_value and current_make_value in make_options:
+            # Prioritize the selectbox value (what user is currently typing)
+            if current_selectbox_value and current_selectbox_value in make_options:
+                make_index = make_options.index(current_selectbox_value)
+            elif current_make_value and current_make_value in make_options:
                 make_index = make_options.index(current_make_value)
-            elif current_make_value:
-                # Custom value not in list - use first option (the custom value we just added)
+            else:
+                # Default to first option
                 make_index = 0
         
         # Use selectbox for reactive filtering - it filters as user types
@@ -1001,7 +1022,7 @@ with left_col:
             key="make_input_main"
         )
         
-        # Store selected make
+        # Store selected make - always preserve the value (even if it's a custom value)
         previous_make = st.session_state.get('make_input_accepted', "")
         if make_input:
             st.session_state['make_input_accepted'] = make_input
@@ -1013,9 +1034,11 @@ with left_col:
                 st.session_state['make_prompt_answered'] = False
                 st.session_state['make_prompt_pending'] = False
         elif not make_input and 'make_input_accepted' in st.session_state:
-            del st.session_state['make_input_accepted']
+            # Only clear if user explicitly cleared it (not if it's a custom value being preserved)
+            if not current_selectbox_value:
+                del st.session_state['make_input_accepted']
             # Clear model when make is cleared
-            if 'model_input_accepted' in st.session_state:
+            if 'model_input_accepted' in st.session_state and not current_selectbox_value:
                 del st.session_state['model_input_accepted']
         
         # Check for make fuzzy matches after input
@@ -1080,19 +1103,39 @@ with left_col:
         # Get current accepted value for display
         current_model_value = st.session_state.get('model_input_accepted', "")
         
-        # Build options list - include custom value if it exists and isn't in the list
-        model_options = model_options_list.copy() if model_options_list else []
-        if current_model_value and current_model_value not in model_options and accepted_make:
-            # Add custom value to options list if it exists
-            model_options.insert(0, current_model_value)
+        # Get the current value from selectbox (if it exists) to preserve user typing
+        # This helps us track what the user is typing even if it doesn't match
+        current_selectbox_model_value = st.session_state.get('model_input_main', current_model_value if accepted_make else "")
         
-        # Find index of current value
+        # Pre-filter options using left-to-right matching if user has typed something
+        if accepted_make and current_selectbox_model_value and current_selectbox_model_value.strip():
+            # Filter options based on what user typed (left-to-right matching)
+            filtered_models = filter_model_suggestions(accepted_make, current_selectbox_model_value, max_suggestions=1000)
+            # Always include the current typed value as the first option (even if no matches)
+            # This allows users to click their typed text as their selection
+            if current_selectbox_model_value not in filtered_models:
+                model_options = [current_selectbox_model_value] + filtered_models
+            else:
+                # Move current value to front if it's already in the list
+                filtered_models.remove(current_selectbox_model_value)
+                model_options = [current_selectbox_model_value] + filtered_models
+        else:
+            # No filter - show all models for the make
+            model_options = model_options_list.copy() if model_options_list else []
+            # If there's an accepted value that's not in the list, add it
+            if current_model_value and current_model_value not in model_options and accepted_make:
+                model_options.insert(0, current_model_value)
+        
+        # Find index of current value - should always be 0 if user has typed something
         model_index = None
         if model_options and accepted_make:
-            if current_model_value and current_model_value in model_options:
+            # Prioritize the selectbox value (what user is currently typing)
+            if current_selectbox_model_value and current_selectbox_model_value in model_options:
+                model_index = model_options.index(current_selectbox_model_value)
+            elif current_model_value and current_model_value in model_options:
                 model_index = model_options.index(current_model_value)
-            elif current_model_value:
-                # Custom value not in list - use first option (the custom value we just added)
+            else:
+                # Default to first option
                 model_index = 0
         
         # Use selectbox for reactive filtering - it filters as user types
@@ -1105,16 +1148,18 @@ with left_col:
             disabled=not accepted_make
         )
 
-        # Store selected model
+        # Store selected model - always preserve the value (even if it's a custom value)
         previous_model = st.session_state.get('model_input_accepted', "")
-        if model_input:
+        if model_input and accepted_make:
             st.session_state['model_input_accepted'] = model_input
             # Reset prompt states when model actually changes
             if previous_model != model_input:
                 st.session_state['model_prompt_answered'] = False
                 st.session_state['model_prompt_pending'] = False
         elif not model_input and 'model_input_accepted' in st.session_state:
-            del st.session_state['model_input_accepted']
+            # Only clear if user explicitly cleared it (not if it's a custom value being preserved)
+            if not current_selectbox_model_value:
+                del st.session_state['model_input_accepted']
         
         # Check for model fuzzy matches after model input
         if (accepted_make and model_input and
