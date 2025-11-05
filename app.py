@@ -858,8 +858,8 @@ if st.session_state['admin_mode']:
     render_admin_ui()
     st.stop()  # Don't show the main app when in admin mode
 
-# Create two columns for the main layout with better spacing
-left_col, spacer, right_col = st.columns([1, 0.2, 1])
+# Create two columns for the main layout with better spacing (2:1 ratio for vehicle search:cost estimate)
+left_col, spacer, right_col = st.columns([2, 0.1, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
@@ -968,8 +968,8 @@ with left_col:
 
     # --- Main Form ---
     # Add small gaps between columns to prevent rendering issues
-    # Year is half the width of Make/Model, reduced gap between Make and Model
-    col1, gap1, col2, gap2, col3 = st.columns([1.5, 0.1, 3, 0.1, 3])
+    # Year is 2/3 of previous size, Make is 3/4 of previous size, reduced gap between Year and Make
+    col1, gap1, col2, gap2, col3 = st.columns([1.0, 0.05, 2.25, 0.1, 3])
 
     # Year input (simple text input, no suggestions needed)
     with col1:
@@ -1001,6 +1001,34 @@ with left_col:
             label_visibility="hidden"
         )
         
+        # Validate typed input when dropdown is clicked (user changed focus)
+        # If user typed something and dropdown is "Choose from list", check for exact match
+        if make_input != current_make_value and make_input and make_dropdown_selection == "Choose from list":
+            if exact_match_in_list(make_input, all_makes_list):
+                # Found exact match - accept it and update dropdown index
+                previous_make = st.session_state.get('make_input_accepted', "")
+                matched_make = None
+                for make in all_makes_list:
+                    if sanitize_input(make).lower() == sanitize_input(make_input).lower():
+                        matched_make = make
+                        break
+                if matched_make:
+                    st.session_state['make_input_accepted'] = matched_make
+                    # Clear model if make changed
+                    if previous_make != matched_make:
+                        if 'model_input_accepted' in st.session_state:
+                            del st.session_state['model_input_accepted']
+                        if 'model_prompt_pending' in st.session_state:
+                            del st.session_state['model_prompt_pending']
+                        if 'model_suggestion' in st.session_state:
+                            del st.session_state['model_suggestion']
+                    # Reset prompt states
+                    if 'make_prompt_pending' in st.session_state:
+                        del st.session_state['make_prompt_pending']
+                    if 'make_suggestion' in st.session_state:
+                        del st.session_state['make_suggestion']
+                    st.rerun()
+        
         # Handle selection from dropdown - update text input
         # Skip if "Choose from list" placeholder is selected
         if make_dropdown_selection and make_dropdown_selection != "Choose from list" and make_dropdown_selection != current_make_value:
@@ -1023,11 +1051,21 @@ with left_col:
             if make_input:
                 # Check if user typed something that exactly matches a list item
                 if exact_match_in_list(make_input, all_makes_list):
-                    # Exact match - accept it directly
+                    # Exact match - accept it directly, but use the actual make from list (preserve case)
                     previous_make = st.session_state.get('make_input_accepted', "")
-                    st.session_state['make_input_accepted'] = make_input
+                    matched_make = None
+                    for make in all_makes_list:
+                        if sanitize_input(make).lower() == sanitize_input(make_input).lower():
+                            matched_make = make
+                            break
+                    if matched_make:
+                        st.session_state['make_input_accepted'] = matched_make
+                        final_make = matched_make
+                    else:
+                        st.session_state['make_input_accepted'] = make_input
+                        final_make = make_input
                     # Clear model if make changed (always clear when make changes)
-                    if previous_make != make_input:
+                    if previous_make != final_make:
                         if 'model_input_accepted' in st.session_state:
                             del st.session_state['model_input_accepted']
                         # Reset model prompt states too
@@ -1151,6 +1189,25 @@ with left_col:
             label_visibility="hidden"
         )
         
+        # Validate typed input when dropdown is clicked (user changed focus)
+        # If user typed something and dropdown is "Choose from list", check for exact match
+        if accepted_make and model_input != current_model_value and model_input and model_dropdown_selection == "Choose from list":
+            if exact_match_in_list(model_input, model_options_list):
+                # Found exact match - accept it
+                matched_model = None
+                for model in model_options_list:
+                    if sanitize_input(model).lower() == sanitize_input(model_input).lower():
+                        matched_model = model
+                        break
+                if matched_model:
+                    st.session_state['model_input_accepted'] = matched_model
+                    # Reset prompt states
+                    if 'model_prompt_pending' in st.session_state:
+                        del st.session_state['model_prompt_pending']
+                    if 'model_suggestion' in st.session_state:
+                        del st.session_state['model_suggestion']
+                    st.rerun()
+        
         # Handle selection from dropdown - update text input
         # Skip if "Choose from list" placeholder is selected
         if accepted_make and model_dropdown_selection and model_dropdown_selection != "Choose from list" and model_dropdown_selection != current_model_value:
@@ -1168,8 +1225,16 @@ with left_col:
             if model_input:
                 # Check if user typed something that exactly matches a list item
                 if exact_match_in_list(model_input, model_options_list):
-                    # Exact match - accept it directly
-                    st.session_state['model_input_accepted'] = model_input
+                    # Exact match - accept it directly, but use the actual model from list (preserve case)
+                    matched_model = None
+                    for model in model_options_list:
+                        if sanitize_input(model).lower() == sanitize_input(model_input).lower():
+                            matched_model = model
+                            break
+                    if matched_model:
+                        st.session_state['model_input_accepted'] = matched_model
+                    else:
+                        st.session_state['model_input_accepted'] = model_input
                     # Reset prompt states
                     if 'model_prompt_pending' in st.session_state:
                         del st.session_state['model_prompt_pending']

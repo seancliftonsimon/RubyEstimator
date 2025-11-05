@@ -611,6 +611,20 @@ def generate_main_app_css() -> str:
         padding-top: 0 !important;
     }}
     
+    /* Reduce bottom margin of text input to minimize spacing before dropdown */
+    .stTextInput,
+    [data-testid="stTextInput"] {{
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }}
+    
+    /* Target the container div that wraps text input to reduce spacing */
+    .stTextInput > div,
+    [data-testid="stTextInput"] > div {{
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }}
+    
     /* Reduce spacing for selectbox labels (hidden labels still take space) */
     .stSelectbox > label,
     [data-testid="stSelectbox"] > label {{
