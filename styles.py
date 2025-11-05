@@ -604,6 +604,23 @@ def generate_main_app_css() -> str:
         display: none !important;
     }}
     
+    /* Reduce spacing between text input and selectbox */
+    .stSelectbox,
+    [data-testid="stSelectbox"] {{
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }}
+    
+    /* Reduce spacing for selectbox labels (hidden labels still take space) */
+    .stSelectbox > label,
+    [data-testid="stSelectbox"] > label {{
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        display: none !important;
+    }}
+    
     /* Fix text selection highlight - override white background */
     ::selection {{
         background: rgba(153, 12, 65, 0.2) !important;

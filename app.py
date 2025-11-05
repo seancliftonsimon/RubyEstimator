@@ -993,10 +993,11 @@ with left_col:
             make_dropdown_index = all_makes_list.index(current_make_value) + 1
         
         make_dropdown_selection = st.selectbox(
-            "Make List",
+            "",
             options=make_dropdown_options,
             index=make_dropdown_index,
-            key="make_input_dropdown"
+            key="make_input_dropdown",
+            label_visibility="hidden"
         )
         
         # Handle selection from dropdown - update text input
@@ -1141,11 +1142,12 @@ with left_col:
             model_dropdown_index = model_options_list.index(current_model_value) + 1
         
         model_dropdown_selection = st.selectbox(
-            "Model List",
+            "",
             options=model_dropdown_options,
             index=model_dropdown_index,
             key="model_input_dropdown",
-            disabled=not accepted_make
+            disabled=not accepted_make,
+            label_visibility="hidden"
         )
         
         # Handle selection from dropdown - update text input
