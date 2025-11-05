@@ -361,11 +361,11 @@ def generate_main_app_css() -> str:
     
     /* Minimize top padding on main content area */
     [data-testid="stAppViewContainer"] > div:first-child {{
-        padding-top: 0.5rem !important;
+        padding-top: 0.15rem !important;
     }}
     
     .main .block-container {{
-        padding-top: 0.5rem !important;
+        padding-top: 0.15rem !important;
         padding-bottom: 1rem !important;
     }}
     
@@ -413,7 +413,7 @@ def generate_main_app_css() -> str:
         font-weight: 800;
         text-align: center;
         margin-bottom: 0.25rem;
-        margin-top: 0.5rem;
+        margin-top: 0.15rem;
         color: {Colors.RUBY_PRIMARY} !important;
         text-shadow: 0 4px 8px {Colors.RUBY_SHADOW_STRONG};
         letter-spacing: 0.05em;
@@ -482,7 +482,7 @@ def generate_main_app_css() -> str:
         font-weight: 600;
         color: {Colors.RUBY_PRIMARY};
         margin-bottom: 0.5rem;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
         padding: 0.5rem 0.75rem;
         border-left: 4px solid {Colors.RUBY_PRIMARY};
         background: {Colors.RUBY_LIGHT};

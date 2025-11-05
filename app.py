@@ -1455,8 +1455,15 @@ with left_col:
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    # Validate make-year compatibility
-                    is_valid, warning_message = validate_make_year_compatibility(make_input, year_int)
+                    # Validate make-year compatibility (skip if bypass flag is set)
+                    bypass_validation = st.session_state.get('bypass_year_validation', False)
+                    if bypass_validation:
+                        # Clear the bypass flag and proceed with search
+                        del st.session_state['bypass_year_validation']
+                        is_valid = True
+                    else:
+                        is_valid, warning_message = validate_make_year_compatibility(make_input, year_int)
+                    
                     if not is_valid:
                         # Clear pending search to prevent automatic search
                         del st.session_state['pending_search']
@@ -1479,10 +1486,33 @@ with left_col:
                         col1, col2, col3 = st.columns([1, 1, 1])
                         with col2:
                             if st.button("Search anyway", key="search_anyway_button", use_container_width=True):
-                                # Restore pending search to proceed with search
+                                # Set bypass flag and restore pending search to proceed with search
+                                st.session_state['bypass_year_validation'] = True
                                 if 'pending_search_after_warning' in st.session_state:
                                     st.session_state['pending_search'] = st.session_state['pending_search_after_warning']
                                     del st.session_state['pending_search_after_warning']
+                                
+                                # Clear all previous vehicle data immediately when proceeding with search (same as Search Vehicle button)
+                                st.session_state['detailed_vehicle_info'] = None
+                                st.session_state['last_curb_weight'] = None
+                                st.session_state['last_aluminum_engine'] = None
+                                st.session_state['last_aluminum_rims'] = None
+                                st.session_state['last_catalytic_converters'] = None
+                                st.session_state['last_vehicle_info'] = None
+                                st.session_state['calculation_results'] = None
+                                st.session_state['last_processed_vehicle'] = None
+                                st.session_state['auto_calculate'] = False
+                                
+                                # Reset reference catalog prompt states for new search
+                                st.session_state['make_prompt_pending'] = False
+                                st.session_state['make_prompt_answered'] = False
+                                st.session_state['model_prompt_pending'] = False
+                                st.session_state['model_prompt_answered'] = False
+                                # Clear any stored suggestions and hints
+                                for key in ['make_suggestion', 'model_suggestion', 'cross_make_hint']:
+                                    if key in st.session_state:
+                                        del st.session_state[key]
+                                
                                 st.rerun()
                     else:
                         # Create a unique identifier for this vehicle search
@@ -1501,7 +1531,7 @@ with left_col:
                                     <div style="background: rgba(255, 255, 255, 0.8); border-radius: 8px; height: 12px; overflow: hidden; margin-bottom: 0.5rem; position: relative; border: 2px solid #3b82f6;">
                                         <div style="background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 25%, #2dd4bf 50%, #14b8a6 75%, #3b82f6 100%); height: 100%; width: 50%; position: absolute; animation: progress-slide 1.5s ease-in-out infinite; box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);"></div>
                                     </div>
-                                    <div style="text-align: center; font-size: 0.875rem; color: #1e3a8a; font-weight: 500; margin-top: 0.5rem;">This may take a few moments...</div>
+                                    <div style="text-align: center; font-size: 0.875rem; color: #1e3a8a; font-weight: 500; margin-top: 0.5rem;">may take 5-10 seconds</div>
                                 </div>
                                 <style>
                                     @keyframes progress-slide {
@@ -1608,10 +1638,9 @@ with left_col:
                                 del st.session_state['pending_search']
                             
                             # Reset input fields after successful search
-                            # Set to empty strings instead of deleting to ensure Streamlit widgets reset
-                            st.session_state['year_input_main'] = ""
-                            st.session_state['make_input_accepted'] = ""
-                            st.session_state['model_input_accepted'] = ""
+                            # Note: Cannot directly modify widget state keys during script execution
+                            # Widgets will maintain their values, which is acceptable UX
+                            # Users can manually clear fields if needed
                             
                             # Clear dropdown previous values to reset dropdowns to "Choose from list"
                             if 'make_dropdown_previous' in st.session_state:
