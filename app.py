@@ -39,11 +39,9 @@ logger.info("✓ Streamlit page configured")
 import pandas as pd
 from vehicle_data import (
     process_vehicle, get_last_ten_entries,
-    suggest_make, suggest_model, cross_make_model_hint,
-    filter_make_suggestions, filter_model_suggestions,
+    suggest_make, suggest_model,
     get_all_makes, get_models_for_make, get_catalog_stats,
-    import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache,
-    matches_left_to_right
+    import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache
 )
 from auth import setup_password_protection
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
@@ -790,6 +788,29 @@ def sanitize_input(text):
     
     return text
 
+
+def exact_match_in_list(user_input: str, options_list: list) -> bool:
+    """
+    Check if user input exactly matches any item in the list (case-insensitive, after sanitization).
+    
+    Args:
+        user_input: User's typed input
+        options_list: List of valid options
+        
+    Returns:
+        bool: True if exact match found, False otherwise
+    """
+    if not user_input or not options_list:
+        return False
+    
+    sanitized_input = sanitize_input(user_input).lower()
+    
+    for option in options_list:
+        if sanitize_input(option).lower() == sanitized_input:
+            return True
+    
+    return False
+
 # --- Streamlit App ---
 
 # Check password protection
@@ -953,144 +974,119 @@ with left_col:
     with col1:
         year_input = st.text_input("Year", placeholder="e.g., 2013", value="2013", key="year_input_main")
 
-    # Make input with dropdown - dynamic options with custom entry support
+    # Make input with text field and dropdown list
     with col2:
-        # Show make "did you mean?" prompt above make input - small text matching label size
-        if st.session_state.get('make_prompt_pending'):
-            st.caption(f"Did you mean '{st.session_state['make_suggestion']}'?")
-            col_y, col_n = st.columns([1, 1])
-            with col_y:
-                if st.button("Yes", key="make_yes", use_container_width=True):
-                    st.session_state['make_input_accepted'] = st.session_state['make_suggestion']
-                    st.session_state['make_prompt_answered'] = True
-                    st.session_state['make_prompt_pending'] = False
-                    st.rerun()
-            with col_n:
-                current_make_input = st.session_state.get('make_input_accepted', "")
-                if st.button("No, keep what I typed", key="make_no", use_container_width=True):
-                    st.session_state['make_input_accepted'] = current_make_input
-                    st.session_state['make_prompt_answered'] = True
-                    st.session_state['make_prompt_pending'] = False
-                    st.rerun()
-        
         # Get all makes for dropdown (already alphabetized)
         all_makes_list = get_all_makes()
         
         # Get current accepted value for display
         current_make_value = st.session_state.get('make_input_accepted', "")
         
-        # Get the current value from selectbox (if it exists) to preserve user typing
-        # This helps us track what the user is typing even if it doesn't match
-        current_selectbox_value = st.session_state.get('make_input_main', current_make_value)
+        # Text input field for make
+        make_input = st.text_input("Make", value=current_make_value, key="make_input_text")
         
-        # Pre-filter options using left-to-right matching if user has typed something
-        if current_selectbox_value and current_selectbox_value.strip():
-            # Filter options based on what user typed (left-to-right matching)
-            filtered_makes = filter_make_suggestions(current_selectbox_value, max_suggestions=1000)
-            # Always include the current typed value as the first option (even if no matches)
-            # This allows users to click their typed text as their selection
-            if current_selectbox_value not in filtered_makes:
-                make_options = [current_selectbox_value] + filtered_makes
-            else:
-                # Move current value to front if it's already in the list
-                filtered_makes.remove(current_selectbox_value)
-                make_options = [current_selectbox_value] + filtered_makes
-        else:
-            # No filter - show all makes
-            make_options = all_makes_list.copy() if all_makes_list else []
-            # If there's an accepted value that's not in the list, add it
-            if current_make_value and current_make_value not in make_options:
-                make_options.insert(0, current_make_value)
+        # Dropdown list below text input
+        make_dropdown_options = all_makes_list.copy() if all_makes_list else []
+        make_dropdown_index = 0
+        if current_make_value and current_make_value in make_dropdown_options:
+            make_dropdown_index = make_dropdown_options.index(current_make_value)
         
-        # Find index of current value - should always be 0 if user has typed something
-        make_index = None
-        if make_options:
-            # Prioritize the selectbox value (what user is currently typing)
-            if current_selectbox_value and current_selectbox_value in make_options:
-                make_index = make_options.index(current_selectbox_value)
-            elif current_make_value and current_make_value in make_options:
-                make_index = make_options.index(current_make_value)
-            else:
-                # Default to first option
-                make_index = 0
-        
-        # Use selectbox for reactive filtering - it filters as user types
-        make_input = st.selectbox(
-            "Make",
-            options=make_options,
-            index=make_index,
-            key="make_input_main"
+        make_dropdown_selection = st.selectbox(
+            "Choose from list",
+            options=make_dropdown_options,
+            index=make_dropdown_index,
+            key="make_input_dropdown"
         )
         
-        # Store selected make - always preserve the value (even if it's a custom value)
-        previous_make = st.session_state.get('make_input_accepted', "")
-        if make_input:
-            st.session_state['make_input_accepted'] = make_input
-            # If make changed, clear model
-            if previous_make != make_input:
+        # Handle selection from dropdown - update text input
+        if make_dropdown_selection and make_dropdown_selection != current_make_value:
+            previous_make = st.session_state.get('make_input_accepted', "")
+            st.session_state['make_input_accepted'] = make_dropdown_selection
+            # Clear model when make changes
+            if previous_make != make_dropdown_selection:
                 if 'model_input_accepted' in st.session_state:
                     del st.session_state['model_input_accepted']
-                # Reset prompt states when make changes
-                st.session_state['make_prompt_answered'] = False
-                st.session_state['make_prompt_pending'] = False
-        elif not make_input and 'make_input_accepted' in st.session_state:
-            # Only clear if user explicitly cleared it (not if it's a custom value being preserved)
-            if not current_selectbox_value:
-                del st.session_state['make_input_accepted']
-            # Clear model when make is cleared
-            if 'model_input_accepted' in st.session_state and not current_selectbox_value:
-                del st.session_state['model_input_accepted']
+            # Reset prompt states
+            if 'make_prompt_pending' in st.session_state:
+                del st.session_state['make_prompt_pending']
+            if 'make_suggestion' in st.session_state:
+                del st.session_state['make_suggestion']
+            st.rerun()
         
-        # Check for make fuzzy matches after input
-        if (make_input and
-            not st.session_state.get('make_prompt_answered', False) and
-            not st.session_state.get('make_prompt_pending', False)):
-
-            fuzzy_make = suggest_make(make_input)
-            if fuzzy_make and fuzzy_make.lower() != make_input.lower():
-                st.session_state['make_suggestion'] = fuzzy_make
-                st.session_state['make_prompt_pending'] = True
-
-    # Model input with dropdown - dynamic options with custom entry support
-    with col3:
-        # Show model "did you mean?" prompt above model input - small text matching label size
-        current_model_input = st.session_state.get('model_input_accepted', "")
-        if st.session_state.get('model_prompt_pending'):
-            if 'cross_make_hint' in st.session_state:
-                hint_make, hint_model = st.session_state['cross_make_hint']
-                st.caption(f"'{current_model_input}' is typically a {hint_make} model. Did you mean to change Make to {hint_make}?")
-                col_y, col_n = st.columns([1, 1])
-                with col_y:
-                    if st.button("Yes, switch to " + hint_make, key="model_cross_make_yes", use_container_width=True):
-                        st.session_state['make_input_accepted'] = hint_make
-                        st.session_state['model_input_accepted'] = hint_model
-                        st.session_state['model_prompt_answered'] = True
-                        st.session_state['model_prompt_pending'] = False
-                        del st.session_state['cross_make_hint']
-                        st.rerun()
-                with col_n:
-                    if st.button("No, keep current make", key="model_cross_make_no", use_container_width=True):
-                        st.session_state['model_input_accepted'] = current_model_input
-                        st.session_state['model_prompt_answered'] = True
-                        st.session_state['model_prompt_pending'] = False
-                        del st.session_state['cross_make_hint']
-                        st.rerun()
+        # Handle text input changes
+        if make_input != current_make_value:
+            # User typed something different from the accepted value
+            if make_input:
+                # Check if user typed something that exactly matches a list item
+                if exact_match_in_list(make_input, all_makes_list):
+                    # Exact match - accept it directly
+                    previous_make = st.session_state.get('make_input_accepted', "")
+                    st.session_state['make_input_accepted'] = make_input
+                    # Clear model if make changed
+                    if previous_make != make_input:
+                        if 'model_input_accepted' in st.session_state:
+                            del st.session_state['model_input_accepted']
+                    # Reset prompt states
+                    if 'make_prompt_pending' in st.session_state:
+                        del st.session_state['make_prompt_pending']
+                    if 'make_suggestion' in st.session_state:
+                        del st.session_state['make_suggestion']
+                    st.rerun()
+                else:
+                    # Check for fuzzy match
+                    fuzzy_make = suggest_make(make_input)
+                    if fuzzy_make and fuzzy_make.lower() != sanitize_input(make_input).lower():
+                        # Show fuzzy match prompt if not already shown
+                        if not st.session_state.get('make_prompt_pending'):
+                            st.session_state['make_suggestion'] = fuzzy_make
+                            st.session_state['make_prompt_pending'] = True
+                    else:
+                        # No match - accept typed value but don't rerun (let user continue typing)
+                        previous_make = st.session_state.get('make_input_accepted', "")
+                        st.session_state['make_input_accepted'] = make_input
+                        # Clear model if make changed
+                        if previous_make != make_input:
+                            if 'model_input_accepted' in st.session_state:
+                                del st.session_state['model_input_accepted']
+                        # Reset prompt states
+                        if 'make_prompt_pending' in st.session_state:
+                            del st.session_state['make_prompt_pending']
+                        if 'make_suggestion' in st.session_state:
+                            del st.session_state['make_suggestion']
             else:
-                st.caption(f"Did you mean '{st.session_state['model_suggestion']}'?")
-                col_y, col_n = st.columns([1, 1])
-                with col_y:
-                    if st.button("Yes", key="model_yes", use_container_width=True):
-                        st.session_state['model_input_accepted'] = st.session_state['model_suggestion']
-                        st.session_state['model_prompt_answered'] = True
-                        st.session_state['model_prompt_pending'] = False
-                        st.rerun()
-                with col_n:
-                    if st.button("No, keep what I typed", key="model_no", use_container_width=True):
-                        st.session_state['model_input_accepted'] = current_model_input
-                        st.session_state['model_prompt_answered'] = True
-                        st.session_state['model_prompt_pending'] = False
-                        st.rerun()
+                # Text input cleared
+                if 'make_input_accepted' in st.session_state:
+                    del st.session_state['make_input_accepted']
+                if 'model_input_accepted' in st.session_state:
+                    del st.session_state['model_input_accepted']
+                if 'make_prompt_pending' in st.session_state:
+                    del st.session_state['make_prompt_pending']
+                if 'make_suggestion' in st.session_state:
+                    del st.session_state['make_suggestion']
         
+        # Show fuzzy match prompt if pending
+        if st.session_state.get('make_prompt_pending'):
+            st.caption(f"Did you mean '{st.session_state['make_suggestion']}'?")
+            col_y, col_n = st.columns([1, 1])
+            with col_y:
+                if st.button("Yes", key="make_yes", use_container_width=True):
+                    st.session_state['make_input_accepted'] = st.session_state['make_suggestion']
+                    if 'model_input_accepted' in st.session_state:
+                        del st.session_state['model_input_accepted']
+                    del st.session_state['make_prompt_pending']
+                    del st.session_state['make_suggestion']
+                    st.rerun()
+            with col_n:
+                if st.button("No, keep what I typed", key="make_no", use_container_width=True):
+                    # Keep the typed value
+                    if make_input:
+                        st.session_state['make_input_accepted'] = make_input
+                    del st.session_state['make_prompt_pending']
+                    del st.session_state['make_suggestion']
+                    st.rerun()
+
+    # Model input with text field and dropdown list
+    with col3:
         # Get the accepted make
         accepted_make = st.session_state.get('make_input_accepted', None)
 
@@ -1103,84 +1099,95 @@ with left_col:
         # Get current accepted value for display
         current_model_value = st.session_state.get('model_input_accepted', "")
         
-        # Get the current value from selectbox (if it exists) to preserve user typing
-        # This helps us track what the user is typing even if it doesn't match
-        current_selectbox_model_value = st.session_state.get('model_input_main', current_model_value if accepted_make else "")
-        
-        # Pre-filter options using left-to-right matching if user has typed something
-        if accepted_make and current_selectbox_model_value and current_selectbox_model_value.strip():
-            # Filter options based on what user typed (left-to-right matching)
-            filtered_models = filter_model_suggestions(accepted_make, current_selectbox_model_value, max_suggestions=1000)
-            # Always include the current typed value as the first option (even if no matches)
-            # This allows users to click their typed text as their selection
-            if current_selectbox_model_value not in filtered_models:
-                model_options = [current_selectbox_model_value] + filtered_models
-            else:
-                # Move current value to front if it's already in the list
-                filtered_models.remove(current_selectbox_model_value)
-                model_options = [current_selectbox_model_value] + filtered_models
-        else:
-            # No filter - show all models for the make
-            model_options = model_options_list.copy() if model_options_list else []
-            # If there's an accepted value that's not in the list, add it
-            if current_model_value and current_model_value not in model_options and accepted_make:
-                model_options.insert(0, current_model_value)
-        
-        # Find index of current value - should always be 0 if user has typed something
-        model_index = None
-        if model_options and accepted_make:
-            # Prioritize the selectbox value (what user is currently typing)
-            if current_selectbox_model_value and current_selectbox_model_value in model_options:
-                model_index = model_options.index(current_selectbox_model_value)
-            elif current_model_value and current_model_value in model_options:
-                model_index = model_options.index(current_model_value)
-            else:
-                # Default to first option
-                model_index = 0
-        
-        # Use selectbox for reactive filtering - it filters as user types
-        model_label = f"Model" + (f" ({accepted_make})" if accepted_make else "")
-        model_input = st.selectbox(
-            model_label,
-            options=model_options,
-            index=model_index,
-            key="model_input_main",
+        # Text input field for model (disabled until make is selected)
+        model_input = st.text_input(
+            "Model" + (f" ({accepted_make})" if accepted_make else ""),
+            value=current_model_value,
+            key="model_input_text",
             disabled=not accepted_make
         )
-
-        # Store selected model - always preserve the value (even if it's a custom value)
-        previous_model = st.session_state.get('model_input_accepted', "")
-        if model_input and accepted_make:
-            st.session_state['model_input_accepted'] = model_input
-            # Reset prompt states when model actually changes
-            if previous_model != model_input:
-                st.session_state['model_prompt_answered'] = False
-                st.session_state['model_prompt_pending'] = False
-        elif not model_input and 'model_input_accepted' in st.session_state:
-            # Only clear if user explicitly cleared it (not if it's a custom value being preserved)
-            if not current_selectbox_model_value:
-                del st.session_state['model_input_accepted']
         
-        # Check for model fuzzy matches after model input
-        if (accepted_make and model_input and
-            not st.session_state.get('model_prompt_answered', False) and
-            not st.session_state.get('model_prompt_pending', False)):
-
-            fuzzy_model = suggest_model(accepted_make, model_input)
-            if fuzzy_model and fuzzy_model.lower() != model_input.lower():
-                st.session_state['model_suggestion'] = fuzzy_model
-                st.session_state['model_prompt_pending'] = True
-
-            # Also check for cross-make hints
-            cross_make_hints = cross_make_model_hint(model_input)
-            if cross_make_hints:
-                # Filter out hints where the suggested make matches the current confirmed make
-                filtered_cross_make_hints = [hint for hint in cross_make_hints if hint[0] != accepted_make]
-                if filtered_cross_make_hints:
-                    # Take the first (best) filtered hint
-                    hint_make, hint_model = filtered_cross_make_hints[0]
-                    st.session_state['cross_make_hint'] = (hint_make, hint_model)
-                    st.session_state['model_prompt_pending'] = True
+        # Dropdown list below text input
+        model_dropdown_options = model_options_list.copy() if model_options_list else []
+        model_dropdown_index = 0
+        if current_model_value and current_model_value in model_dropdown_options:
+            model_dropdown_index = model_dropdown_options.index(current_model_value)
+        
+        model_dropdown_selection = st.selectbox(
+            "Choose from list",
+            options=model_dropdown_options,
+            index=model_dropdown_index,
+            key="model_input_dropdown",
+            disabled=not accepted_make
+        )
+        
+        # Handle selection from dropdown - update text input
+        if accepted_make and model_dropdown_selection and model_dropdown_selection != current_model_value:
+            st.session_state['model_input_accepted'] = model_dropdown_selection
+            # Reset prompt states
+            if 'model_prompt_pending' in st.session_state:
+                del st.session_state['model_prompt_pending']
+            if 'model_suggestion' in st.session_state:
+                del st.session_state['model_suggestion']
+            st.rerun()
+        
+        # Handle text input changes
+        if accepted_make and model_input != current_model_value:
+            # User typed something different from the accepted value
+            if model_input:
+                # Check if user typed something that exactly matches a list item
+                if exact_match_in_list(model_input, model_options_list):
+                    # Exact match - accept it directly
+                    st.session_state['model_input_accepted'] = model_input
+                    # Reset prompt states
+                    if 'model_prompt_pending' in st.session_state:
+                        del st.session_state['model_prompt_pending']
+                    if 'model_suggestion' in st.session_state:
+                        del st.session_state['model_suggestion']
+                    st.rerun()
+                else:
+                    # Check for fuzzy match
+                    fuzzy_model = suggest_model(accepted_make, model_input)
+                    if fuzzy_model and fuzzy_model.lower() != sanitize_input(model_input).lower():
+                        # Show fuzzy match prompt if not already shown
+                        if not st.session_state.get('model_prompt_pending'):
+                            st.session_state['model_suggestion'] = fuzzy_model
+                            st.session_state['model_prompt_pending'] = True
+                    else:
+                        # No match - accept typed value but don't rerun (let user continue typing)
+                        st.session_state['model_input_accepted'] = model_input
+                        # Reset prompt states
+                        if 'model_prompt_pending' in st.session_state:
+                            del st.session_state['model_prompt_pending']
+                        if 'model_suggestion' in st.session_state:
+                            del st.session_state['model_suggestion']
+            else:
+                # Text input cleared
+                if 'model_input_accepted' in st.session_state:
+                    del st.session_state['model_input_accepted']
+                if 'model_prompt_pending' in st.session_state:
+                    del st.session_state['model_prompt_pending']
+                if 'model_suggestion' in st.session_state:
+                    del st.session_state['model_suggestion']
+        
+        # Show fuzzy match prompt if pending
+        if st.session_state.get('model_prompt_pending'):
+            st.caption(f"Did you mean '{st.session_state['model_suggestion']}'?")
+            col_y, col_n = st.columns([1, 1])
+            with col_y:
+                if st.button("Yes", key="model_yes", use_container_width=True):
+                    st.session_state['model_input_accepted'] = st.session_state['model_suggestion']
+                    del st.session_state['model_prompt_pending']
+                    del st.session_state['model_suggestion']
+                    st.rerun()
+            with col_n:
+                if st.button("No, keep what I typed", key="model_no", use_container_width=True):
+                    # Keep the typed value
+                    if model_input:
+                        st.session_state['model_input_accepted'] = model_input
+                    del st.session_state['model_prompt_pending']
+                    del st.session_state['model_suggestion']
+                    st.rerun()
 
     # Submit button (moved outside form for dynamic enabling)
     submit_disabled = (
@@ -1206,8 +1213,8 @@ with left_col:
     if submit_button:
         # Use accepted values (from suggestions/"did you mean?" confirmations)
         year_input = sanitize_input(year_input)
-        make_input = sanitize_input(st.session_state.get('make_input_accepted', make_input))
-        model_input = sanitize_input(st.session_state.get('model_input_accepted', model_input))
+        make_input = sanitize_input(st.session_state.get('make_input_accepted', ""))
+        model_input = sanitize_input(st.session_state.get('model_input_accepted', ""))
 
         # Store the search inputs
         st.session_state['pending_search'] = {
