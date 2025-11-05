@@ -971,9 +971,9 @@ with left_col:
         # Get current accepted value or raw input
         make_raw = st.session_state.get('make_raw_input', "")
         current_make_value = st.session_state.get('make_input_accepted', make_raw if make_raw else "")
-        
+
         # Build dynamic options list
-        # If user has typed something custom, put it first, then filtered matches
+        # Always include custom text if it exists and isn't in the standard list
         if make_raw and make_raw.strip() and make_raw not in all_makes_list:
             # User has custom text - put their text first, then filtered suggestions
             filtered_makes = filter_make_suggestions(make_raw, max_suggestions=15)
@@ -996,9 +996,8 @@ with left_col:
             index=make_index,
             key="make_input_main"
         )
-        
-        # After selectbox renders, check if selection is custom (not in original list)
-        # This detects when user has selected their custom typed text
+
+        # Store custom input immediately if it's not in the standard list
         if make_input and make_input not in all_makes_list:
             st.session_state['make_raw_input'] = make_input
         elif make_input in all_makes_list:
@@ -1063,9 +1062,8 @@ with left_col:
             key="model_input_main",
             disabled=not accepted_make
         )
-        
-        # After selectbox renders, check if selection is custom (not in original list)
-        # This detects when user has selected their custom typed text
+
+        # Store custom input immediately if it's not in the standard list
         if model_input and accepted_make and model_input not in model_options_list:
             st.session_state['model_raw_input'] = model_input
         elif model_input and accepted_make and model_input in model_options_list:
@@ -1140,10 +1138,13 @@ with left_col:
         # Also check for cross-make hints
         cross_make_hints = cross_make_model_hint(current_model_input)
         if cross_make_hints:
-            # Take the first (best) hint
-            hint_make, hint_model = cross_make_hints[0]
-            st.session_state['cross_make_hint'] = (hint_make, hint_model)
-            st.session_state['model_prompt_pending'] = True
+            # Filter out hints where the suggested make matches the current confirmed make
+            filtered_cross_make_hints = [hint for hint in cross_make_hints if hint[0] != confirmed_make]
+            if filtered_cross_make_hints:
+                # Take the first (best) filtered hint
+                hint_make, hint_model = filtered_cross_make_hints[0]
+                st.session_state['cross_make_hint'] = (hint_make, hint_model)
+                st.session_state['model_prompt_pending'] = True
 
     # Show model "did you mean?" prompt
     if st.session_state.get('model_prompt_pending'):
