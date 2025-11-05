@@ -969,9 +969,9 @@ with left_col:
         current_make_value = st.session_state.get('make_input_accepted', "")
 
         # Build filtered options list based on current input
-        if make_input and make_input.strip():
+        if current_make_value and current_make_value.strip():
             # Filter suggestions based on typed text
-            make_options = filter_make_suggestions(make_input, max_suggestions=15)
+            make_options = filter_make_suggestions(current_make_value, max_suggestions=15)
         else:
             # Show all makes when no input
             make_options = (all_makes_list if all_makes_list else [])
@@ -1033,9 +1033,9 @@ with left_col:
         
         # Build filtered options list based on current input
         if accepted_make:
-            if model_input and model_input.strip():
+            if current_model_value and current_model_value.strip():
                 # Filter suggestions based on typed text
-                model_options = filter_model_suggestions(accepted_make, model_input, max_suggestions=15)
+                model_options = filter_model_suggestions(accepted_make, current_model_value, max_suggestions=15)
             else:
                 # Show all models when no input
                 model_options = (model_options_list if model_options_list else [])
