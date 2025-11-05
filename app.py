@@ -1624,64 +1624,64 @@ with left_col:
                             
                             # Refresh the page to show the updated vehicle details and cost estimate
                             st.rerun()
-                    else:
-                        # API succeeded but curb weight not found in search results
-                        # Clear pending search on error
-                        if 'pending_search' in st.session_state:
-                            del st.session_state['pending_search']
-                        
-                        # Check if we got any other fields successfully
-                        has_partial_data = any([
-                            vehicle_data.get('aluminum_engine') is not None,
-                            vehicle_data.get('aluminum_rims') is not None,
-                            vehicle_data.get('catalytic_converters') is not None
-                        ])
-                        
-                        # Determine if vehicle likely doesn't exist (no data found at all)
-                        # vs. vehicle exists but just missing curb weight
-                        critical_fields_found = sum([
-                            vehicle_data.get('aluminum_engine') is not None,
-                            vehicle_data.get('aluminum_rims') is not None,
-                            vehicle_data.get('catalytic_converters') is not None
-                        ])
-                        
-                        vehicle_likely_doesnt_exist = (critical_fields_found == 0)
-                        
-                        if vehicle_likely_doesnt_exist:
-                            # Vehicle doesn't appear to exist
-                            st.markdown(f"""
-                            <div class="warning-message" style="background-color: #fee2e2; border-left: 4px solid #dc2626;">
-                                <strong>⚠️ Vehicle Not Found:</strong> Unable to find a <strong>{year_int} {make_input} {model_input}</strong> in our search results.
-                                <br><br>
-                                <strong>Please verify:</strong>
-                                <ul style="margin: 0.5rem 0 0 1rem; padding-left: 1rem;">
-                                    <li>Year is correct (this make/model may not have been produced in {year_int})</li>
-                                    <li>Make and model names are spelled correctly</li>
-                                    <li>This vehicle actually exists (not a concept car or unreleased model)</li>
-                                </ul>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            st.info("💡 **Suggestions:**\n- Check if this model was produced in a different year range\n- Try searching for a similar year (e.g., try years +/- 2 years)\n- Verify the spelling of the make and model\n- If you're certain this vehicle exists, use Manual Entry below")
                         else:
-                            # Vehicle exists but curb weight not found
-                            st.markdown("""
-                            <div class="warning-message">
-                                <strong>Curb Weight Not Found:</strong> The search completed but could not find reliable curb weight data for this vehicle.
-                            </div>
-                            """, unsafe_allow_html=True)
+                            # API succeeded but curb weight not found in search results
+                            # Clear pending search on error
+                            if 'pending_search' in st.session_state:
+                                del st.session_state['pending_search']
                             
-                            if has_partial_data:
-                                st.info(f"ℹ️ **Found partial data:**")
-                                cols = st.columns(3)
-                                if vehicle_data.get('aluminum_engine') is not None:
-                                    cols[0].write(f"✓ Aluminum Engine: {vehicle_data['aluminum_engine']}")
-                                if vehicle_data.get('aluminum_rims') is not None:
-                                    cols[1].write(f"✓ Aluminum Rims: {vehicle_data['aluminum_rims']}")
-                                if vehicle_data.get('catalytic_converters') is not None:
-                                    cols[2].write(f"✓ Cat Converters: {vehicle_data['catalytic_converters']}")
+                            # Check if we got any other fields successfully
+                            has_partial_data = any([
+                                vehicle_data.get('aluminum_engine') is not None,
+                                vehicle_data.get('aluminum_rims') is not None,
+                                vehicle_data.get('catalytic_converters') is not None
+                            ])
                             
-                            st.info("💡 **What to do next:**\n- Try a different model year (curb weight data may be available for nearby years)\n- Use the Manual Entry option below if you know the vehicle's curb weight")
+                            # Determine if vehicle likely doesn't exist (no data found at all)
+                            # vs. vehicle exists but just missing curb weight
+                            critical_fields_found = sum([
+                                vehicle_data.get('aluminum_engine') is not None,
+                                vehicle_data.get('aluminum_rims') is not None,
+                                vehicle_data.get('catalytic_converters') is not None
+                            ])
+                            
+                            vehicle_likely_doesnt_exist = (critical_fields_found == 0)
+                            
+                            if vehicle_likely_doesnt_exist:
+                                # Vehicle doesn't appear to exist
+                                st.markdown(f"""
+                                <div class="warning-message" style="background-color: #fee2e2; border-left: 4px solid #dc2626;">
+                                    <strong>⚠️ Vehicle Not Found:</strong> Unable to find a <strong>{year_int} {make_input} {model_input}</strong> in our search results.
+                                    <br><br>
+                                    <strong>Please verify:</strong>
+                                    <ul style="margin: 0.5rem 0 0 1rem; padding-left: 1rem;">
+                                        <li>Year is correct (this make/model may not have been produced in {year_int})</li>
+                                        <li>Make and model names are spelled correctly</li>
+                                        <li>This vehicle actually exists (not a concept car or unreleased model)</li>
+                                    </ul>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                st.info("💡 **Suggestions:**\n- Check if this model was produced in a different year range\n- Try searching for a similar year (e.g., try years +/- 2 years)\n- Verify the spelling of the make and model\n- If you're certain this vehicle exists, use Manual Entry below")
+                            else:
+                                # Vehicle exists but curb weight not found
+                                st.markdown("""
+                                <div class="warning-message">
+                                    <strong>Curb Weight Not Found:</strong> The search completed but could not find reliable curb weight data for this vehicle.
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                if has_partial_data:
+                                    st.info(f"ℹ️ **Found partial data:**")
+                                    cols = st.columns(3)
+                                    if vehicle_data.get('aluminum_engine') is not None:
+                                        cols[0].write(f"✓ Aluminum Engine: {vehicle_data['aluminum_engine']}")
+                                    if vehicle_data.get('aluminum_rims') is not None:
+                                        cols[1].write(f"✓ Aluminum Rims: {vehicle_data['aluminum_rims']}")
+                                    if vehicle_data.get('catalytic_converters') is not None:
+                                        cols[2].write(f"✓ Cat Converters: {vehicle_data['catalytic_converters']}")
+                                
+                                st.info("💡 **What to do next:**\n- Try a different model year (curb weight data may be available for nearby years)\n- Use the Manual Entry option below if you know the vehicle's curb weight")
             except ValueError:
                 # Clear pending search on error
                 if 'pending_search' in st.session_state:
