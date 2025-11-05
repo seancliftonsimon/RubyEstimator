@@ -818,17 +818,58 @@ def generate_main_app_css() -> str:
         opacity: 0 !important;
     }}
     
-    /* Only hide keyboard shortcut spans (not the label text) */
+    /* Only hide keyboard shortcut spans (not the label text) - including on hover */
     [data-testid="stExpander"] details summary span[class*="keyboard"],
-    [data-testid="stExpander"] details summary span[aria-label*="keyboard"] {{
+    [data-testid="stExpander"] details summary span[aria-label*="keyboard"],
+    [data-testid="stExpander"] details summary:hover span[class*="keyboard"],
+    [data-testid="stExpander"] details summary:hover span[aria-label*="keyboard"],
+    [data-testid="stExpander"] details summary *[class*="keyboard"],
+    [data-testid="stExpander"] details summary *[aria-label*="keyboard"],
+    [data-testid="stExpander"] details summary *[data-testid*="keyboard"],
+    [data-testid="stExpander"] details summary:hover *[class*="keyboard"],
+    [data-testid="stExpander"] details summary:hover *[aria-label*="keyboard"],
+    [data-testid="stExpander"] details summary:hover *[data-testid*="keyboard"] {{
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+    }}
+    
+    /* Hide pseudo-elements on keyboard-related elements only */
+    [data-testid="stExpander"] details summary *[class*="keyboard"]::after,
+    [data-testid="stExpander"] details summary *[class*="keyboard"]::before,
+    [data-testid="stExpander"] details summary *[aria-label*="keyboard"]::after,
+    [data-testid="stExpander"] details summary *[aria-label*="keyboard"]::before {{
+        content: none !important;
     }}
     
     /* Disable tooltips on hover but keep text visible */
+    [data-testid="stExpander"] details summary[title]:hover::after,
+    [data-testid="stExpander"] details summary[title]:hover::before,
+    [data-testid="stExpander"] details summary *[title]:hover::after,
+    [data-testid="stExpander"] details summary *[title]:hover::before,
     [data-testid="stExpander"] [title]:hover::after {{
         display: none !important;
+        content: none !important;
+        visibility: hidden !important;
+    }}
+    
+    /* Remove title tooltips completely */
+    [data-testid="stExpander"] details summary[title],
+    [data-testid="stExpander"] details summary *[title] {{
+        pointer-events: auto !important;
+    }}
+    
+    /* Hide Material Icons keyboard arrow on hover */
+    [data-testid="stExpander"] details summary:hover .material-icons,
+    [data-testid="stExpander"] details summary:hover *[class*="material-icons"] {{
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }}
     
     /* Ensure expander label text is visible */

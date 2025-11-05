@@ -120,6 +120,51 @@ DEFAULT_CONSENSUS_SETTINGS: Dict[str, Any] = {
     }
 }
 
+# Make-year compatibility list for validation
+MAKE_YEAR_COMPATIBILITY: list[Dict[str, Any]] = [
+    {"make": "Acura",       "start_year": 1986, "end_year": None},
+    {"make": "Audi",        "start_year": 1970, "end_year": None},
+    {"make": "BMW",         "start_year": 1956, "end_year": None},
+    {"make": "Buick",       "start_year": 1899, "end_year": None},
+    {"make": "Cadillac",    "start_year": 1902, "end_year": None},
+    {"make": "Chevrolet",   "start_year": 1911, "end_year": None},
+    {"make": "Chrysler",    "start_year": 1925, "end_year": None},
+    {"make": "Dodge",       "start_year": 1914, "end_year": None},
+    {"make": "Ford",        "start_year": 1903, "end_year": None},
+    {"make": "Genesis",     "start_year": 2015, "end_year": None},
+    {"make": "GMC",         "start_year": 1911, "end_year": None},
+    {"make": "Honda",       "start_year": 1969, "end_year": None},
+    {"make": "Hummer",      "start_year": 1992, "end_year": 2010},
+    {"make": "Hyundai",     "start_year": 1986, "end_year": None},
+    {"make": "Infiniti",    "start_year": 1989, "end_year": None},
+    {"make": "Jaguar",      "start_year": 1945, "end_year": None},
+    {"make": "Jeep",        "start_year": 1941, "end_year": None},
+    {"make": "Kia",         "start_year": 1994, "end_year": None},
+    {"make": "Land Rover",  "start_year": 1948, "end_year": None},
+    {"make": "Lexus",       "start_year": 1989, "end_year": None},
+    {"make": "Lincoln",     "start_year": 1917, "end_year": None},
+    {"make": "Mazda",       "start_year": 1970, "end_year": None},
+    {"make": "Mercedes-Benz","start_year": 1954, "end_year": None},
+    {"make": "Mercury",     "start_year": 1939, "end_year": 2011},
+    {"make": "Mini",        "start_year": 1959, "end_year": None},
+    {"make": "Mitsubishi",  "start_year": 1982, "end_year": None},
+    {"make": "Nissan",      "start_year": 1958, "end_year": None},
+    {"make": "Oldsmobile",  "start_year": 1897, "end_year": 2004},
+    {"make": "Plymouth",    "start_year": 1928, "end_year": 2001},
+    {"make": "Pontiac",     "start_year": 1926, "end_year": 2010},
+    {"make": "Porsche",     "start_year": 1950, "end_year": None},
+    {"make": "Ram",         "start_year": 2009, "end_year": None},
+    {"make": "Saab",        "start_year": 1945, "end_year": 2016},
+    {"make": "Saturn",      "start_year": 1985, "end_year": 2010},
+    {"make": "Scion",       "start_year": 2003, "end_year": 2016},
+    {"make": "Subaru",      "start_year": 1968, "end_year": None},
+    {"make": "Suzuki",      "start_year": 1985, "end_year": 2013},
+    {"make": "Tesla",       "start_year": 2003, "end_year": None},
+    {"make": "Toyota",      "start_year": 1958, "end_year": None},
+    {"make": "Volkswagen",  "start_year": 1949, "end_year": None},
+    {"make": "Volvo",       "start_year": 1955, "end_year": None}
+]
+
 def _merge_dicts(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
     merged = dict(base)
     for k, v in (override or {}).items():
@@ -149,6 +194,49 @@ def get_config() -> Dict[str, Any]:
 
 def refresh_config_cache():
     load_db_config.clear()
+
+def validate_make_year_compatibility(make: str, year: int) -> tuple[bool, str]:
+    """
+    Validate if the entered year is within the make's production period.
+    
+    Args:
+        make: The vehicle make name (case-insensitive)
+        year: The vehicle year as an integer
+        
+    Returns:
+        tuple[bool, str]: (is_valid, warning_message)
+            - is_valid: True if year is valid or make is not in list, False if year is outside production period
+            - warning_message: Warning message if invalid, empty string if valid
+    """
+    # Normalize make name for comparison (case-insensitive)
+    make_normalized = make.strip().lower()
+    
+    # Find matching make in compatibility list
+    make_info = None
+    for entry in MAKE_YEAR_COMPATIBILITY:
+        if entry["make"].lower() == make_normalized:
+            make_info = entry
+            break
+    
+    # If make is not in the list, allow search (don't show warning)
+    if make_info is None:
+        return (True, "")
+    
+    start_year = make_info["start_year"]
+    end_year = make_info["end_year"]
+    
+    # Check if year is before start_year
+    if year < start_year:
+        warning_msg = f"⚠️ Are you sure that date is from before the production time of {make_info['make']}? {make_info['make']} started production in {start_year}, but you entered {year}."
+        return (False, warning_msg)
+    
+    # Check if year is after end_year (only if end_year is not None)
+    if end_year is not None and year > end_year:
+        warning_msg = f"⚠️ Are you sure that date is from after the production time of {make_info['make']}? {make_info['make']} ended production in {end_year}, but you entered {year}."
+        return (False, warning_msg)
+    
+    # Year is within valid range
+    return (True, "")
 
 def render_admin_ui():
     """Render the admin configuration UI with restore to default functionality."""
@@ -720,15 +808,64 @@ st.markdown("""
         align-items: center !important;
     }
     
-    /* Hide only keyboard shortcut text (not the label) */
+    /* Hide only keyboard shortcut text (not the label) - including on hover */
     [data-testid="stExpander"] details summary span[class*="keyboard"],
-    [data-testid="stExpander"] details summary span[aria-label*="keyboard"] {
+    [data-testid="stExpander"] details summary span[aria-label*="keyboard"],
+    [data-testid="stExpander"] details summary:hover span[class*="keyboard"],
+    [data-testid="stExpander"] details summary:hover span[aria-label*="keyboard"],
+    [data-testid="stExpander"] details summary *[class*="keyboard"],
+    [data-testid="stExpander"] details summary *[aria-label*="keyboard"],
+    [data-testid="stExpander"] details summary *[data-testid*="keyboard"],
+    [data-testid="stExpander"] details summary:hover *[class*="keyboard"],
+    [data-testid="stExpander"] details summary:hover *[aria-label*="keyboard"],
+    [data-testid="stExpander"] details summary:hover *[data-testid*="keyboard"] {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
     }
     
-    /* Disable tooltip popups */
-    [data-testid="stExpander"] [title]:hover::after {
+    /* Hide pseudo-elements on keyboard-related elements only */
+    [data-testid="stExpander"] details summary *[class*="keyboard"]::after,
+    [data-testid="stExpander"] details summary *[class*="keyboard"]::before,
+    [data-testid="stExpander"] details summary *[aria-label*="keyboard"]::after,
+    [data-testid="stExpander"] details summary *[aria-label*="keyboard"]::before {
+        content: none !important;
+    }
+    
+    /* Disable tooltip popups and remove title attributes */
+    [data-testid="stExpander"] details summary[title]:hover::after,
+    [data-testid="stExpander"] details summary[title]:hover::before,
+    [data-testid="stExpander"] details summary *[title]:hover::after,
+    [data-testid="stExpander"] details summary *[title]:hover::before {
         display: none !important;
+        content: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Remove title tooltips completely */
+    [data-testid="stExpander"] details summary[title],
+    [data-testid="stExpander"] details summary *[title] {
+        pointer-events: auto !important;
+    }
+    
+    /* Hide any Material Icons that might show keyboard arrow (but keep emoji icons) */
+    [data-testid="stExpander"] details summary .material-icons,
+    [data-testid="stExpander"] details summary *[class*="material-icons"],
+    [data-testid="stExpander"] details summary:hover .material-icons,
+    [data-testid="stExpander"] details summary:hover *[class*="material-icons"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }
+    
+    /* Ensure summary text itself is visible but no keyboard shortcuts */
+    [data-testid="stExpander"] details summary {
+        position: relative !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1318,143 +1455,175 @@ with left_col:
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    # Create a unique identifier for this vehicle search
-                    vehicle_id = f"{year_int}_{make_input}_{model_input}"
-                    
-                    # Check if we've already processed this vehicle in this session
-                    if st.session_state.get('last_processed_vehicle') != vehicle_id:
-                        # Show simplified progress indicator
-                        with progress_container.container():
-                            st.markdown("""
-                            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%); border-radius: 12px; padding: 1.5rem; border: 3px solid #3b82f6; box-shadow: 0 6px 24px rgba(59, 130, 246, 0.3); margin-bottom: 1rem;">
-                                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                                    <div style="font-size: 1.75rem; margin-right: 0.75rem; animation: pulse-icon 1.5s ease-in-out infinite;">🔍</div>
-                                    <div style="font-size: 1.2rem; font-weight: 700; color: #1e40af; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);">Searching the web for vehicle info...</div>
-                                </div>
-                                <div style="background: rgba(255, 255, 255, 0.8); border-radius: 8px; height: 12px; overflow: hidden; margin-bottom: 0.5rem; position: relative; border: 2px solid #3b82f6;">
-                                    <div style="background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 25%, #2dd4bf 50%, #14b8a6 75%, #3b82f6 100%); height: 100%; width: 50%; position: absolute; animation: progress-slide 1.5s ease-in-out infinite; box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);"></div>
-                                </div>
-                                <div style="text-align: center; font-size: 0.875rem; color: #1e3a8a; font-weight: 500; margin-top: 0.5rem;">This may take a few moments...</div>
-                            </div>
-                            <style>
-                                @keyframes progress-slide {
-                                    0% { 
-                                        left: -50%; 
-                                    }
-                                    100% { 
-                                        left: 100%; 
-                                    }
-                                }
-                                @keyframes pulse-icon {
-                                    0%, 100% { 
-                                        transform: scale(1); 
-                                        opacity: 1;
-                                    }
-                                    50% { 
-                                        transform: scale(1.1); 
-                                        opacity: 0.8;
-                                    }
-                                }
-                            </style>
-                            """, unsafe_allow_html=True)
-                        
-                        # Process vehicle (single API call gets all specs at once)
-                        vehicle_data = process_vehicle(year_int, make_input, model_input)
-                        
-                        # Clear progress indicator
-                        progress_container.empty()
-                        
-                        # Mark this vehicle as processed to prevent duplicate processing
-                        st.session_state['last_processed_vehicle'] = vehicle_id
+                    # Validate make-year compatibility
+                    is_valid, warning_message = validate_make_year_compatibility(make_input, year_int)
+                    if not is_valid:
+                        # Clear pending search on validation failure
+                        del st.session_state['pending_search']
+                        st.warning(warning_message)
                     else:
-                        # Use the existing vehicle data from session state
-                        vehicle_data = {
-                            'curb_weight_lbs': st.session_state.get('last_curb_weight'),
-                            'aluminum_engine': st.session_state.get('last_aluminum_engine'),
-                            'aluminum_rims': st.session_state.get('last_aluminum_rims'),
-                            'catalytic_converters': st.session_state.get('last_catalytic_converters')
-                        }
-                    
-                    if vehicle_data is None:
-                        # Vehicle validation failed - it's fake or doesn't exist
-                        # Clear pending search on error
-                        if 'pending_search' in st.session_state:
-                            del st.session_state['pending_search']
-                        st.markdown(f"""
-                        <div class="error-message">
-                            <strong>Vehicle Not Found:</strong> {year_int} {make_input} {model_input} does not appear to be a real vehicle or was not manufactured in this year. Please check your input.
-                        </div>
-                        """, unsafe_allow_html=True)
-                    elif 'error' in vehicle_data and vehicle_data['error']:
-                        # API call failed (503, timeout, etc.)
-                        # Clear pending search on error
-                        if 'pending_search' in st.session_state:
-                            del st.session_state['pending_search']
-                        error_msg = vehicle_data['error']
-                        st.markdown(f"""
-                        <div class="error-message">
-                            <strong>Search Error:</strong> Unable to search for vehicle data due to a temporary issue.
-                        </div>
-                        """, unsafe_allow_html=True)
-                        st.error(f"Error details: {error_msg}")
-                        st.info("💡 **What to do next:**\n- Try again in a few moments (API might be overloaded)\n- Use the Manual Entry option below if you know the vehicle's curb weight")
-                    elif vehicle_data and vehicle_data.get('curb_weight_lbs'):
-                        # Display simple success message
-                        st.markdown(f"""
-                        <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
-                            ✅ <strong>Vehicle Found!</strong> {year_int} {make_input} {model_input}
-                        </div>
-                        """, unsafe_allow_html=True)
+                        # Create a unique identifier for this vehicle search
+                        vehicle_id = f"{year_int}_{make_input}_{model_input}"
                         
-                        # Store the detailed vehicle info for display on the right
-                        # Check if we have confidence information from staged resolver
-                        confidence_info = vehicle_data.get('confidence_scores', {})
-                        validation_warnings = vehicle_data.get('warnings', [])
-                        source_attribution = vehicle_data.get('source_attribution', {})
-                        citations = vehicle_data.get('citations', {})
+                        # Check if we've already processed this vehicle in this session
+                        if st.session_state.get('last_processed_vehicle') != vehicle_id:
+                            # Show simplified progress indicator
+                            with progress_container.container():
+                                st.markdown("""
+                                <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%); border-radius: 12px; padding: 1.5rem; border: 3px solid #3b82f6; box-shadow: 0 6px 24px rgba(59, 130, 246, 0.3); margin-bottom: 1rem;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                                        <div style="font-size: 1.75rem; margin-right: 0.75rem; animation: pulse-icon 1.5s ease-in-out infinite;">🔍</div>
+                                        <div style="font-size: 1.2rem; font-weight: 700; color: #1e40af; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);">Searching the web for vehicle info...</div>
+                                    </div>
+                                    <div style="background: rgba(255, 255, 255, 0.8); border-radius: 8px; height: 12px; overflow: hidden; margin-bottom: 0.5rem; position: relative; border: 2px solid #3b82f6;">
+                                        <div style="background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 25%, #2dd4bf 50%, #14b8a6 75%, #3b82f6 100%); height: 100%; width: 50%; position: absolute; animation: progress-slide 1.5s ease-in-out infinite; box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);"></div>
+                                    </div>
+                                    <div style="text-align: center; font-size: 0.875rem; color: #1e3a8a; font-weight: 500; margin-top: 0.5rem;">This may take a few moments...</div>
+                                </div>
+                                <style>
+                                    @keyframes progress-slide {
+                                        0% { 
+                                            left: -50%; 
+                                        }
+                                        100% { 
+                                            left: 100%; 
+                                        }
+                                    }
+                                    @keyframes pulse-icon {
+                                        0%, 100% { 
+                                            transform: scale(1); 
+                                            opacity: 1;
+                                        }
+                                        50% { 
+                                            transform: scale(1.1); 
+                                            opacity: 0.8;
+                                        }
+                                    }
+                                </style>
+                                """, unsafe_allow_html=True)
+                            
+                            # Process vehicle (single API call gets all specs at once)
+                            vehicle_data = process_vehicle(year_int, make_input, model_input)
+                            
+                            # Clear progress indicator
+                            progress_container.empty()
+                            
+                            # Mark this vehicle as processed to prevent duplicate processing
+                            st.session_state['last_processed_vehicle'] = vehicle_id
+                        else:
+                            # Use the existing vehicle data from session state
+                            vehicle_data = {
+                                'curb_weight_lbs': st.session_state.get('last_curb_weight'),
+                                'aluminum_engine': st.session_state.get('last_aluminum_engine'),
+                                'aluminum_rims': st.session_state.get('last_aluminum_rims'),
+                                'catalytic_converters': st.session_state.get('last_catalytic_converters')
+                            }
                         
-                        st.session_state['detailed_vehicle_info'] = {
-                            'year': year_int,
-                            'make': make_input,
-                            'model': model_input,
-                            'weight': vehicle_data['curb_weight_lbs'],
-                            'aluminum_engine': vehicle_data['aluminum_engine'],
-                            'aluminum_rims': vehicle_data['aluminum_rims'],
-                            'catalytic_converters': vehicle_data['catalytic_converters'],
-                            'confidence_scores': confidence_info,
-                            'validation_warnings': validation_warnings,
-                            'source_attribution': source_attribution,
-                            'citations': citations
-                        }
-                        
-                        # Store the data in session state for the cost estimator
-                        st.session_state['last_curb_weight'] = vehicle_data['curb_weight_lbs']
-                        st.session_state['last_aluminum_engine'] = vehicle_data['aluminum_engine']
-                        st.session_state['last_aluminum_rims'] = vehicle_data['aluminum_rims']
-                        st.session_state['last_catalytic_converters'] = vehicle_data['catalytic_converters']
-                        st.session_state['last_vehicle_info'] = f"{year_int} {make_input} {model_input}"
-                        
-                        # Auto-populate and calculate the cost estimator
-                        st.session_state['auto_calculate'] = True
-                        # Clear pending search before rerun now that we have new data
-                        if 'pending_search' in st.session_state:
-                            del st.session_state['pending_search']
-                        
-                        # Reset input fields after successful search
-                        if 'year_input_main' in st.session_state:
-                            del st.session_state['year_input_main']
-                        if 'make_input_accepted' in st.session_state:
-                            del st.session_state['make_input_accepted']
-                        if 'model_input_accepted' in st.session_state:
-                            del st.session_state['model_input_accepted']
-                        # Clear dropdown previous values to reset dropdowns
-                        if 'make_dropdown_previous' in st.session_state:
-                            del st.session_state['make_dropdown_previous']
-                        if 'model_dropdown_previous' in st.session_state:
-                            del st.session_state['model_dropdown_previous']
-                        
-                        # Refresh the page to show the updated vehicle details and cost estimate
-                        st.rerun()
+                        if vehicle_data is None:
+                            # Vehicle validation failed - it's fake or doesn't exist
+                            # Clear pending search on error
+                            if 'pending_search' in st.session_state:
+                                del st.session_state['pending_search']
+                            st.markdown(f"""
+                            <div class="error-message">
+                                <strong>Vehicle Not Found:</strong> {year_int} {make_input} {model_input} does not appear to be a real vehicle or was not manufactured in this year. Please check your input.
+                            </div>
+                            """, unsafe_allow_html=True)
+                        elif 'error' in vehicle_data and vehicle_data['error']:
+                            # API call failed (503, timeout, etc.)
+                            # Clear pending search on error
+                            if 'pending_search' in st.session_state:
+                                del st.session_state['pending_search']
+                            error_msg = vehicle_data['error']
+                            st.markdown(f"""
+                            <div class="error-message">
+                                <strong>Search Error:</strong> Unable to search for vehicle data due to a temporary issue.
+                            </div>
+                            """, unsafe_allow_html=True)
+                            st.error(f"Error details: {error_msg}")
+                            st.info("💡 **What to do next:**\n- Try again in a few moments (API might be overloaded)\n- Use the Manual Entry option below if you know the vehicle's curb weight")
+                        elif vehicle_data and vehicle_data.get('curb_weight_lbs'):
+                            # Display simple success message
+                            st.markdown(f"""
+                            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
+                                ✅ <strong>Vehicle Found!</strong> {year_int} {make_input} {model_input}
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Store the detailed vehicle info for display on the right
+                            # Check if we have confidence information from staged resolver
+                            confidence_info = vehicle_data.get('confidence_scores', {})
+                            validation_warnings = vehicle_data.get('warnings', [])
+                            source_attribution = vehicle_data.get('source_attribution', {})
+                            citations = vehicle_data.get('citations', {})
+                            
+                            st.session_state['detailed_vehicle_info'] = {
+                                'year': year_int,
+                                'make': make_input,
+                                'model': model_input,
+                                'weight': vehicle_data['curb_weight_lbs'],
+                                'aluminum_engine': vehicle_data['aluminum_engine'],
+                                'aluminum_rims': vehicle_data['aluminum_rims'],
+                                'catalytic_converters': vehicle_data['catalytic_converters'],
+                                'confidence_scores': confidence_info,
+                                'validation_warnings': validation_warnings,
+                                'source_attribution': source_attribution,
+                                'citations': citations
+                            }
+                            
+                            # Store the data in session state for the cost estimator
+                            st.session_state['last_curb_weight'] = vehicle_data['curb_weight_lbs']
+                            st.session_state['last_aluminum_engine'] = vehicle_data['aluminum_engine']
+                            st.session_state['last_aluminum_rims'] = vehicle_data['aluminum_rims']
+                            st.session_state['last_catalytic_converters'] = vehicle_data['catalytic_converters']
+                            st.session_state['last_vehicle_info'] = f"{year_int} {make_input} {model_input}"
+                            
+                            # Auto-populate and calculate the cost estimator
+                            st.session_state['auto_calculate'] = True
+                            # Clear pending search before rerun now that we have new data
+                            if 'pending_search' in st.session_state:
+                                del st.session_state['pending_search']
+                            
+                            # Reset input fields after successful search
+                            # Set to empty strings instead of deleting to ensure Streamlit widgets reset
+                            st.session_state['year_input_main'] = ""
+                            st.session_state['make_input_accepted'] = ""
+                            st.session_state['model_input_accepted'] = ""
+                            
+                            # Clear dropdown previous values to reset dropdowns to "Choose from list"
+                            if 'make_dropdown_previous' in st.session_state:
+                                del st.session_state['make_dropdown_previous']
+                            if 'model_dropdown_previous' in st.session_state:
+                                del st.session_state['model_dropdown_previous']
+                            
+                            # Clear any dynamic text input keys that might be cached
+                            # These keys are generated dynamically, so we clear them by pattern
+                            keys_to_delete = []
+                            for key in list(st.session_state.keys()):
+                                if key.startswith('make_input_text_') or key.startswith('model_input_text_'):
+                                    keys_to_delete.append(key)
+                            for key in keys_to_delete:
+                                del st.session_state[key]
+                            
+                            # Reset dropdown selections by clearing their session state
+                            # This ensures they default to "Choose from list" (index 0)
+                            if 'make_input_dropdown' in st.session_state:
+                                del st.session_state['make_input_dropdown']
+                            if 'model_input_dropdown' in st.session_state:
+                                del st.session_state['model_input_dropdown']
+                            
+                            # Clear prompt states
+                            if 'make_prompt_pending' in st.session_state:
+                                del st.session_state['make_prompt_pending']
+                            if 'make_suggestion' in st.session_state:
+                                del st.session_state['make_suggestion']
+                            if 'model_prompt_pending' in st.session_state:
+                                del st.session_state['model_prompt_pending']
+                            if 'model_suggestion' in st.session_state:
+                                del st.session_state['model_suggestion']
+                            
+                            # Refresh the page to show the updated vehicle details and cost estimate
+                            st.rerun()
                     else:
                         # API succeeded but curb weight not found in search results
                         # Clear pending search on error
@@ -1880,7 +2049,7 @@ with right_col:
             
             # Show manual entry option when no vehicle is selected
             st.markdown('<div style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0;">Enter curb weight manually</div>', unsafe_allow_html=True)
-            with st.expander("Enter curb weight manually", expanded=False):
+            with st.expander("Enter curb weight manually", expanded=False, icon="⚖️"):
                 with st.form(key="manual_calc_form_no_vehicle"):
                     col1, col2 = st.columns(2)
                     with col1:
