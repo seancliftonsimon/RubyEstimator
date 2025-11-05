@@ -841,13 +841,6 @@ left_col, spacer, right_col = st.columns([1, 0.2, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
-    # Visual indicator for dropdown system
-    st.markdown("""
-    <div style="background: linear-gradient(90deg, #10b981, #059669); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
-        🎯 Now with Dropdowns!
-    </div>
-    """, unsafe_allow_html=True)
-
     st.markdown("""
     <div class="section-header">
         🚗 Vehicle Search
@@ -961,9 +954,9 @@ with left_col:
 
     # Make input with dropdown - dynamic options with custom entry support
     with col2:
-        # Show make "did you mean?" prompt above make input
+        # Show make "did you mean?" prompt above make input - small text matching label size
         if st.session_state.get('make_prompt_pending'):
-            st.warning(f"Did you mean '{st.session_state['make_suggestion']}'?")
+            st.caption(f"Did you mean '{st.session_state['make_suggestion']}'?")
             col_y, col_n = st.columns([1, 1])
             with col_y:
                 if st.button("Yes", key="make_yes", use_container_width=True):
@@ -985,30 +978,29 @@ with left_col:
         # Get current accepted value for display
         current_make_value = st.session_state.get('make_input_accepted', "")
         
-        # Text input allows custom values to persist
-        make_input = st.text_input(
+        # Build options list - include custom value if it exists and isn't in the list
+        make_options = all_makes_list.copy() if all_makes_list else []
+        if current_make_value and current_make_value not in make_options:
+            # Add custom value to options list if it exists
+            make_options.insert(0, current_make_value)
+        
+        # Find index of current value
+        make_index = None
+        if make_options:
+            if current_make_value and current_make_value in make_options:
+                make_index = make_options.index(current_make_value)
+            elif current_make_value:
+                # Custom value not in list - use first option (the custom value we just added)
+                make_index = 0
+        
+        # Use selectbox for reactive filtering - it filters as user types
+        make_input = st.selectbox(
             "Make",
-            value=current_make_value,
+            options=make_options,
+            index=make_index,
             key="make_input_main"
         )
         
-        # Build filtered options list based on ACTUAL typed input (not accepted value)
-        if make_input and make_input.strip():
-            # Filter suggestions based on what user is currently typing
-            make_options = filter_make_suggestions(make_input, max_suggestions=15)
-            # Only show dropdown if there are filtered options
-            if make_options:
-                make_suggestion = st.selectbox(
-                    "",
-                    options=make_options,
-                    index=None,
-                    key="make_suggestions"
-                )
-                # If user selected from dropdown, update the text input
-                if make_suggestion:
-                    st.session_state['make_input_main'] = make_suggestion
-                    st.rerun()
-
         # Store selected make
         previous_make = st.session_state.get('make_input_accepted', "")
         if make_input:
@@ -1038,12 +1030,12 @@ with left_col:
 
     # Model input with dropdown - dynamic options with custom entry support
     with col3:
-        # Show model "did you mean?" prompt above model input
+        # Show model "did you mean?" prompt above model input - small text matching label size
         current_model_input = st.session_state.get('model_input_accepted', "")
         if st.session_state.get('model_prompt_pending'):
             if 'cross_make_hint' in st.session_state:
                 hint_make, hint_model = st.session_state['cross_make_hint']
-                st.warning(f"'{current_model_input}' is typically a {hint_make} model. Did you mean to change Make to {hint_make}?")
+                st.caption(f"'{current_model_input}' is typically a {hint_make} model. Did you mean to change Make to {hint_make}?")
                 col_y, col_n = st.columns([1, 1])
                 with col_y:
                     if st.button("Yes, switch to " + hint_make, key="model_cross_make_yes", use_container_width=True):
@@ -1061,7 +1053,7 @@ with left_col:
                         del st.session_state['cross_make_hint']
                         st.rerun()
             else:
-                st.warning(f"Did you mean '{st.session_state['model_suggestion']}'?")
+                st.caption(f"Did you mean '{st.session_state['model_suggestion']}'?")
                 col_y, col_n = st.columns([1, 1])
                 with col_y:
                     if st.button("Yes", key="model_yes", use_container_width=True):
@@ -1088,31 +1080,30 @@ with left_col:
         # Get current accepted value for display
         current_model_value = st.session_state.get('model_input_accepted', "")
         
-        # Text input allows custom values to persist
+        # Build options list - include custom value if it exists and isn't in the list
+        model_options = model_options_list.copy() if model_options_list else []
+        if current_model_value and current_model_value not in model_options and accepted_make:
+            # Add custom value to options list if it exists
+            model_options.insert(0, current_model_value)
+        
+        # Find index of current value
+        model_index = None
+        if model_options and accepted_make:
+            if current_model_value and current_model_value in model_options:
+                model_index = model_options.index(current_model_value)
+            elif current_model_value:
+                # Custom value not in list - use first option (the custom value we just added)
+                model_index = 0
+        
+        # Use selectbox for reactive filtering - it filters as user types
         model_label = f"Model" + (f" ({accepted_make})" if accepted_make else "")
-        model_input = st.text_input(
+        model_input = st.selectbox(
             model_label,
-            value=current_model_value,
+            options=model_options,
+            index=model_index,
             key="model_input_main",
             disabled=not accepted_make
         )
-        
-        # Build filtered options list based on ACTUAL typed input (not accepted value)
-        if model_input and model_input.strip() and accepted_make:
-            # Filter suggestions based on what user is currently typing
-            model_options = filter_model_suggestions(accepted_make, model_input, max_suggestions=15)
-            # Only show dropdown if there are filtered options
-            if model_options:
-                model_suggestion = st.selectbox(
-                    "",
-                    options=model_options,
-                    index=None,
-                    key="model_suggestions"
-                )
-                # If user selected from dropdown, update the text input
-                if model_suggestion:
-                    st.session_state['model_input_main'] = model_suggestion
-                    st.rerun()
 
         # Store selected model
         previous_model = st.session_state.get('model_input_accepted', "")
