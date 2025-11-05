@@ -977,7 +977,7 @@ with left_col:
         # Get current accepted value for display
         current_make_value = st.session_state.get('make_input_accepted', "")
         
-        # Text input field for make
+        # Text input field for make - use value from session state to sync with dropdown
         make_input = st.text_input("Make", value=current_make_value, key="make_input_text")
         
         # Dropdown list below text input - "Choose from list" as first option
@@ -1008,6 +1008,9 @@ with left_col:
                 # Always clear model when make changes via dropdown
                 if 'model_input_accepted' in st.session_state:
                     del st.session_state['model_input_accepted']
+                # Clear model dropdown previous to force refresh
+                if 'model_dropdown_previous' in st.session_state:
+                    del st.session_state['model_dropdown_previous']
                 # Reset prompt states
                 if 'make_prompt_pending' in st.session_state:
                     del st.session_state['make_prompt_pending']
@@ -1171,7 +1174,7 @@ with left_col:
         # Get current accepted value for display
         current_model_value = st.session_state.get('model_input_accepted', "")
         
-        # Text input field for model (disabled until make is selected)
+        # Text input field for model (disabled until make is selected) - use value from session state to sync with dropdown
         model_input = st.text_input(
             "Model" + (f" ({accepted_make})" if accepted_make else ""),
             value=current_model_value,
@@ -2149,39 +2152,19 @@ if 'db_created' not in st.session_state:
             print("✅ Database connection successful")
             st.session_state['db_created'] = True
 
-            # Auto-load seed catalog (always reload to ensure latest version is used)
+            # Ensure catalog cache is loaded (static, no database rebuild)
             try:
-                from vehicle_data import get_catalog_stats, import_catalog_from_json
-                from database_config import create_database_engine
-                from sqlalchemy import text
-                print("📚 Loading/refreshing seed catalog data...")
-
-                # Clear existing catalog data first
-                engine = create_database_engine()
-                with engine.connect() as conn:
-                    print("  Clearing existing catalog data...")
-                    conn.execute(text("DELETE FROM ref_aliases"))
-                    conn.execute(text("DELETE FROM ref_models"))
-                    conn.execute(text("DELETE FROM ref_makes"))
-                    conn.commit()
-                    print("  ✓ Existing catalog data cleared")
-
-                # Now load the fresh seed data
-                import json
-                import os
-                seed_file = os.path.join(os.path.dirname(__file__), 'seed_catalog.json')
-                if os.path.exists(seed_file):
-                    with open(seed_file, 'r') as f:
-                        seed_data = json.load(f)
-                    success = import_catalog_from_json(seed_data)
-                    if success:
-                        print("✅ Seed catalog loaded/refreshed successfully")
-                    else:
-                        print("❌ Failed to load seed catalog")
+                from vehicle_data import ensure_catalog_cached
+                print("📚 Loading static catalog from seed_catalog.json...")
+                cache_data = ensure_catalog_cached()
+                if cache_data and cache_data.get("make_index", {}).get("all_makes"):
+                    make_count = len(cache_data["make_index"]["all_makes"])
+                    model_count = sum(len(models.get("all_models", [])) for models in cache_data.get("model_index_by_make", {}).values())
+                    print(f"✅ Static catalog loaded: {make_count} makes, {model_count} models")
                 else:
-                    print("⚠️ seed_catalog.json not found, skipping auto-load")
+                    print("⚠️ Catalog cache is empty or invalid")
             except Exception as e:
-                print(f"⚠️ Error loading seed catalog: {e}")
+                print(f"⚠️ Error loading catalog cache: {e}")
 
         else:
             print(f"❌ Database connection failed: {message}")

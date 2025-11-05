@@ -454,8 +454,12 @@ def rebuild_alias_table() -> bool:
                         id as target_id
                     FROM ref_makes,
                     json_array_elements_text(
-                        CASE WHEN aliases_json IS NULL OR aliases_json = '' THEN '[]'::json
-                             ELSE aliases_json::json END
+                        CASE 
+                            WHEN aliases_json IS NULL THEN '[]'::json
+                            WHEN TRIM(aliases_json::text) = '' THEN '[]'::json
+                            WHEN aliases_json::text = 'null' THEN '[]'::json
+                            ELSE aliases_json::json 
+                        END
                     ) as value
                     WHERE TRIM(value) != ''
                 """)
@@ -471,8 +475,12 @@ def rebuild_alias_table() -> bool:
                         id as target_id
                     FROM ref_models,
                     json_array_elements_text(
-                        CASE WHEN aliases_json IS NULL OR aliases_json = '' THEN '[]'::json
-                             ELSE aliases_json::json END
+                        CASE 
+                            WHEN aliases_json IS NULL THEN '[]'::json
+                            WHEN TRIM(aliases_json::text) = '' THEN '[]'::json
+                            WHEN aliases_json::text = 'null' THEN '[]'::json
+                            ELSE aliases_json::json 
+                        END
                     ) as value
                     WHERE TRIM(value) != ''
                 """)
