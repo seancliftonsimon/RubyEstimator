@@ -985,21 +985,23 @@ with left_col:
         # Text input field for make
         make_input = st.text_input("Make", value=current_make_value, key="make_input_text")
         
-        # Dropdown list below text input
-        make_dropdown_options = all_makes_list.copy() if all_makes_list else []
-        make_dropdown_index = 0
-        if current_make_value and current_make_value in make_dropdown_options:
-            make_dropdown_index = make_dropdown_options.index(current_make_value)
+        # Dropdown list below text input - "Choose from list" as first option
+        make_dropdown_options = ["Choose from list"] + (all_makes_list.copy() if all_makes_list else [])
+        make_dropdown_index = 0  # Default to "Choose from list"
+        if current_make_value and current_make_value in all_makes_list:
+            # Find index in the full list (add 1 because "Choose from list" is first)
+            make_dropdown_index = all_makes_list.index(current_make_value) + 1
         
         make_dropdown_selection = st.selectbox(
-            "Choose from list",
+            "Make List",
             options=make_dropdown_options,
             index=make_dropdown_index,
             key="make_input_dropdown"
         )
         
         # Handle selection from dropdown - update text input
-        if make_dropdown_selection and make_dropdown_selection != current_make_value:
+        # Skip if "Choose from list" placeholder is selected
+        if make_dropdown_selection and make_dropdown_selection != "Choose from list" and make_dropdown_selection != current_make_value:
             previous_make = st.session_state.get('make_input_accepted', "")
             st.session_state['make_input_accepted'] = make_dropdown_selection
             # Clear model when make changes
@@ -1022,10 +1024,15 @@ with left_col:
                     # Exact match - accept it directly
                     previous_make = st.session_state.get('make_input_accepted', "")
                     st.session_state['make_input_accepted'] = make_input
-                    # Clear model if make changed
+                    # Clear model if make changed (always clear when make changes)
                     if previous_make != make_input:
                         if 'model_input_accepted' in st.session_state:
                             del st.session_state['model_input_accepted']
+                        # Reset model prompt states too
+                        if 'model_prompt_pending' in st.session_state:
+                            del st.session_state['model_prompt_pending']
+                        if 'model_suggestion' in st.session_state:
+                            del st.session_state['model_suggestion']
                     # Reset prompt states
                     if 'make_prompt_pending' in st.session_state:
                         del st.session_state['make_prompt_pending']
@@ -1040,6 +1047,17 @@ with left_col:
                         if not st.session_state.get('make_prompt_pending'):
                             st.session_state['make_suggestion'] = fuzzy_make
                             st.session_state['make_prompt_pending'] = True
+                        # Update accepted make temporarily so model list updates
+                        previous_make = st.session_state.get('make_input_accepted', "")
+                        st.session_state['make_input_accepted'] = make_input
+                        # Clear model if make changed
+                        if previous_make != make_input:
+                            if 'model_input_accepted' in st.session_state:
+                                del st.session_state['model_input_accepted']
+                            if 'model_prompt_pending' in st.session_state:
+                                del st.session_state['model_prompt_pending']
+                            if 'model_suggestion' in st.session_state:
+                                del st.session_state['model_suggestion']
                     else:
                         # No match - accept typed value but don't rerun (let user continue typing)
                         previous_make = st.session_state.get('make_input_accepted', "")
@@ -1048,6 +1066,10 @@ with left_col:
                         if previous_make != make_input:
                             if 'model_input_accepted' in st.session_state:
                                 del st.session_state['model_input_accepted']
+                            if 'model_prompt_pending' in st.session_state:
+                                del st.session_state['model_prompt_pending']
+                            if 'model_suggestion' in st.session_state:
+                                del st.session_state['model_suggestion']
                         # Reset prompt states
                         if 'make_prompt_pending' in st.session_state:
                             del st.session_state['make_prompt_pending']
@@ -1063,6 +1085,10 @@ with left_col:
                     del st.session_state['make_prompt_pending']
                 if 'make_suggestion' in st.session_state:
                     del st.session_state['make_suggestion']
+                if 'model_prompt_pending' in st.session_state:
+                    del st.session_state['model_prompt_pending']
+                if 'model_suggestion' in st.session_state:
+                    del st.session_state['model_suggestion']
         
         # Show fuzzy match prompt if pending
         if st.session_state.get('make_prompt_pending'):
@@ -1107,14 +1133,15 @@ with left_col:
             disabled=not accepted_make
         )
         
-        # Dropdown list below text input
-        model_dropdown_options = model_options_list.copy() if model_options_list else []
-        model_dropdown_index = 0
-        if current_model_value and current_model_value in model_dropdown_options:
-            model_dropdown_index = model_dropdown_options.index(current_model_value)
+        # Dropdown list below text input - "Choose from list" as first option
+        model_dropdown_options = ["Choose from list"] + (model_options_list.copy() if model_options_list else [])
+        model_dropdown_index = 0  # Default to "Choose from list"
+        if current_model_value and current_model_value in model_options_list:
+            # Find index in the full list (add 1 because "Choose from list" is first)
+            model_dropdown_index = model_options_list.index(current_model_value) + 1
         
         model_dropdown_selection = st.selectbox(
-            "Choose from list",
+            "Model List",
             options=model_dropdown_options,
             index=model_dropdown_index,
             key="model_input_dropdown",
@@ -1122,7 +1149,8 @@ with left_col:
         )
         
         # Handle selection from dropdown - update text input
-        if accepted_make and model_dropdown_selection and model_dropdown_selection != current_model_value:
+        # Skip if "Choose from list" placeholder is selected
+        if accepted_make and model_dropdown_selection and model_dropdown_selection != "Choose from list" and model_dropdown_selection != current_model_value:
             st.session_state['model_input_accepted'] = model_dropdown_selection
             # Reset prompt states
             if 'model_prompt_pending' in st.session_state:
