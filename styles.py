@@ -625,6 +625,14 @@ def generate_main_app_css() -> str:
         padding-bottom: 0 !important;
     }}
     
+    /* Hide help text (e.g., "press enter to submit") below text inputs */
+    .stTextInput > div > small,
+    [data-testid="stTextInput"] > div > small,
+    .stTextInput small,
+    [data-testid="stTextInput"] small {{
+        display: none !important;
+    }}
+    
     /* Reduce spacing for selectbox labels (hidden labels still take space) */
     .stSelectbox > label,
     [data-testid="stSelectbox"] > label {{

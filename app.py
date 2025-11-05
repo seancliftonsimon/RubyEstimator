@@ -17,9 +17,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Log startup
-logger.info("="*70)
 logger.info("🚀 Ruby GEM Application Starting...")
-logger.info("="*70)
 
 # Configure page with light mode styling (must be first Streamlit command)
 st.set_page_config(
@@ -34,8 +32,6 @@ st.set_page_config(
     }
 )
 
-logger.info("✓ Streamlit page configured")
-
 import pandas as pd
 from vehicle_data import (
     process_vehicle, get_last_ten_entries,
@@ -45,8 +41,6 @@ from vehicle_data import (
 )
 from auth import setup_password_protection
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
-
-logger.info("✓ Core modules imported")
 from confidence_ui import (
     render_confidence_badge, render_warning_banner, 
     add_confidence_css
@@ -994,7 +988,7 @@ with left_col:
             make_dropdown_index = all_makes_list.index(current_make_value) + 1
         
         make_dropdown_selection = st.selectbox(
-            "",
+            "Make selection",
             options=make_dropdown_options,
             index=make_dropdown_index,
             key="make_input_dropdown",
@@ -1030,8 +1024,8 @@ with left_col:
                     st.rerun()
         
         # Handle selection from dropdown - update text input
-        # Skip if "Choose from list" placeholder is selected
-        if make_dropdown_selection and make_dropdown_selection != "Choose from list" and make_dropdown_selection != current_make_value:
+        # Always replace input field with dropdown selection (skip only if "Choose from list")
+        if make_dropdown_selection and make_dropdown_selection != "Choose from list":
             previous_make = st.session_state.get('make_input_accepted', "")
             st.session_state['make_input_accepted'] = make_dropdown_selection
             # Clear model when make changes
@@ -1181,7 +1175,7 @@ with left_col:
             model_dropdown_index = model_options_list.index(current_model_value) + 1
         
         model_dropdown_selection = st.selectbox(
-            "",
+            "Model selection",
             options=model_dropdown_options,
             index=model_dropdown_index,
             key="model_input_dropdown",
@@ -1209,8 +1203,8 @@ with left_col:
                     st.rerun()
         
         # Handle selection from dropdown - update text input
-        # Skip if "Choose from list" placeholder is selected
-        if accepted_make and model_dropdown_selection and model_dropdown_selection != "Choose from list" and model_dropdown_selection != current_model_value:
+        # Always replace input field with dropdown selection (skip only if "Choose from list")
+        if accepted_make and model_dropdown_selection and model_dropdown_selection != "Choose from list":
             st.session_state['model_input_accepted'] = model_dropdown_selection
             # Reset prompt states
             if 'model_prompt_pending' in st.session_state:
