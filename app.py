@@ -1013,17 +1013,16 @@ with left_col:
             make_dropdown_index = all_makes_list.index(current_make_value) + 1
         
         make_dropdown_selection = st.selectbox(
-            "Make selection",
+            "Make",
             options=make_dropdown_options,
             index=make_dropdown_index,
-            key="make_input_dropdown",
-            label_visibility="hidden"
+            key="make_input_dropdown"
         )
 
         # Text input field for make - use value from session state to sync with dropdown
         # Use a dynamic key to force update when value changes
         make_input_key = f"make_input_text_{current_make_value}"
-        make_input = st.text_input("Make", value=current_make_value, key=make_input_key)
+        make_input = st.text_input("", value=current_make_value, placeholder="or type here.", key=make_input_key, label_visibility="collapsed")
         
         # Track previous dropdown selection to detect changes
         previous_dropdown_selection = st.session_state.get('make_dropdown_previous', None)
@@ -1209,12 +1208,11 @@ with left_col:
             model_dropdown_index = model_options_list.index(current_model_value) + 1
         
         model_dropdown_selection = st.selectbox(
-            "Model selection",
+            "Model" + (f" ({accepted_make})" if accepted_make else ""),
             options=model_dropdown_options,
             index=model_dropdown_index,
             key="model_input_dropdown",
-            disabled=not accepted_make,
-            label_visibility="hidden"
+            disabled=not accepted_make
         )
         
         # Show fuzzy match suggestion above text input
@@ -1232,10 +1230,12 @@ with left_col:
         # Use a dynamic key to force update when value changes
         model_input_key = f"model_input_text_{current_model_value}_{accepted_make}"
         model_input = st.text_input(
-            "Model" + (f" ({accepted_make})" if accepted_make else ""),
+            "",
             value=current_model_value,
+            placeholder="or type here.",
             key=model_input_key,
-            disabled=not accepted_make
+            disabled=not accepted_make,
+            label_visibility="collapsed"
         )
         
         # Track previous dropdown selection to detect changes
