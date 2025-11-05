@@ -968,7 +968,8 @@ with left_col:
 
     # --- Main Form ---
     # Add small gaps between columns to prevent rendering issues
-    col1, gap1, col2, gap2, col3 = st.columns([3, 0.2, 3, 0.2, 3])
+    # Year is half the width of Make/Model, reduced gap between Make and Model
+    col1, gap1, col2, gap2, col3 = st.columns([1.5, 0.1, 3, 0.1, 3])
 
     # Year input (simple text input, no suggestions needed)
     with col1:
@@ -1094,9 +1095,9 @@ with left_col:
         # Show fuzzy match prompt if pending
         if st.session_state.get('make_prompt_pending'):
             st.caption(f"Did you mean '{st.session_state['make_suggestion']}'?")
-            col_y, col_n = st.columns([1, 1])
+            col_y, col_n = st.columns([2, 3])
             with col_y:
-                if st.button("Yes", key="make_yes", use_container_width=True):
+                if st.button("Yes", key="make_yes"):
                     st.session_state['make_input_accepted'] = st.session_state['make_suggestion']
                     if 'model_input_accepted' in st.session_state:
                         del st.session_state['model_input_accepted']
@@ -1104,7 +1105,7 @@ with left_col:
                     del st.session_state['make_suggestion']
                     st.rerun()
             with col_n:
-                if st.button("No, keep what I typed", key="make_no", use_container_width=True):
+                if st.button("No, keep what I typed", key="make_no"):
                     # Keep the typed value
                     if make_input:
                         st.session_state['make_input_accepted'] = make_input
@@ -1203,15 +1204,15 @@ with left_col:
         # Show fuzzy match prompt if pending
         if st.session_state.get('model_prompt_pending'):
             st.caption(f"Did you mean '{st.session_state['model_suggestion']}'?")
-            col_y, col_n = st.columns([1, 1])
+            col_y, col_n = st.columns([2, 3])
             with col_y:
-                if st.button("Yes", key="model_yes", use_container_width=True):
+                if st.button("Yes", key="model_yes"):
                     st.session_state['model_input_accepted'] = st.session_state['model_suggestion']
                     del st.session_state['model_prompt_pending']
                     del st.session_state['model_suggestion']
                     st.rerun()
             with col_n:
-                if st.button("No, keep what I typed", key="model_no", use_container_width=True):
+                if st.button("No, keep what I typed", key="model_no"):
                     # Keep the typed value
                     if model_input:
                         st.session_state['model_input_accepted'] = model_input
