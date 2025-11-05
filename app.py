@@ -995,9 +995,37 @@ with left_col:
             label_visibility="hidden"
         )
         
+        # Track previous dropdown selection to detect changes
+        previous_dropdown_selection = st.session_state.get('make_dropdown_previous', None)
+        
+        # Handle selection from dropdown - update text input FIRST (takes priority over text input)
+        # Always replace input field with dropdown selection (skip only if "Choose from list")
+        if make_dropdown_selection and make_dropdown_selection != "Choose from list":
+            # Update if dropdown selection differs from accepted value OR if dropdown actually changed
+            if previous_dropdown_selection != make_dropdown_selection or make_dropdown_selection != current_make_value:
+                previous_make = st.session_state.get('make_input_accepted', "")
+                st.session_state['make_input_accepted'] = make_dropdown_selection
+                # Always clear model when make changes via dropdown
+                if 'model_input_accepted' in st.session_state:
+                    del st.session_state['model_input_accepted']
+                # Reset prompt states
+                if 'make_prompt_pending' in st.session_state:
+                    del st.session_state['make_prompt_pending']
+                if 'make_suggestion' in st.session_state:
+                    del st.session_state['make_suggestion']
+                if 'model_prompt_pending' in st.session_state:
+                    del st.session_state['model_prompt_pending']
+                if 'model_suggestion' in st.session_state:
+                    del st.session_state['model_suggestion']
+                st.session_state['make_dropdown_previous'] = make_dropdown_selection
+                st.rerun()
+        
+        # Store current dropdown selection for next comparison
+        st.session_state['make_dropdown_previous'] = make_dropdown_selection
+        
         # Validate typed input when dropdown is clicked (user changed focus)
-        # If user typed something and dropdown is "Choose from list", check for exact match
-        if make_input != current_make_value and make_input and make_dropdown_selection == "Choose from list":
+        # Only process if dropdown hasn't changed (to avoid conflicts)
+        if previous_dropdown_selection == make_dropdown_selection and make_input != current_make_value and make_input and make_dropdown_selection == "Choose from list":
             if exact_match_in_list(make_input, all_makes_list):
                 # Found exact match - accept it and update dropdown index
                 previous_make = st.session_state.get('make_input_accepted', "")
@@ -1023,24 +1051,8 @@ with left_col:
                         del st.session_state['make_suggestion']
                     st.rerun()
         
-        # Handle selection from dropdown - update text input
-        # Always replace input field with dropdown selection (skip only if "Choose from list")
-        if make_dropdown_selection and make_dropdown_selection != "Choose from list":
-            previous_make = st.session_state.get('make_input_accepted', "")
-            st.session_state['make_input_accepted'] = make_dropdown_selection
-            # Clear model when make changes
-            if previous_make != make_dropdown_selection:
-                if 'model_input_accepted' in st.session_state:
-                    del st.session_state['model_input_accepted']
-            # Reset prompt states
-            if 'make_prompt_pending' in st.session_state:
-                del st.session_state['make_prompt_pending']
-            if 'make_suggestion' in st.session_state:
-                del st.session_state['make_suggestion']
-            st.rerun()
-        
-        # Handle text input changes
-        if make_input != current_make_value:
+        # Handle text input changes (only if dropdown hasn't changed)
+        if previous_dropdown_selection == make_dropdown_selection and make_input != current_make_value:
             # User typed something different from the accepted value
             if make_input:
                 # Check if user typed something that exactly matches a list item
@@ -1183,9 +1195,29 @@ with left_col:
             label_visibility="hidden"
         )
         
+        # Track previous dropdown selection to detect changes
+        previous_model_dropdown_selection = st.session_state.get('model_dropdown_previous', None)
+        
+        # Handle selection from dropdown - update text input FIRST (takes priority over text input)
+        # Always replace input field with dropdown selection (skip only if "Choose from list")
+        if accepted_make and model_dropdown_selection and model_dropdown_selection != "Choose from list":
+            # Update if dropdown selection differs from accepted value OR if dropdown actually changed
+            if previous_model_dropdown_selection != model_dropdown_selection or model_dropdown_selection != current_model_value:
+                st.session_state['model_input_accepted'] = model_dropdown_selection
+                # Reset prompt states
+                if 'model_prompt_pending' in st.session_state:
+                    del st.session_state['model_prompt_pending']
+                if 'model_suggestion' in st.session_state:
+                    del st.session_state['model_suggestion']
+                st.session_state['model_dropdown_previous'] = model_dropdown_selection
+                st.rerun()
+        
+        # Store current dropdown selection for next comparison
+        st.session_state['model_dropdown_previous'] = model_dropdown_selection
+        
         # Validate typed input when dropdown is clicked (user changed focus)
-        # If user typed something and dropdown is "Choose from list", check for exact match
-        if accepted_make and model_input != current_model_value and model_input and model_dropdown_selection == "Choose from list":
+        # Only process if dropdown hasn't changed (to avoid conflicts)
+        if accepted_make and previous_model_dropdown_selection == model_dropdown_selection and model_input != current_model_value and model_input and model_dropdown_selection == "Choose from list":
             if exact_match_in_list(model_input, model_options_list):
                 # Found exact match - accept it
                 matched_model = None
@@ -1202,19 +1234,8 @@ with left_col:
                         del st.session_state['model_suggestion']
                     st.rerun()
         
-        # Handle selection from dropdown - update text input
-        # Always replace input field with dropdown selection (skip only if "Choose from list")
-        if accepted_make and model_dropdown_selection and model_dropdown_selection != "Choose from list":
-            st.session_state['model_input_accepted'] = model_dropdown_selection
-            # Reset prompt states
-            if 'model_prompt_pending' in st.session_state:
-                del st.session_state['model_prompt_pending']
-            if 'model_suggestion' in st.session_state:
-                del st.session_state['model_suggestion']
-            st.rerun()
-        
-        # Handle text input changes
-        if accepted_make and model_input != current_model_value:
+        # Handle text input changes (only if dropdown hasn't changed)
+        if accepted_make and previous_model_dropdown_selection == model_dropdown_selection and model_input != current_model_value:
             # User typed something different from the accepted value
             if model_input:
                 # Check if user typed something that exactly matches a list item

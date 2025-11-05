@@ -607,7 +607,7 @@ def generate_main_app_css() -> str:
     /* Reduce spacing between text input and selectbox */
     .stSelectbox,
     [data-testid="stSelectbox"] {{
-        margin-top: 0 !important;
+        margin-top: -0.5rem !important;
         padding-top: 0 !important;
     }}
     
@@ -623,6 +623,13 @@ def generate_main_app_css() -> str:
     [data-testid="stTextInput"] > div {{
         margin-bottom: 0 !important;
         padding-bottom: 0 !important;
+    }}
+    
+    /* Target the container div that wraps selectbox to reduce spacing */
+    .stSelectbox > div,
+    [data-testid="stSelectbox"] > div {{
+        margin-top: 0 !important;
+        padding-top: 0 !important;
     }}
     
     /* Hide help text (e.g., "press enter to submit") below text inputs */
