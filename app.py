@@ -846,9 +846,115 @@ st.markdown("""
         opacity: 0 !important;
     }
     
+    /* Aggressively hide keyboard shortcut indicators - including arrow characters */
+    [data-testid="stExpander"] details summary *[aria-label*="arrow"],
+    [data-testid="stExpander"] details summary *[aria-label*="right"],
+    [data-testid="stExpander"] details summary *[aria-label*="Arrow"],
+    [data-testid="stExpander"] details summary *[aria-label*="Right"],
+    [data-testid="stExpander"] details summary *[title*="arrow"],
+    [data-testid="stExpander"] details summary *[title*="right"],
+    [data-testid="stExpander"] details summary *[title*="Arrow"],
+    [data-testid="stExpander"] details summary *[title*="Right"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Hide any element with specific Streamlit keyboard shortcut classes */
+    [data-testid="stExpander"] details summary [class*="stKeyboardShortcut"],
+    [data-testid="stExpander"] details summary [class*="keyboard-shortcut"],
+    [data-testid="stExpander"] details summary [data-baseweb*="keyboard"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    /* Hide keyboard shortcut text that appears as arrow characters */
+    /* Use a comprehensive approach to hide any element that might contain the arrow */
+    
+    /* Hide any element that appears after the main label (keyboard shortcuts are typically last) */
+    [data-testid="stExpander"] details summary > *:last-child:not(:first-child):not(:nth-child(2)) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        font-size: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        line-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+    }
+    
+    /* Hide any element from the 3rd child onwards (keeping icon and label) */
+    [data-testid="stExpander"] details summary > *:nth-child(n+3) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        font-size: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        line-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+    }
+    
+    /* Hide any span elements that might contain arrow text */
+    [data-testid="stExpander"] details summary span:not(:first-child):not(:nth-child(2)) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        font-size: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        line-height: 0 !important;
+    }
+    
+    /* Hide any pseudo-elements that might contain arrows */
+    [data-testid="stExpander"] details summary::after,
+    [data-testid="stExpander"] details summary::before {
+        display: none !important;
+        content: "" !important;
+    }
+    
     /* Ensure summary text itself is visible but no keyboard shortcuts */
     [data-testid="stExpander"] details summary {
         position: relative !important;
+    }
+    
+    /* Additional fallback: Hide any element with very small width (likely keyboard shortcut indicator) */
+    [data-testid="stExpander"] details summary > * {
+        min-width: auto !important;
+    }
+    
+    /* Hide elements that might contain only arrow characters by targeting suspicious patterns */
+    [data-testid="stExpander"] details summary > span[style*="opacity"]:not(:first-child):not(:nth-child(2)),
+    [data-testid="stExpander"] details summary > span[style*="font-size"]:not(:first-child):not(:nth-child(2)) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        font-size: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)
