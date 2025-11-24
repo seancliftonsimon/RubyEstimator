@@ -49,6 +49,7 @@ from confidence_ui import (
 from typing import Dict, Any
 import os
 from styles import generate_main_app_css, generate_admin_mode_css, get_semantic_colors, Colors
+from cat_prices import CatPriceManager
 
 # Default configuration values (used when DB has no overrides)
 DEFAULT_PRICE_PER_LB: Dict[str, float] = {
@@ -302,125 +303,190 @@ def render_admin_ui():
         unsafe_allow_html=True,
     )
 
-    with st.form("admin_settings_form"):
-        st.markdown("### 📝 Configuration Settings")
-        st.markdown("Adjust values below and click **Save All Changes** at the bottom. Use **Restore to Default** buttons to reset individual sections.")
+    # Main tabs: General Settings and Cat Prices
+    tab_general, tab_cat_prices = st.tabs(["⚙️ General Settings", "🚗 Cat Prices"])
+    
+    with tab_general:
+        with st.form("admin_settings_form"):
+            st.markdown("### 📝 Configuration Settings")
+            st.markdown("Adjust values below and click **Save All Changes** at the bottom. Use **Restore to Default** buttons to reset individual sections.")
 
-        tab_prices, tab_costs, tab_weights, tab_assumptions = st.tabs(
-            ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions"]
-        )
+            tab_prices, tab_costs, tab_weights, tab_assumptions = st.tabs(
+                ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions"]
+            )
 
-        with tab_prices:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.subheader("Commodity Prices ($/lb)")
-            with col2:
-                if st.form_submit_button("🔄 Restore to Default", key="restore_prices_btn"):
-                    st.session_state['restore_prices'] = True
-            
-            if st.session_state.get('restore_prices', False):
-                price_df = pd.DataFrame(
-                    [(k, float(v)) for k, v in DEFAULT_PRICE_PER_LB.items()], columns=["key", "value"]
+            with tab_prices:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.subheader("Commodity Prices ($/lb)")
+                with col2:
+                    if st.form_submit_button("🔄 Restore to Default", key="restore_prices_btn"):
+                        st.session_state['restore_prices'] = True
+                
+                if st.session_state.get('restore_prices', False):
+                    price_df = pd.DataFrame(
+                        [(k, float(v)) for k, v in DEFAULT_PRICE_PER_LB.items()], columns=["key", "value"]
+                    ).sort_values("key").reset_index(drop=True)
+                    st.session_state['restore_prices'] = False
+                else:
+                    price_df = pd.DataFrame(
+                        [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
+                    ).sort_values("key").reset_index(drop=True)
+                
+                price_df = st.data_editor(price_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_prices")
+
+            with tab_costs:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.subheader("Flat Costs")
+                with col2:
+                    if st.form_submit_button("🔄 Restore to Default", key="restore_costs_btn"):
+                        st.session_state['restore_costs'] = True
+                
+                costs_to_use = DEFAULT_FLAT_COSTS if st.session_state.get('restore_costs', False) else cfg["flat_costs"]
+                if st.session_state.get('restore_costs', False):
+                    st.session_state['restore_costs'] = False
+                
+                # Convert to DataFrame for editing
+                costs_df = pd.DataFrame(
+                    [(k, float(v)) for k, v in costs_to_use.items()], columns=["key", "value"]
                 ).sort_values("key").reset_index(drop=True)
-                st.session_state['restore_prices'] = False
-            else:
-                price_df = pd.DataFrame(
-                    [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
+                
+                costs_df = st.data_editor(costs_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_costs")
+
+            with tab_weights:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.subheader("Component Weights (lb per car)")
+                with col2:
+                    if st.form_submit_button("🔄 Restore to Default", key="restore_weights_btn"):
+                        st.session_state['restore_weights'] = True
+                
+                weights_to_use = DEFAULT_WEIGHTS_FIXED if st.session_state.get('restore_weights', False) else cfg["weights_fixed"]
+                if st.session_state.get('restore_weights', False):
+                    st.session_state['restore_weights'] = False
+                
+                # Convert to DataFrame for editing
+                weights_df = pd.DataFrame(
+                    [(k, float(v)) for k, v in weights_to_use.items()], columns=["key", "value"]
                 ).sort_values("key").reset_index(drop=True)
-            
-            price_df = st.data_editor(price_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_prices")
+                
+                weights_df = st.data_editor(weights_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_weights")
 
-        with tab_costs:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.subheader("Flat Costs")
+            with tab_assumptions:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.subheader("Assumptions / Factors")
+                with col2:
+                    if st.form_submit_button("🔄 Restore to Default", key="restore_assumptions_btn"):
+                        st.session_state['restore_assumptions'] = True
+                
+                assumptions_to_use = DEFAULT_ASSUMPTIONS if st.session_state.get('restore_assumptions', False) else cfg["assumptions"]
+                if st.session_state.get('restore_assumptions', False):
+                    st.session_state['restore_assumptions'] = False
+                
+                # Convert to DataFrame for editing
+                assumptions_df = pd.DataFrame(
+                    [(k, float(v)) for k, v in assumptions_to_use.items()], columns=["key", "value"]
+                ).sort_values("key").reset_index(drop=True)
+                
+                assumptions_df = st.data_editor(assumptions_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_assumptions")
+
+            # Save button outside all tabs
+            st.markdown("---")
+            st.markdown("### 💾 Save Changes")
+            
+            # Confirmation checkbox
+            confirm_save = st.checkbox("⚠️ I confirm that I want to update the database with these changes.", key="confirm_save_checkbox")
+            
+            col1, col2, col3 = st.columns([2, 1, 2])
             with col2:
-                if st.form_submit_button("🔄 Restore to Default", key="restore_costs_btn"):
-                    st.session_state['restore_costs'] = True
+                save = st.form_submit_button("💾 Save All Changes", width='stretch', disabled=not confirm_save)
             
-            costs_to_use = DEFAULT_FLAT_COSTS if st.session_state.get('restore_costs', False) else cfg["flat_costs"]
-            if st.session_state.get('restore_costs', False):
-                st.session_state['restore_costs'] = False
-            
-            # Convert to DataFrame for editing
-            costs_df = pd.DataFrame(
-                [(k, float(v)) for k, v in costs_to_use.items()], columns=["key", "value"]
-            ).sort_values("key").reset_index(drop=True)
-            
-            costs_df = st.data_editor(costs_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_costs")
+            if save and confirm_save:
+                # Gather updates from DataFrames
+                new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
+                new_flat = {str(row["key"]): float(row["value"]) for _, row in costs_df.iterrows()}
+                new_weights = {str(row["key"]): float(row["value"]) for _, row in weights_df.iterrows()}
+                new_assumptions = {str(row["key"]): float(row["value"]) for _, row in assumptions_df.iterrows()}
 
-        with tab_weights:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.subheader("Component Weights (lb per car)")
+                # Persist
+                updated_by = os.getenv("USER") or os.getenv("USERNAME") or "admin"
+                ok = True
+                ok &= upsert_app_config("price_per_lb", new_prices, "$/lb commodity prices", updated_by)
+                ok &= upsert_app_config("flat_costs", new_flat, "Flat costs", updated_by)
+                ok &= upsert_app_config("weights_fixed", new_weights, "Fixed component weights", updated_by)
+                ok &= upsert_app_config("assumptions", new_assumptions, "Estimator assumptions", updated_by)
+                
+                # Note: Heuristics, Grounding, and Consensus are preserved as is (not updated here)
+
+                if ok:
+                    refresh_config_cache()
+                    st.success("✅ Settings saved successfully! Reloading configuration...")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to save one or more configuration groups. Please try again.")
+    
+    with tab_cat_prices:
+        st.markdown("### 🚗 Catalytic Converter Prices")
+        st.markdown("Manage the internal price list of catalytic converters from especially valuable cars.")
+        
+        cat_manager = CatPriceManager.get_instance()
+        
+        # Get current entries
+        cat_df = cat_manager.get_all_entries()
+        
+        if cat_df.empty:
+            st.info("No cat price entries found. The table will be populated from CSV on first load.")
+        else:
+            # Display editable table
+            st.markdown("**Edit entries below. Add new rows, modify existing ones, or delete rows.**")
+            
+            # Use data_editor with num_rows="dynamic" to allow adding rows
+            edited_df = st.data_editor(
+                cat_df,
+                width='stretch',
+                num_rows="dynamic",
+                hide_index=True,
+                column_config={
+                    "id": st.column_config.NumberColumn("ID", disabled=True, format="%d"),
+                    "vehicle_name": st.column_config.TextColumn("Vehicle Name", required=True),
+                    "cat_count": st.column_config.NumberColumn("# of Cats", min_value=0, format="%d"),
+                    "total_sale": st.column_config.NumberColumn("Total Sale ($)", min_value=0.0, format="$%.2f"),
+                    "current_sale": st.column_config.NumberColumn("Current Sale ($)", min_value=0.0, format="$%.2f"),
+                    "extra_cat_value": st.column_config.NumberColumn("Extra Cat Value ($)", min_value=0.0, format="$%.2f")
+                },
+                key="cat_prices_editor"
+            )
+            
+            col1, col2, col3 = st.columns([2, 1, 2])
             with col2:
-                if st.form_submit_button("🔄 Restore to Default", key="restore_weights_btn"):
-                    st.session_state['restore_weights'] = True
-            
-            weights_to_use = DEFAULT_WEIGHTS_FIXED if st.session_state.get('restore_weights', False) else cfg["weights_fixed"]
-            if st.session_state.get('restore_weights', False):
-                st.session_state['restore_weights'] = False
-            
-            # Convert to DataFrame for editing
-            weights_df = pd.DataFrame(
-                [(k, float(v)) for k, v in weights_to_use.items()], columns=["key", "value"]
-            ).sort_values("key").reset_index(drop=True)
-            
-            weights_df = st.data_editor(weights_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_weights")
-
-        with tab_assumptions:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.subheader("Assumptions / Factors")
-            with col2:
-                if st.form_submit_button("🔄 Restore to Default", key="restore_assumptions_btn"):
-                    st.session_state['restore_assumptions'] = True
-            
-            assumptions_to_use = DEFAULT_ASSUMPTIONS if st.session_state.get('restore_assumptions', False) else cfg["assumptions"]
-            if st.session_state.get('restore_assumptions', False):
-                st.session_state['restore_assumptions'] = False
-            
-            # Convert to DataFrame for editing
-            assumptions_df = pd.DataFrame(
-                [(k, float(v)) for k, v in assumptions_to_use.items()], columns=["key", "value"]
-            ).sort_values("key").reset_index(drop=True)
-            
-            assumptions_df = st.data_editor(assumptions_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_assumptions")
-
-        # Save button outside all tabs
-        st.markdown("---")
-        st.markdown("### 💾 Save Changes")
-        
-        # Confirmation checkbox
-        confirm_save = st.checkbox("⚠️ I confirm that I want to update the database with these changes.", key="confirm_save_checkbox")
-        
-        col1, col2, col3 = st.columns([2, 1, 2])
-        with col2:
-            save = st.form_submit_button("💾 Save All Changes", width='stretch', disabled=not confirm_save)
-        
-        if save and confirm_save:
-            # Gather updates from DataFrames
-            new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
-            new_flat = {str(row["key"]): float(row["value"]) for _, row in costs_df.iterrows()}
-            new_weights = {str(row["key"]): float(row["value"]) for _, row in weights_df.iterrows()}
-            new_assumptions = {str(row["key"]): float(row["value"]) for _, row in assumptions_df.iterrows()}
-
-            # Persist
-            updated_by = os.getenv("USER") or os.getenv("USERNAME") or "admin"
-            ok = True
-            ok &= upsert_app_config("price_per_lb", new_prices, "$/lb commodity prices", updated_by)
-            ok &= upsert_app_config("flat_costs", new_flat, "Flat costs", updated_by)
-            ok &= upsert_app_config("weights_fixed", new_weights, "Fixed component weights", updated_by)
-            ok &= upsert_app_config("assumptions", new_assumptions, "Estimator assumptions", updated_by)
-            
-            # Note: Heuristics, Grounding, and Consensus are preserved as is (not updated here)
-
-            if ok:
-                refresh_config_cache()
-                st.success("✅ Settings saved successfully! Reloading configuration...")
-                st.rerun()
-            else:
-                st.error("❌ Failed to save one or more configuration groups. Please try again.")
+                if st.button("💾 Save Cat Prices", use_container_width=True):
+                    try:
+                        # Validate that vehicle_name is not empty for all rows
+                        if edited_df['vehicle_name'].isna().any() or (edited_df['vehicle_name'].astype(str).str.strip() == '').any():
+                            st.error("❌ Error: Vehicle name cannot be empty. Please fill in all vehicle names.")
+                        else:
+                            # Check for duplicate vehicle names within the edited DataFrame
+                            vehicle_names = edited_df['vehicle_name'].astype(str).str.strip().str.upper()
+                            duplicates = vehicle_names[vehicle_names.duplicated()]
+                            if not duplicates.empty:
+                                dup_list = duplicates.unique().tolist()
+                                st.error(f"❌ Error: Duplicate vehicle names found: {', '.join(dup_list)}. Each vehicle name must be unique.")
+                            else:
+                                success = cat_manager.update_entries(edited_df)
+                                if success:
+                                    st.success("✅ Cat prices saved successfully!")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Failed to save cat prices. Please check the logs for details.")
+                    except ValueError as e:
+                        # Handle specific validation errors from update_entries
+                        st.error(f"❌ {str(e)}")
+                        logger.error(f"Validation error saving cat prices: {e}", exc_info=True)
+                    except Exception as e:
+                        st.error(f"❌ Error saving cat prices: {e}")
+                        logger.error(f"Error saving cat prices: {e}", exc_info=True)
 
 
 # Load current config (fallback to defaults)

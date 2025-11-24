@@ -169,6 +169,30 @@ def ensure_schema() -> None:
             )
         )
         logger.debug("  ✓ evidence table ready")
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS cat_prices (
+                    id SERIAL PRIMARY KEY,
+                    vehicle_name TEXT NOT NULL UNIQUE,
+                    cat_count INTEGER NOT NULL,
+                    total_sale NUMERIC NOT NULL,
+                    current_sale NUMERIC,
+                    extra_cat_value NUMERIC,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                CREATE INDEX IF NOT EXISTS idx_cat_prices_vehicle_name ON cat_prices(vehicle_name)
+                """
+            )
+        )
+        logger.debug("  ✓ cat_prices table ready")
         logger.info("✓ PostgreSQL (Neon) schema validated/created successfully")
 
         conn.commit()
