@@ -45,7 +45,7 @@ from confidence_ui import (
     render_confidence_badge, render_warning_banner, 
     add_confidence_css
 )
-# Simplified UI components no longer needed - using inline progress indicator
+
 from typing import Dict, Any
 import os
 from styles import generate_main_app_css, generate_admin_mode_css, get_semantic_colors, Colors
@@ -246,6 +246,30 @@ def render_admin_ui():
         st.rerun()
     
     st.markdown('<div class="main-title">⚙️ Admin Configuration</div>', unsafe_allow_html=True)
+
+    # --- Password Protection ---
+    if 'admin_authenticated' not in st.session_state:
+        st.session_state['admin_authenticated'] = False
+
+    if not st.session_state['admin_authenticated']:
+        st.markdown("""
+        <div style="max-width: 400px; margin: 2rem auto; padding: 2rem; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e9ecef; text-align: center;">
+            <h3 style="color: #333; margin-bottom: 1.5rem;">🔒 Admin Access</h3>
+            <p style="color: #666; margin-bottom: 1.5rem;">Please enter the admin password to continue.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            password_input = st.text_input("Password", type="password", key="admin_password_input")
+            if st.button("Login", use_container_width=True):
+                if password_input == "emerald":
+                    st.session_state['admin_authenticated'] = True
+                    st.rerun()
+                else:
+                    st.error("❌ Incorrect password")
+        return
+    # ---------------------------
     
     # Info banner
     st.info(
@@ -264,12 +288,6 @@ def render_admin_ui():
         st.session_state['restore_weights'] = False
     if 'restore_assumptions' not in st.session_state:
         st.session_state['restore_assumptions'] = False
-    if 'restore_heuristics' not in st.session_state:
-        st.session_state['restore_heuristics'] = False
-    if 'restore_grounding' not in st.session_state:
-        st.session_state['restore_grounding'] = False
-    if 'restore_consensus' not in st.session_state:
-        st.session_state['restore_consensus'] = False
     
     cfg = get_config()
 
@@ -288,8 +306,8 @@ def render_admin_ui():
         st.markdown("### 📝 Configuration Settings")
         st.markdown("Adjust values below and click **Save All Changes** at the bottom. Use **Restore to Default** buttons to reset individual sections.")
 
-        tab_prices, tab_costs, tab_weights, tab_assumptions, tab_heuristics, tab_grounding, tab_consensus = st.tabs(
-            ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions", "🔍 Heuristics", "🌐 Grounding", "🤝 Consensus"]
+        tab_prices, tab_costs, tab_weights, tab_assumptions = st.tabs(
+            ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions"]
         )
 
         with tab_prices:
@@ -310,7 +328,7 @@ def render_admin_ui():
                     [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
                 ).sort_values("key").reset_index(drop=True)
             
-            price_df = st.data_editor(price_df, width='stretch', num_rows="fixed", hide_index=True)
+            price_df = st.data_editor(price_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_prices")
 
         with tab_costs:
             col1, col2 = st.columns([3, 1])
@@ -324,11 +342,12 @@ def render_admin_ui():
             if st.session_state.get('restore_costs', False):
                 st.session_state['restore_costs'] = False
             
-            col_fc1, col_fc2, col_fc3, col_fc4 = st.columns(4)
-            purchase = col_fc1.number_input("PURCHASE ($)", value=float(costs_to_use["PURCHASE"]))
-            tow = col_fc2.number_input("TOW ($)", value=float(costs_to_use["TOW"]))
-            lead = col_fc3.number_input("LEAD_PER_CAR ($)", value=float(costs_to_use["LEAD_PER_CAR"]))
-            nut = col_fc4.number_input("NUT_PER_LB ($/lb)", value=float(costs_to_use["NUT_PER_LB"]))
+            # Convert to DataFrame for editing
+            costs_df = pd.DataFrame(
+                [(k, float(v)) for k, v in costs_to_use.items()], columns=["key", "value"]
+            ).sort_values("key").reset_index(drop=True)
+            
+            costs_df = st.data_editor(costs_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_costs")
 
         with tab_weights:
             col1, col2 = st.columns([3, 1])
@@ -342,17 +361,12 @@ def render_admin_ui():
             if st.session_state.get('restore_weights', False):
                 st.session_state['restore_weights'] = False
             
-            c1, c2, c3, c4 = st.columns(4)
-            rims_al = c1.number_input("Aluminum Rims Weight", value=float(weights_to_use["rims_aluminum_weight_lbs"]))
-            battery_baseline = c2.number_input("Battery Baseline", value=float(weights_to_use["battery_baseline_weight_lbs"]))
-            harness_w = c3.number_input("Wiring Harness", value=float(weights_to_use["harness_weight_lbs"]))
-            fe_rad = c4.number_input("FE Radiator", value=float(weights_to_use["fe_radiator_weight_lbs"]))
-            c5, c6, c7, c8, c9 = st.columns(5)
-            breakage_w = c5.number_input("Breakage", value=float(weights_to_use["breakage_weight_lbs"]))
-            alt_w = c6.number_input("Alternator", value=float(weights_to_use["alternator_weight_lbs"]))
-            starter_w = c7.number_input("Starter", value=float(weights_to_use["starter_weight_lbs"]))
-            ac_comp_w = c8.number_input("A/C Compressor", value=float(weights_to_use["ac_compressor_weight_lbs"]))
-            fuse_box_w = c9.number_input("Fuse Box", value=float(weights_to_use["fuse_box_weight_lbs"]))
+            # Convert to DataFrame for editing
+            weights_df = pd.DataFrame(
+                [(k, float(v)) for k, v in weights_to_use.items()], columns=["key", "value"]
+            ).sort_values("key").reset_index(drop=True)
+            
+            weights_df = st.data_editor(weights_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_weights")
 
         with tab_assumptions:
             col1, col2 = st.columns([3, 1])
@@ -366,139 +380,30 @@ def render_admin_ui():
             if st.session_state.get('restore_assumptions', False):
                 st.session_state['restore_assumptions'] = False
             
-            a1, a2, a3, a4 = st.columns(4)
-            engine_pct = a1.number_input("Engine % of curb (0-1)", value=float(assumptions_to_use["engine_weight_percent_of_curb"]))
-            battery_recov = a2.number_input("Battery Recovery (0-1)", value=float(assumptions_to_use["battery_recovery_factor"]))
-            cats_avg = a3.number_input("Default Cats per Car", value=float(assumptions_to_use["cats_per_car_default_average"]))
-            unknown_split = a4.number_input("Unknown Engine Al Split (0-1)", value=float(assumptions_to_use["unknown_engine_split_aluminum_percent"]))
-
-        with tab_heuristics:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.subheader("Heuristics (optional)")
-            with col2:
-                if st.form_submit_button("🔄 Restore to Default", key="restore_heuristics_btn"):
-                    st.session_state['restore_heuristics'] = True
+            # Convert to DataFrame for editing
+            assumptions_df = pd.DataFrame(
+                [(k, float(v)) for k, v in assumptions_to_use.items()], columns=["key", "value"]
+            ).sort_values("key").reset_index(drop=True)
             
-            heuristics_to_use = DEFAULT_HEURISTICS if st.session_state.get('restore_heuristics', False) else cfg["heuristics"]
-            if st.session_state.get('restore_heuristics', False):
-                st.session_state['restore_heuristics'] = False
-            
-            perf_txt = "\n".join(heuristics_to_use.get("performance_indicators", []))
-            v8_txt = "\n".join(heuristics_to_use.get("v8_keywords", []))
-            h1, h2, h3 = st.columns([2, 2, 1])
-            perf_txt = h1.text_area("Performance Indicators (one per line)", value=perf_txt)
-            v8_txt = h2.text_area("V8 Keywords (one per line)", value=v8_txt)
-            cats_fallback = h3.number_input("Fallback Cats", value=int(heuristics_to_use.get("fallback_cats_default_if_no_match", 1)))
-
-        with tab_grounding:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.subheader("Grounding Search Settings")
-            with col2:
-                if st.form_submit_button("🔄 Restore to Default", key="restore_grounding_btn"):
-                    st.session_state['restore_grounding'] = True
-            
-            grounding_to_use = DEFAULT_GROUNDING_SETTINGS if st.session_state.get('restore_grounding', False) else cfg["grounding_settings"]
-            if st.session_state.get('restore_grounding', False):
-                st.session_state['restore_grounding'] = False
-            
-            g1, g2, g3, g4 = st.columns(4)
-            target_candidates = g1.number_input("Target Candidates", value=int(grounding_to_use["target_candidates"]), min_value=1, max_value=10)
-            clustering_tolerance = g2.number_input("Clustering Tolerance", value=float(grounding_to_use["clustering_tolerance"]), min_value=0.01, max_value=1.0, step=0.01)
-            confidence_threshold = g3.number_input("Confidence Threshold", value=float(grounding_to_use["confidence_threshold"]), min_value=0.0, max_value=1.0, step=0.01)
-            outlier_threshold = g4.number_input("Outlier Threshold", value=float(grounding_to_use["outlier_threshold"]), min_value=0.5, max_value=5.0, step=0.1)
-            
-            st.subheader("Nut Fee Configuration")
-            nut_fee_option = st.selectbox(
-                "Nut fee applies to:",
-                options=["curb_weight", "elv_weight"],
-                index=0 if grounding_to_use["nut_fee_applies_to"] == "curb_weight" else 1,
-                format_func=lambda x: "Curb Weight" if x == "curb_weight" else "ELV Weight"
-            )
-
-        with tab_consensus:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.subheader("Consensus Algorithm Settings")
-            with col2:
-                if st.form_submit_button("🔄 Restore to Default", key="restore_consensus_btn"):
-                    st.session_state['restore_consensus'] = True
-            
-            consensus_to_use = DEFAULT_CONSENSUS_SETTINGS if st.session_state.get('restore_consensus', False) else cfg["consensus_settings"]
-            if st.session_state.get('restore_consensus', False):
-                st.session_state['restore_consensus'] = False
-            
-            c1, c2 = st.columns(2)
-            min_agreement_ratio = c1.number_input("Min Agreement Ratio", value=float(consensus_to_use["min_agreement_ratio"]), min_value=0.0, max_value=1.0, step=0.01)
-            
-            st.subheader("Source Preferences")
-            preferred_sources_txt = "\n".join(consensus_to_use.get("preferred_sources", []))
-            preferred_sources_txt = st.text_area("Preferred Sources (one per line)", value=preferred_sources_txt)
-            
-            st.subheader("Source Weights")
-            sw = consensus_to_use.get("source_weights", {})
-            sw1, sw2, sw3, sw4 = st.columns(4)
-            kbb_weight = sw1.number_input("KBB.com Weight", value=float(sw.get("kbb.com", 1.2)), min_value=0.1, max_value=3.0, step=0.1)
-            edmunds_weight = sw2.number_input("Edmunds.com Weight", value=float(sw.get("edmunds.com", 1.2)), min_value=0.1, max_value=3.0, step=0.1)
-            manufacturer_weight = sw3.number_input("Manufacturer Weight", value=float(sw.get("manufacturer", 1.5)), min_value=0.1, max_value=3.0, step=0.1)
-            default_weight = sw4.number_input("Default Weight", value=float(sw.get("default", 1.0)), min_value=0.1, max_value=3.0, step=0.1)
+            assumptions_df = st.data_editor(assumptions_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_assumptions")
 
         # Save button outside all tabs
         st.markdown("---")
         st.markdown("### 💾 Save Changes")
+        
+        # Confirmation checkbox
+        confirm_save = st.checkbox("⚠️ I confirm that I want to update the database with these changes.", key="confirm_save_checkbox")
+        
         col1, col2, col3 = st.columns([2, 1, 2])
         with col2:
-            save = st.form_submit_button("💾 Save All Changes", width='stretch')
+            save = st.form_submit_button("💾 Save All Changes", width='stretch', disabled=not confirm_save)
         
-        if save:
-            # Gather updates
+        if save and confirm_save:
+            # Gather updates from DataFrames
             new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
-            new_flat = {
-                "PURCHASE": float(purchase),
-                "TOW": float(tow),
-                "LEAD_PER_CAR": float(lead),
-                "NUT_PER_LB": float(nut),
-            }
-            new_weights = {
-                "rims_aluminum_weight_lbs": float(rims_al),
-                "battery_baseline_weight_lbs": float(battery_baseline),
-                "harness_weight_lbs": float(harness_w),
-                "fe_radiator_weight_lbs": float(fe_rad),
-                "breakage_weight_lbs": float(breakage_w),
-                "alternator_weight_lbs": float(alt_w),
-                "starter_weight_lbs": float(starter_w),
-                "ac_compressor_weight_lbs": float(ac_comp_w),
-                "fuse_box_weight_lbs": float(fuse_box_w),
-            }
-            new_assumptions = {
-                "engine_weight_percent_of_curb": float(engine_pct),
-                "battery_recovery_factor": float(battery_recov),
-                "cats_per_car_default_average": float(cats_avg),
-                "unknown_engine_split_aluminum_percent": float(unknown_split),
-            }
-            new_heuristics = {
-                "performance_indicators": [s.strip() for s in perf_txt.splitlines() if s.strip()],
-                "v8_keywords": [s.strip() for s in v8_txt.splitlines() if s.strip()],
-                "fallback_cats_default_if_no_match": int(cats_fallback),
-            }
-            new_grounding = {
-                "target_candidates": int(target_candidates),
-                "clustering_tolerance": float(clustering_tolerance),
-                "confidence_threshold": float(confidence_threshold),
-                "outlier_threshold": float(outlier_threshold),
-                "nut_fee_applies_to": str(nut_fee_option),
-            }
-            new_consensus = {
-                "min_agreement_ratio": float(min_agreement_ratio),
-                "preferred_sources": [s.strip() for s in preferred_sources_txt.splitlines() if s.strip()],
-                "source_weights": {
-                    "kbb.com": float(kbb_weight),
-                    "edmunds.com": float(edmunds_weight),
-                    "manufacturer": float(manufacturer_weight),
-                    "default": float(default_weight),
-                }
-            }
+            new_flat = {str(row["key"]): float(row["value"]) for _, row in costs_df.iterrows()}
+            new_weights = {str(row["key"]): float(row["value"]) for _, row in weights_df.iterrows()}
+            new_assumptions = {str(row["key"]): float(row["value"]) for _, row in assumptions_df.iterrows()}
 
             # Persist
             updated_by = os.getenv("USER") or os.getenv("USERNAME") or "admin"
@@ -507,9 +412,8 @@ def render_admin_ui():
             ok &= upsert_app_config("flat_costs", new_flat, "Flat costs", updated_by)
             ok &= upsert_app_config("weights_fixed", new_weights, "Fixed component weights", updated_by)
             ok &= upsert_app_config("assumptions", new_assumptions, "Estimator assumptions", updated_by)
-            ok &= upsert_app_config("heuristics", new_heuristics, "Cat count heuristics", updated_by)
-            ok &= upsert_app_config("grounding_settings", new_grounding, "Grounding search settings", updated_by)
-            ok &= upsert_app_config("consensus_settings", new_consensus, "Consensus algorithm settings", updated_by)
+            
+            # Note: Heuristics, Grounding, and Consensus are preserved as is (not updated here)
 
             if ok:
                 refresh_config_cache()
@@ -543,7 +447,7 @@ AC_COMPRESSOR_WEIGHT_LBS = float(WEIGHTS["ac_compressor_weight_lbs"])
 FUSE_BOX_WEIGHT_LBS = float(WEIGHTS["fuse_box_weight_lbs"]) 
 
 # --- Cost Estimator Functions ---
-def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=None, catalytic_converters=None):
+def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=None, catalytic_converters=None, cat_value_override=None):
     """Compute all commodity weights, prices, and sale values."""
     w = lambda lbs: cars * lbs
     
@@ -618,12 +522,25 @@ def compute_commodities(cars, curb_weight, aluminum_engine=None, aluminum_rims=N
 
     # Add count-based catalytic converters
     cats_count = cars * (catalytic_converters if catalytic_converters is not None else CATS_PER_CAR)
+    
+    cat_unit_price = PRICE_PER_LB["CATS"]
+    cat_sale_value = cats_count * cat_unit_price
+    cat_label = "Catalytic Converters"
+    
+    if cat_value_override is not None:
+        # Override value (cat_value_override is total value per car)
+        cat_sale_value = cars * cat_value_override
+        cat_label = "Catalytic Converters (Price List)"
+        # Adjust unit price for display if count > 0
+        if cats_count > 0:
+            cat_unit_price = cat_sale_value / cats_count
+            
     list_commodities.append({
         "key": "CATS", 
-        "label": "Catalytic Converters",
+        "label": cat_label,
         "weight": cats_count,  # Store count in weight field for display
-        "unit_price": PRICE_PER_LB["CATS"],
-        "sale_value": cats_count * PRICE_PER_LB["CATS"],
+        "unit_price": cat_unit_price,
+        "sale_value": cat_sale_value,
         "is_count_based": True  # Flag to indicate this is count-based
     })
     
@@ -1600,7 +1517,8 @@ with left_col:
                                 'confidence_scores': confidence_info,
                                 'validation_warnings': validation_warnings,
                                 'source_attribution': source_attribution,
-                                'citations': citations
+                                'citations': citations,
+                                'cat_value_override': vehicle_data.get('cat_value_override')
                             }
                             
                             # Store the data in session state for the cost estimator
@@ -1608,6 +1526,7 @@ with left_col:
                             st.session_state['last_aluminum_engine'] = vehicle_data['aluminum_engine']
                             st.session_state['last_aluminum_rims'] = vehicle_data['aluminum_rims']
                             st.session_state['last_catalytic_converters'] = vehicle_data['catalytic_converters']
+                            st.session_state['last_cat_value_override'] = vehicle_data.get('cat_value_override')
                             st.session_state['last_vehicle_info'] = f"{year_int} {make_input} {model_input}"
                             
                             # Auto-populate and calculate the cost estimator
@@ -1804,6 +1723,7 @@ with right_col:
                 
                 # Use stored count if available; otherwise rely on default average (CATS_PER_CAR) in compute_commodities
                 catalytic_converters = st.session_state.get('last_catalytic_converters')
+                cat_value_override = st.session_state.get('last_cat_value_override')
 
                 # Get stored purchase price and tow fee, or use defaults
                 stored_results = st.session_state.get('calculation_results')
@@ -1814,8 +1734,8 @@ with right_col:
                     purchase_price = FLAT_COSTS["PURCHASE"]
                     tow_fee = FLAT_COSTS["TOW"]
             
-                # Perform the calculation (always use default average cats)
-                commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=None)
+                # Perform the calculation
+                commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=catalytic_converters, cat_value_override=cat_value_override)
                 totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price, tow_fee)
                 
                 # Store results in session state
@@ -1856,13 +1776,14 @@ with right_col:
                         
                         # Use stored count if available; otherwise rely on default average (CATS_PER_CAR)
                         catalytic_converters = st.session_state.get('last_catalytic_converters')
+                        cat_value_override = st.session_state.get('last_cat_value_override')
 
                         # Use default purchase price and tow fee for initial calculation
                         purchase_price = FLAT_COSTS["PURCHASE"]
                         tow_fee = FLAT_COSTS["TOW"]
                         
-                        # Perform the calculation (always use default average cats)
-                        commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=None)
+                        # Perform the calculation
+                        commodities = compute_commodities(cars_int, curb_weight_int, aluminum_engine, aluminum_rims, catalytic_converters=catalytic_converters, cat_value_override=cat_value_override)
                         totals = calculate_totals(commodities, cars_int, curb_weight_int, purchase_price, tow_fee)
                         
                         # Store results in session state
@@ -1992,7 +1913,8 @@ with right_col:
                                     commodities = compute_commodities(results['cars'], results['curb_weight'],
                                                                     st.session_state.get('last_aluminum_engine'),
                                                                     st.session_state.get('last_aluminum_rims'),
-                                                                    catalytic_converters=None)
+                                                                    catalytic_converters=st.session_state.get('last_catalytic_converters'),
+                                                                    cat_value_override=st.session_state.get('last_cat_value_override'))
                                     totals = calculate_totals(commodities, results['cars'], results['curb_weight'],
                                                             purchase_price_float, tow_fee_float)
                                     st.session_state['calculation_results'] = {
@@ -2264,6 +2186,8 @@ if 'last_aluminum_rims' not in st.session_state:
     st.session_state['last_aluminum_rims'] = None
 if 'last_catalytic_converters' not in st.session_state:
     st.session_state['last_catalytic_converters'] = None
+if 'last_cat_value_override' not in st.session_state:
+    st.session_state['last_cat_value_override'] = None
 if 'last_vehicle_info' not in st.session_state:
     st.session_state['last_vehicle_info'] = None
 if 'auto_calculate' not in st.session_state:

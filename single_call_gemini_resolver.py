@@ -175,16 +175,16 @@ class SingleCallGeminiResolver:
         return f"""Find specs for {year} {make} {model}. Return JSON ONLY.
 
 FIND 4 FIELDS:
-1. curb_weight (lbs, determine the most likely and sensible value based on available data - use base trim if identifiable, or most common value)
+1. curb_weight (lbs, determine the most likely and sensible value based on the consensus of high-quality sources - do NOT default to the lowest value. Use base trim if identifiable, otherwise the most common configuration.)
 2. aluminum_engine (true/false, needs explicit "aluminum")
 3. aluminum_rims (true/false, "aluminum" or "alloy")
-4. catalytic_converters (count, integer, determine the most likely and sensible number)
+4. catalytic_converters (count, integer, determine the most likely and sensible number based on the specific engine configuration)
 
-SOURCES: Use any available sources (mark "oem" for manufacturer sites, "secondary" for others). Include URL + quote.
+SOURCES: Use ALL available sources to determine the truth. Do NOT restrict to specific domains.
 
 STATUS: "found" (has data), "not_found" (no data, value=null), "conflicting" (unclear, value=null)
 
-IMPORTANT: If the vehicle does not appear to exist or cannot be verified, set status to "not_found" for all fields and return null values.
+IMPORTANT: If the vehicle does not appear to exist (e.g. make/model mismatch, or year out of range), set status to "not_found" for ALL fields and return null values.
 
 RETURN JSON:
 {{
@@ -540,7 +540,7 @@ RETURN JSON:
                     selected_weight = sorted_weights[len(sorted_weights) // 2]
                 
                 if len(valid_weights) > 1:
-                    logger.info(f"Multiple weights found: {valid_weights}, selecting median (most sensible): {selected_weight} lbs")
+                    logger.info(f"Multiple weights found: {valid_weights}, selecting median as most sensible: {selected_weight} lbs")
                 return selected_weight
             else:
                 logger.warning(f"⚠️ No valid weights found in list: {value}")

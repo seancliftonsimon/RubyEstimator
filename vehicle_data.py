@@ -104,6 +104,21 @@ def process_vehicle(year: int, make: str, model: str, progress_callback=None) ->
     citation_counts = {field: len(cites) for field, cites in output["citations"].items()}
     logger.debug(f"Citation counts: {citation_counts}")
 
+    # Check for cat price override from CSV
+    from cat_prices import CatPriceManager
+    cat_manager = CatPriceManager.get_instance()
+    cat_details = cat_manager.get_cat_details(make, model)
+    
+    if cat_details:
+        logger.info(f"Found cat price override for {make} {model}: {cat_details}")
+        # Override count
+        output["catalytic_converters"] = cat_details['count']
+        # Add value override
+        output["cat_value_override"] = cat_details['total_value']
+        output["source_attribution"]["catalytic_converters"] = "csv_override"
+        output["confidence_scores"]["catalytic_converters"] = 1.0
+        output["warnings"].append(f"Catalytic converter data sourced from internal price list (Total Value: ${cat_details['total_value']})")
+
     if progress_callback:
         progress_callback("complete", None, "done", None, None)
 
