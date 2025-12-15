@@ -621,12 +621,35 @@ def generate_main_app_css() -> str:
     {generate_input_css()}
     
     /* ========== SELECTBOX (DROPDOWN) STYLING ========== */
-    /* Hide dropdown arrows */
+    /* Hide dropdown arrows (SVG icons) */
     .stSelectbox [data-baseweb="select"] svg,
     [data-testid="stSelectbox"] [data-baseweb="select"] svg,
     .stSelectbox [data-baseweb="select"] > div > svg,
     [data-testid="stSelectbox"] [data-baseweb="select"] > div > svg {{
         display: none !important;
+    }}
+    
+    /* Hide any Material-Icons \"keyboard\" text that can leak through as plain text */
+    [data-testid="stSelectbox"] span[class*="keyboard"],
+    [data-testid="stSelectbox"] span[aria-label*="keyboard"],
+    [data-testid="stSelectbox"] [class*="material-icons"],
+    [data-testid="stSelectbox"] [aria-label*="keyboard_arrow"] {{
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }}
+    
+    /* Make the select control look like a clickable input */
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {{
+        border: 3px solid {Colors.RUBY_BORDER_STRONG} !important;
+        background: {Colors.WHITE} !important;
+        border-radius: {BorderRadius.LG} !important;
+        padding: 0.4rem 0.75rem !important;
+        cursor: pointer !important;
+    }}
+    
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover {{
+        border-color: {Colors.RUBY_PRIMARY} !important;
     }}
     
     /* Reduce spacing between text input and selectbox */
