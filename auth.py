@@ -24,6 +24,7 @@ def hash_password(password):
 # -----------------------------------------------------------------------------
 
 _USERNAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+_PASSCODE_RE = re.compile(r"^\d{4}$")
 
 
 def normalize_username(username: str) -> str:
@@ -33,6 +34,10 @@ def normalize_username(username: str) -> str:
 def is_valid_username(username: str) -> bool:
     u = normalize_username(username)
     return bool(u) and bool(_USERNAME_RE.match(u))
+
+
+def _is_valid_4_digit_passcode(passcode: str) -> bool:
+    return bool(_PASSCODE_RE.match((passcode or "").strip()))
 
 
 def _bcrypt_hash_password(password: str) -> str:
@@ -73,7 +78,10 @@ def create_user(
 
     pw_hash: Optional[str] = None
     if password and password.strip():
-        pw_hash = _bcrypt_hash_password(password.strip())
+        pw = password.strip()
+        if not _is_valid_4_digit_passcode(pw):
+            return False, "Passcode must be exactly 4 digits."
+        pw_hash = _bcrypt_hash_password(pw)
 
     engine = create_database_engine()
     with engine.connect() as conn:
@@ -230,34 +238,89 @@ def render_login_ui(session_key: str = "buyer_user") -> bool:
     if st.session_state.get(session_key):
         return True
 
-    st.markdown("### Buyer Login")
-    st.caption("Passwords cannot be reset. If forgotten, admin must create a new username.")
+    # Centered, smaller login "card"
+    left, center, right = st.columns([1.6, 1.0, 1.6])
+    with center:
+        st.subheader("Buyer Login")
 
-    # Optional dropdown for convenience (still allows typing)
-    try:
-        users = list_users(limit=200)
-        usernames = [u["username"] for u in users]
-    except Exception:
-        usernames = []
+        with st.form("buyer_login_form", clear_on_submit=False):
+            username = st.text_input("Username", key="buyer_login_username")
+            passcode = st.text_input(
+                "Four digit passcode",
+                type="password",
+                key="buyer_login_passcode",
+                max_chars=4,
+            )
+            submitted = st.form_submit_button("Log in")
 
-    chosen = st.selectbox("Choose username (optional)", [""] + usernames, index=0, key="buyer_login_pick")
+        if submitted:
+            if passcode and not _is_valid_4_digit_passcode(passcode):
+                st.error("Passcode must be exactly 4 digits.")
+            else:
+                ok, msg, user = login_user(username=username, password=passcode)
+                if ok and user:
+                    st.session_state[session_key] = user
+                    # Clear passcode field from state
+                    if "buyer_login_passcode" in st.session_state:
+                        del st.session_state["buyer_login_passcode"]
+                    st.rerun()
+                else:
+                    st.error(msg)
 
-    with st.form("buyer_login_form", clear_on_submit=False):
-        username = st.text_input("Username", value=chosen or "", key="buyer_login_username")
-        password = st.text_input("Password (only if your account has one)", type="password", key="buyer_login_password")
-        submitted = st.form_submit_button("Log in")
+        st.caption("Need an account?")
 
-    if submitted:
-        ok, msg, user = login_user(username=username, password=password)
-        if ok and user:
-            st.session_state[session_key] = user
-            # Clear password field from state
-            for k in ["buyer_login_password"]:
-                if k in st.session_state:
-                    del st.session_state[k]
-            st.rerun()
-        else:
-            st.error(msg)
+        # Smaller option below the login card
+        with st.expander("Create user", expanded=False):
+            with st.form("buyer_create_user_form", clear_on_submit=False):
+                new_username = st.text_input("Username", key="buyer_signup_username")
+                new_display_name = st.text_input("Display name (optional)", key="buyer_signup_display_name")
+                new_passcode = st.text_input(
+                    "Create a four digit passcode",
+                    type="password",
+                    key="buyer_signup_passcode",
+                    max_chars=4,
+                )
+                new_passcode2 = st.text_input(
+                    "Confirm passcode",
+                    type="password",
+                    key="buyer_signup_passcode_confirm",
+                    max_chars=4,
+                )
+                create_submitted = st.form_submit_button("Create user")
+
+            if create_submitted:
+                if not new_username:
+                    st.error("Username is required.")
+                elif not _is_valid_4_digit_passcode(new_passcode or ""):
+                    st.error("Passcode must be exactly 4 digits.")
+                elif new_passcode != new_passcode2:
+                    st.error("Passcodes do not match.")
+                else:
+                    ok, msg = create_user(
+                        username=new_username,
+                        display_name=new_display_name,
+                        password=new_passcode,
+                        is_admin=False,
+                    )
+                    if ok:
+                        # Auto-login after successful signup
+                        ok2, msg2, user = login_user(username=new_username, password=new_passcode)
+                        if ok2 and user:
+                            st.session_state[session_key] = user
+                            # Clear sensitive fields
+                            for k in [
+                                "buyer_signup_passcode",
+                                "buyer_signup_passcode_confirm",
+                                "buyer_login_passcode",
+                            ]:
+                                if k in st.session_state:
+                                    del st.session_state[k]
+                            st.rerun()
+                        else:
+                            st.success(msg)
+                            st.info(msg2)
+                    else:
+                        st.error(msg)
 
     return False
 

@@ -63,6 +63,12 @@ from cat_prices import CatPriceManager
 from sqlalchemy import text
 from datetime import datetime, timedelta
 
+# --- Streamlit App Styling (must apply before any gated UI, including login) ---
+# Add confidence indicator CSS
+add_confidence_css()
+# Apply main app CSS from centralized styles module
+st.markdown(generate_main_app_css(), unsafe_allow_html=True)
+
 # --- Buyer Login Gate ---
 # If we are not in admin mode, require buyer login.
 if not st.session_state.get("admin_mode", False):
@@ -1022,14 +1028,6 @@ def exact_match_in_list(user_input: str, options_list: list) -> bool:
             return True
     
     return False
-
-# --- Streamlit App ---
-
-# Add confidence indicator CSS
-add_confidence_css()
-
-# Apply main app CSS from centralized styles module
-st.markdown(generate_main_app_css(), unsafe_allow_html=True)
 
 # --- Top Title Bar ---
 st.markdown('<div class="topbar-bg"></div>', unsafe_allow_html=True)
