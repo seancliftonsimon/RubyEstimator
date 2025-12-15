@@ -96,6 +96,25 @@ DEFAULT_ASSUMPTIONS: Dict[str, float] = {
     "unknown_engine_split_aluminum_percent": 0.5,
 }
 
+ADMIN_FIELD_METADATA = {
+    "engine_weight_percent_of_curb": {
+        "label": "Engine Weight % of Curb",
+        "helper": "Percentage of total vehicle weight attributed to the engine (e.g., 0.139 = 13.9%)."
+    },
+    "battery_recovery_factor": {
+        "label": "Battery Recovery Factor",
+        "helper": "Adjustment factor for battery weight recovery (e.g., 0.8 means 80% of baseline weight)."
+    },
+    "cats_per_car_default_average": {
+        "label": "Avg. Cats per Car",
+        "helper": "Default number of catalytic converters assumed if not specified."
+    },
+    "unknown_engine_split_aluminum_percent": {
+        "label": "Assumed aluminum share when engine material is unknown (0–1)",
+        "helper": "0.75 means 75% aluminum / 25% iron in the estimate."
+    }
+}
+
 DEFAULT_HEURISTICS: Dict[str, Any] = {
     "performance_indicators": ["gt", "rs", "ss", "amg", "type r", "m3", "m4", "m5", "v8"],
     "v8_keywords": ["v8", "5.0", "6.2"],
@@ -385,12 +404,42 @@ def render_admin_ui():
                 if st.session_state.get('restore_assumptions', False):
                     st.session_state['restore_assumptions'] = False
                 
-                # Convert to DataFrame for editing
-                assumptions_df = pd.DataFrame(
-                    [(k, float(v)) for k, v in assumptions_to_use.items()], columns=["key", "value"]
-                ).sort_values("key").reset_index(drop=True)
+                # Prepare data with metadata
+                assumption_rows = []
+                for k, v in assumptions_to_use.items():
+                    meta = ADMIN_FIELD_METADATA.get(k, {})
+                    label = meta.get("label", k)
+                    helper = meta.get("helper", "")
+                    assumption_rows.append({
+                        "key": k,
+                        "Description": label,
+                        "value": float(v),
+                        "Helper": helper
+                    })
                 
-                assumptions_df = st.data_editor(assumptions_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_assumptions")
+                assumptions_df = pd.DataFrame(assumption_rows)
+                
+                assumptions_df = st.data_editor(
+                    assumptions_df,
+                    width='stretch',
+                    num_rows="fixed",
+                    hide_index=True,
+                    column_order=["Description", "value"],
+                    column_config={
+                        "Description": st.column_config.TextColumn("Description", disabled=True),
+                        "value": st.column_config.NumberColumn("Value", required=True, step=0.001, format="%.4f")
+                    },
+                    key="editor_assumptions"
+                )
+
+                # Show helper text for unknown engine split
+                split_row = assumptions_df[assumptions_df["key"] == "unknown_engine_split_aluminum_percent"]
+                if not split_row.empty:
+                    val = float(split_row.iloc[0]["value"])
+                    al_pct = val * 100
+                    fe_pct = (1.0 - val) * 100
+                    st.info(f"ℹ️ **Split Calculation:** {ADMIN_FIELD_METADATA['unknown_engine_split_aluminum_percent']['helper']}\n\n"
+                            f"Current setting: **{al_pct:.1f}% Aluminum** / **{fe_pct:.1f}% Iron**")
 
             # Save button outside all tabs
             st.markdown("---")
@@ -791,6 +840,25 @@ st.markdown("""
         align-items: center !important;
     }
     
+    /* CRITICAL: Hide ALL children except first two (icon/emoji and label text) */
+    /* This prevents keyboard_arrow_down/keyboard_arrow_right text from showing */
+    [data-testid="stExpander"] details summary > *:nth-child(n+3) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        font-size: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        line-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        text-indent: -9999px !important;
+        clip: rect(0, 0, 0, 0) !important;
+    }
+    
     /* Hide only keyboard shortcut text (not the label) - including on hover */
     [data-testid="stExpander"] details summary span[class*="keyboard"],
     [data-testid="stExpander"] details summary span[aria-label*="keyboard"],
@@ -881,11 +949,18 @@ st.markdown("""
         overflow: hidden !important;
     }
     
-    /* Hide keyboard shortcut text that appears as arrow characters */
-    /* Use a comprehensive approach to hide any element that might contain the arrow */
+    /* Hide keyboard shortcut text that appears as "keyboard_arrow_down" or "keyboard_arrow_right" */
+    /* These appear as text when Material Icons font doesn't load - hide them completely */
     
-    /* Hide any element that appears after the main label (keyboard shortcuts are typically last) */
-    [data-testid="stExpander"] details summary > *:last-child:not(:first-child):not(:nth-child(2)) {
+    /* Hide all Material Icons elements in expander headers */
+    [data-testid="stExpander"] details summary .material-icons,
+    [data-testid="stExpander"] details summary .material-symbols-outlined,
+    [data-testid="stExpander"] details summary [class*="material-icons"],
+    [data-testid="stExpander"] details summary [class*="material-symbols"],
+    [data-testid="stExpander"] details summary span[class*="material"],
+    [data-testid="stExpander"] details summary i[class*="material"],
+    [data-testid="stExpander"] details summary *[class*="material-icons"],
+    [data-testid="stExpander"] details summary *[class*="material-symbols"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -898,9 +973,13 @@ st.markdown("""
         padding: 0 !important;
         position: absolute !important;
         left: -9999px !important;
+        text-indent: -9999px !important;
     }
     
-    /* Hide any element from the 3rd child onwards (keeping icon and label) */
+    /* Hide any element from the 3rd child onwards (keeping icon/emoji and label text) */
+    [data-testid="stExpander"] details summary > span:nth-child(n+3),
+    [data-testid="stExpander"] details summary > div:nth-child(n+3),
+    [data-testid="stExpander"] details summary > p:nth-child(n+3),
     [data-testid="stExpander"] details summary > *:nth-child(n+3) {
         display: none !important;
         visibility: hidden !important;
@@ -914,9 +993,27 @@ st.markdown("""
         padding: 0 !important;
         position: absolute !important;
         left: -9999px !important;
+        text-indent: -9999px !important;
     }
     
-    /* Hide any span elements that might contain arrow text */
+    /* Hide the last child if it's not the first or second (likely keyboard shortcut) */
+    [data-testid="stExpander"] details summary > *:last-child:not(:first-child):not(:nth-child(2)) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        font-size: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        line-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        text-indent: -9999px !important;
+    }
+    
+    /* Hide any span that might contain the keyboard arrow text */
     [data-testid="stExpander"] details summary span:not(:first-child):not(:nth-child(2)) {
         display: none !important;
         visibility: hidden !important;
@@ -926,28 +1023,26 @@ st.markdown("""
         height: 0 !important;
         overflow: hidden !important;
         line-height: 0 !important;
+        text-indent: -9999px !important;
     }
     
-    /* Hide any pseudo-elements that might contain arrows */
+    /* Hide pseudo-elements */
     [data-testid="stExpander"] details summary::after,
     [data-testid="stExpander"] details summary::before {
         display: none !important;
         content: "" !important;
     }
     
-    /* Ensure summary text itself is visible but no keyboard shortcuts */
+    /* Ensure summary is positioned correctly */
     [data-testid="stExpander"] details summary {
         position: relative !important;
     }
     
-    /* Additional fallback: Hide any element with very small width (likely keyboard shortcut indicator) */
-    [data-testid="stExpander"] details summary > * {
-        min-width: auto !important;
-    }
-    
-    /* Hide elements that might contain only arrow characters by targeting suspicious patterns */
-    [data-testid="stExpander"] details summary > span[style*="opacity"]:not(:first-child):not(:nth-child(2)),
-    [data-testid="stExpander"] details summary > span[style*="font-size"]:not(:first-child):not(:nth-child(2)) {
+    /* Hide elements with attributes containing keyboard_arrow */
+    [data-testid="stExpander"] details summary *[aria-label*="keyboard_arrow"],
+    [data-testid="stExpander"] details summary *[title*="keyboard_arrow"],
+    [data-testid="stExpander"] details summary *[class*="keyboard_arrow"],
+    [data-testid="stExpander"] details summary *[data-testid*="keyboard_arrow"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -955,6 +1050,26 @@ st.markdown("""
         width: 0 !important;
         height: 0 !important;
         overflow: hidden !important;
+    }
+    
+    /* FINAL FALLBACK: Force hide any element that might contain keyboard_arrow text */
+    /* Target all possible elements that could contain this text */
+    [data-testid="stExpander"] details summary span,
+    [data-testid="stExpander"] details summary div,
+    [data-testid="stExpander"] details summary p {
+        /* Only show if it's the first or second child */
+    }
+    
+    /* Explicitly hide any element containing "keyboard_arrow" in any form */
+    /* Since CSS can't select by text content, we hide all suspicious elements */
+    [data-testid="stExpander"] details summary > *:not(:first-child):not(:nth-child(2)) {
+        font-size: 0 !important;
+        line-height: 0 !important;
+        max-width: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        text-overflow: clip !important;
+        white-space: nowrap !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -974,11 +1089,7 @@ left_col, spacer, right_col = st.columns([2, 0.1, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
-    st.markdown("""
-    <div class="section-header">
-        🚗 Vehicle Search
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="section-header">🚗 Vehicle Search</div>', unsafe_allow_html=True)
 
     # Create a container for vehicle details that can be cleared
     vehicle_details_container = st.empty()
@@ -1069,6 +1180,16 @@ with left_col:
             
             # Display validation warnings if present
             validation_warnings = vehicle_info.get('validation_warnings', [])
+            
+            # Show positive indicator if cat price was found (internal override)
+            if vehicle_info.get('cat_value_override'):
+                 st.markdown(f"""
+                <div class="success-message">
+                    <strong>Cat Price Found!</strong><br>
+                    Using specific pricing from internal list: ${vehicle_info['cat_value_override']:,.2f}
+                </div>
+                """, unsafe_allow_html=True)
+            
             if validation_warnings:
                 from confidence_ui import render_warning_banner
                 st.markdown("### ⚠️ Data Quality Alerts")
@@ -1854,11 +1975,7 @@ with left_col:
 
 # --- Right Column: Cost Estimator Results ---
 with right_col:
-    st.markdown("""
-    <div class="section-header">
-        💰 Cost Estimate
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="section-header">💰 Cost Estimate</div>', unsafe_allow_html=True)
     
     # Create a container for cost estimate results that can be cleared
     cost_estimate_container = st.empty()

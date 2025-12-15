@@ -117,7 +117,7 @@ def process_vehicle(year: int, make: str, model: str, progress_callback=None) ->
         output["cat_value_override"] = cat_details['total_value']
         output["source_attribution"]["catalytic_converters"] = "csv_override"
         output["confidence_scores"]["catalytic_converters"] = 1.0
-        output["warnings"].append(f"Catalytic converter data sourced from internal price list (Total Value: ${cat_details['total_value']})")
+        # output["warnings"].append(f"Catalytic converter data sourced from internal price list (Total Value: ${cat_details['total_value']})")
 
     if progress_callback:
         progress_callback("complete", None, "done", None, None)

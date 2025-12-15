@@ -348,9 +348,10 @@ def generate_main_app_css() -> str:
     [data-testid="stHeader"] {{
         background: {Colors.WHITE} !important;
         border-bottom: 3px solid {Colors.RUBY_PRIMARY} !important;
-        padding: 0.25rem 0 !important;
-        min-height: 2rem !important;
-        max-height: 2rem !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: 0 !important;
+        display: none !important;
     }}
     
     /* Hide Streamlit header elements to reduce top spacing */
@@ -365,8 +366,9 @@ def generate_main_app_css() -> str:
     }}
     
     .main .block-container {{
-        padding-top: 0.15rem !important;
-        padding-bottom: 1rem !important;
+        padding-top: 0 !important;
+        padding-bottom: 0.5rem !important;
+        max-width: 95% !important;
     }}
     
     .main {{
@@ -452,16 +454,16 @@ def generate_main_app_css() -> str:
     
     .section-header {{
         font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
-        font-size: 1.5rem !important;
+        font-size: 1.25rem !important;
         font-weight: 700 !important;
         color: {Colors.WHITE} !important;
         background: {Colors.RUBY_GRADIENT} !important;
         margin-top: 0 !important;
-        margin-bottom: 1rem !important;
-        padding: 0.75rem 1.5rem !important;
+        margin-bottom: 0.5rem !important;
+        padding: 0.5rem 1rem !important;
         border-radius: {BorderRadius.LG} !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
-        box-shadow: 0 6px 16px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 4px 12px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15) !important;
         border: 2px solid {Colors.RUBY_DARK} !important;
     }}
     
