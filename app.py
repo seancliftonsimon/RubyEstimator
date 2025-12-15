@@ -39,7 +39,7 @@ from vehicle_data import (
     get_all_makes, get_models_for_make, get_catalog_stats,
     import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache
 )
-from auth import setup_password_protection
+from auth import require_admin_password, clear_admin_auth
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
 from confidence_ui import (
     render_confidence_badge, render_warning_banner, 
@@ -94,6 +94,8 @@ DEFAULT_ASSUMPTIONS: Dict[str, float] = {
     "battery_recovery_factor": 0.8,
     "cats_per_car_default_average": 1.36,
     "unknown_engine_split_aluminum_percent": 0.5,
+    # Profit styling threshold (admin-controlled)
+    "minimum_goal_profit": 25.0,
 }
 
 ADMIN_FIELD_METADATA = {
@@ -112,6 +114,11 @@ ADMIN_FIELD_METADATA = {
         "label": "Avg. Cats per Car",
         "helper": "Default number of catalytic converters assumed if not specified.",
         "format": "%.2f"
+    },
+    "minimum_goal_profit": {
+        "label": "Minimum Goal Profit ($)",
+        "helper": "Profit color floor for estimates. Net profit below this is highlighted as tight margin (yellow).",
+        "format": "%.2f",
     },
     "unknown_engine_split_aluminum_percent": {
         "label": "Assumed Aluminum Share (Unknown Engine)",
@@ -296,36 +303,7 @@ def validate_make_year_compatibility(make: str, year: int) -> tuple[bool, str]:
 
 def render_admin_ui():
     """Render the admin configuration UI with restore to default functionality."""
-    # Back button to return to main page
-    if st.button("← Back to Main Page", key="admin_back_button", use_container_width=False):
-        st.session_state['admin_mode'] = False
-        st.rerun()
-    
     st.markdown('<div class="main-title">Admin Configuration</div>', unsafe_allow_html=True)
-
-    # --- Password Protection ---
-    if 'admin_authenticated' not in st.session_state:
-        st.session_state['admin_authenticated'] = False
-
-    if not st.session_state['admin_authenticated']:
-        st.markdown("""
-        <div style="max-width: 400px; margin: 2rem auto; padding: 2rem; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e9ecef; text-align: center;">
-            <h3 style="color: #333; margin-bottom: 1.5rem;">🔒 Admin Access</h3>
-            <p style="color: #666; margin-bottom: 1.5rem;">Please enter the admin password to continue.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            password_input = st.text_input("Password", type="password", key="admin_password_input")
-            if st.button("Login", use_container_width=True):
-                if password_input == "emerald":
-                    st.session_state['admin_authenticated'] = True
-                    st.rerun()
-                else:
-                    st.error("❌ Incorrect password")
-        return
-    # ---------------------------
     
     # Info banner
     st.info(
@@ -661,6 +639,7 @@ ENGINE_WEIGHT_PERCENT = float(CONFIG["assumptions"]["engine_weight_percent_of_cu
 BATTERY_RECOVERY_FACTOR = float(CONFIG["assumptions"]["battery_recovery_factor"])      # fraction
 CATS_PER_CAR = float(CONFIG["assumptions"]["cats_per_car_default_average"])            # count avg
 UNKNOWN_ENGINE_SPLIT_AL_PCT = float(CONFIG["assumptions"]["unknown_engine_split_aluminum_percent"])  # fraction
+MINIMUM_GOAL_PROFIT = float(CONFIG["assumptions"].get("minimum_goal_profit", 25.0))  # dollars
 
 WEIGHTS = CONFIG["weights_fixed"]
 RIMS_AL_WEIGHT_LBS = float(WEIGHTS["rims_aluminum_weight_lbs"]) 
@@ -930,15 +909,35 @@ def exact_match_in_list(user_input: str, options_list: list) -> bool:
 
 # --- Streamlit App ---
 
-# Check password protection
-if not setup_password_protection():
-    st.stop()
-
 # Add confidence indicator CSS
 add_confidence_css()
 
 # Apply main app CSS from centralized styles module
 st.markdown(generate_main_app_css(), unsafe_allow_html=True)
+
+# --- Top Title Bar ---
+st.markdown('<div class="topbar-bg"></div>', unsafe_allow_html=True)
+st.markdown(
+    f'<div class="topbar-status">User: placeholder | Mode: {"Admin" if st.session_state.get("admin_mode", False) else "Main"}</div>',
+    unsafe_allow_html=True,
+)
+
+# Logo: always returns to main page
+if st.button("Ruby G-E-M", key="logo_home"):
+    st.session_state["admin_mode"] = False
+    st.rerun()
+
+# Admin toggle in top bar
+admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
+if st.button(admin_label, key="top_admin_toggle_btn"):
+    st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
+    st.rerun()
+
+# Logout in top bar
+if st.button("Logout", key="logout_btn"):
+    clear_admin_auth()
+    st.session_state["admin_mode"] = False
+    st.rerun()
 
 # Additional CSS to hide keyboard shortcuts but keep expander labels visible
 st.markdown("""
@@ -1193,7 +1192,8 @@ if 'admin_mode' not in st.session_state:
 if st.session_state['admin_mode']:
     # Apply admin-specific CSS for distinct mode styling
     st.markdown(generate_admin_mode_css(), unsafe_allow_html=True)
-    render_admin_ui()
+    if require_admin_password():
+        render_admin_ui()
     st.stop()  # Don't show the main app when in admin mode
 
 # Create two columns for the main layout with better spacing (2:1 ratio for vehicle search:cost estimate)
@@ -2228,11 +2228,14 @@ with right_col:
                     
                     # Display summary metrics with semantic colors
                     # Row 1: Net Profit (full width)
-                    profit_colors = get_semantic_colors(totals["net"], "profit")
-                    # Solid colors for professional look
-                    profit_bg = "#ecfdf5" if totals["net"] >= 0 else "#fef2f2" # Emerald 50 / Red 50
-                    profit_border = "#10b981" if totals["net"] >= 0 else "#ef4444" # Emerald 500 / Red 500
-                    profit_text = "#047857" if totals["net"] >= 0 else "#b91c1c" # Emerald 700 / Red 700
+                    profit_colors = get_semantic_colors(
+                        totals["net"],
+                        "profit",
+                        minimum_goal_profit=MINIMUM_GOAL_PROFIT,
+                    )
+                    profit_bg = profit_colors["background"]
+                    profit_border = profit_colors["border"]
+                    profit_text = profit_colors["text"]
                     st.markdown(f"""
                 <div style="background: {profit_bg}; padding: 1.5rem; border-radius: 8px; border: 1px solid {profit_border}; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);">
                     <div style="text-align: center;">
@@ -2401,7 +2404,32 @@ with right_col:
                 
                 summary_df = pd.DataFrame(summary_data)
                 
-                st.dataframe(summary_df, width='stretch', hide_index=True)
+                def _style_profit_row(row: pd.Series):
+                    if str(row.get("Item", "")).strip().lower() != "net profit":
+                        return [""] * len(row)
+                    colors = get_semantic_colors(
+                        float(totals["net"]),
+                        "profit",
+                        minimum_goal_profit=MINIMUM_GOAL_PROFIT,
+                    )
+                    # Highlight the full row, with stronger emphasis on the Amount cell.
+                    styles = [""] * len(row)
+                    for i, col in enumerate(row.index):
+                        if col == "Amount":
+                            styles[i] = (
+                                f"background-color: {colors['background']};"
+                                f"color: {colors['text']};"
+                                f"font-weight: 700;"
+                            )
+                        else:
+                            styles[i] = f"background-color: {colors['background']};"
+                    return styles
+
+                st.dataframe(
+                    summary_df.style.apply(_style_profit_row, axis=1),
+                    width='stretch',
+                    hide_index=True,
+                )
         
         else:
             # Show a message when no vehicle has been searched yet
@@ -2412,7 +2440,6 @@ with right_col:
             """, unsafe_allow_html=True)
             
             # Show manual entry option when no vehicle is selected
-            st.markdown('<div style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0;">Enter curb weight manually</div>', unsafe_allow_html=True)
             with st.expander("Enter curb weight manually", expanded=False):
                 with st.form(key="manual_calc_form_no_vehicle"):
                     col1, col2 = st.columns(2)
@@ -2522,27 +2549,6 @@ with right_col:
 
 # --- Footer ---
 st.markdown("---")
-
-# Admin button in bottom left corner with absolute positioning
-st.markdown("""
-<style>
-    .admin-button-container {
-        position: fixed;
-        bottom: 1rem;
-        left: 1rem;
-        z-index: 999;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Use a container for admin button that will be positioned
-admin_container = st.container()
-with admin_container:
-    if st.button("Admin" if not st.session_state.get('admin_mode', False) else "Close Admin", 
-                 key="admin_toggle_btn",
-                 help="Access admin settings"):
-        st.session_state['admin_mode'] = not st.session_state.get('admin_mode', False)
-        st.rerun()
 
 # Add title at bottom in smaller format
 st.markdown("""

@@ -6,6 +6,59 @@ def hash_password(password):
     """Hash a password using SHA-256"""
     return hashlib.sha256(password.encode()).hexdigest()
 
+def _get_stored_password_hash() -> str:
+    """Return the configured password hash (env first, then secrets). Empty means disabled."""
+    stored_hash = os.getenv("PASSWORD_HASH", "") or ""
+    if stored_hash:
+        return stored_hash
+    try:
+        return st.secrets.get("password_hash", "") or ""
+    except Exception:
+        return ""
+
+def clear_admin_auth():
+    """Clear admin authentication state from the session."""
+    if "admin_authenticated" in st.session_state:
+        del st.session_state["admin_authenticated"]
+    if "admin_password" in st.session_state:
+        del st.session_state["admin_password"]
+
+def require_admin_password() -> bool:
+    """
+    Gate Admin mode behind a password.
+    - Uses a form so Enter submits.
+    - Stores only a boolean in session state (never the plaintext password).
+    """
+    stored_hash = _get_stored_password_hash()
+    if not stored_hash:
+        st.session_state["admin_authenticated"] = True
+        return True
+
+    if st.session_state.get("admin_authenticated", False):
+        return True
+
+    st.markdown("### Admin Access")
+    st.caption("Enter the admin password to continue.")
+
+    with st.form("admin_login_form", clear_on_submit=False):
+        # Streamlit will usually focus the first input on rerun; keep this as the first widget.
+        password = st.text_input("Password", type="password", key="admin_password")
+        submitted = st.form_submit_button("Log in")
+
+    if submitted:
+        if hash_password(password) == stored_hash:
+            st.session_state["admin_authenticated"] = True
+            if "admin_password" in st.session_state:
+                del st.session_state["admin_password"]
+            st.rerun()
+        else:
+            st.session_state["admin_authenticated"] = False
+            if "admin_password" in st.session_state:
+                del st.session_state["admin_password"]
+            st.error("Password incorrect")
+
+    return st.session_state.get("admin_authenticated", False)
+
 def check_password():
     """Returns `True` if the user had the correct password."""
     
@@ -71,7 +124,7 @@ def setup_password_protection():
     if "password_correct" not in st.session_state or not st.session_state["password_correct"]:
         st.markdown("""
         <div style="text-align: center; padding: 2rem;">
-            <h1>🔒 Ruby GEM</h1>
+            <h1>Ruby GEM</h1>
             <p>Please enter the password to access the application.</p>
         </div>
         """, unsafe_allow_html=True)

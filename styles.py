@@ -261,30 +261,51 @@ def generate_confidence_badge_css() -> str:
     """
 
 
-def get_semantic_colors(value: float, value_type: str = "profit") -> Dict[str, str]:
+def get_semantic_colors(
+    value: float,
+    value_type: str = "profit",
+    minimum_goal_profit: Optional[float] = None,
+) -> Dict[str, str]:
     """
     Get semantic colors based on value type.
     
     Args:
         value: The numeric value to style
         value_type: Type of value - "profit", "cost", "info"
+        minimum_goal_profit: For profit values, the floor that indicates "good" profit.
     
     Returns:
         Dictionary with background, border, and text colors
     """
     if value_type == "profit":
-        if value >= 0:
-            return {
-                "background": Colors.SUCCESS_LIGHT,
-                "border": Colors.SUCCESS_BORDER,
-                "text": Colors.SUCCESS
-            }
-        else:
+        # Profit rules:
+        # - Red: value < 0
+        # - Yellow: 0 <= value < minimum_goal_profit
+        # - Green: value >= minimum_goal_profit
+        floor = 0.0
+        if minimum_goal_profit is not None:
+            try:
+                floor = max(0.0, float(minimum_goal_profit))
+            except (TypeError, ValueError):
+                floor = 0.0
+
+        if value < 0:
             return {
                 "background": Colors.ERROR_LIGHT,
                 "border": Colors.ERROR_BORDER,
-                "text": Colors.ERROR
+                "text": Colors.ERROR,
             }
+        if value < floor:
+            return {
+                "background": Colors.WARNING_LIGHT,
+                "border": Colors.WARNING_BORDER,
+                "text": Colors.WARNING,
+            }
+        return {
+            "background": Colors.SUCCESS_LIGHT,
+            "border": Colors.SUCCESS_BORDER,
+            "text": Colors.SUCCESS,
+        }
     elif value_type == "cost":
         return {
             "background": Colors.ERROR_LIGHT,
@@ -401,6 +422,83 @@ def generate_main_app_css() -> str:
     .main {{
         background: transparent !important;
         color: {Colors.GRAY_800} !important;
+    }}
+
+    /* ========== TOP BAR ========== */
+    .topbar-bg {{
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 52px;
+        background: {Colors.WHITE};
+        border-bottom: 1px solid {Colors.GRAY_200};
+        z-index: 1000;
+    }}
+
+    .topbar-status {{
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: {Colors.GRAY_600};
+        font-size: 0.9rem;
+        font-weight: 500;
+        z-index: 1001;
+        white-space: nowrap;
+    }}
+
+    /* Make room for top bar */
+    .main .block-container {{
+        padding-top: 4rem !important;
+    }}
+
+    /* Logo button */
+    button[key="logo_home"] {{
+        position: fixed !important;
+        top: 8px !important;
+        left: 16px !important;
+        z-index: 1002 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: {Colors.RUBY_PRIMARY} !important;
+        font-weight: 800 !important;
+        font-size: 1.05rem !important;
+        padding: 0.25rem 0.5rem !important;
+        min-height: auto !important;
+    }}
+
+    button[key="logo_home"]:hover {{
+        text-decoration: underline !important;
+        transform: none !important;
+    }}
+
+    /* Top bar admin toggle */
+    button[key="top_admin_toggle_btn"] {{
+        position: fixed !important;
+        top: 8px !important;
+        right: 110px !important;
+        z-index: 1002 !important;
+        min-height: 36px !important;
+        padding: 0.35rem 0.75rem !important;
+        font-size: 0.95rem !important;
+    }}
+
+    /* Top bar logout */
+    button[key="logout_btn"] {{
+        position: fixed !important;
+        top: 8px !important;
+        right: 16px !important;
+        z-index: 1002 !important;
+        min-height: 36px !important;
+        padding: 0.35rem 0.75rem !important;
+        font-size: 0.95rem !important;
+        background: {Colors.GRAY_700} !important;
+    }}
+
+    button[key="logout_btn"]:hover {{
+        background: {Colors.GRAY_800} !important;
     }}
     
     /* Force all text elements to be dark - but NOT in buttons, tables, or special headers */
