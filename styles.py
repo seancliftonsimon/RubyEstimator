@@ -821,6 +821,22 @@ def generate_main_app_css() -> str:
         margin-top: 1rem !important;
         margin-bottom: 1rem !important;
     }}
+
+    /* Expander chevron fix: hide Material-Icon ligature text (e.g., keyboard_arrow_right) */
+    [data-testid="stExpander"] .material-icons,
+    [data-testid="stExpander"] .material-icons-outlined,
+    [data-testid="stExpander"] [class*="material-icons"],
+    [data-testid="stExpander"] *[style*="Material Icons"],
+    [data-testid="stExpander"] *[style*="Material-Icons"] {{
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+    }}
     
     .streamlit-expanderHeader {{
         background: linear-gradient(135deg, {Colors.RUBY_LIGHT} 0%, {Colors.GRAY_50} 100%) !important;
