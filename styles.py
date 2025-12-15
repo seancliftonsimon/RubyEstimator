@@ -330,18 +330,24 @@ def generate_main_app_css() -> str:
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
     }}
     
-    /* Exclude icon fonts from font override, and suppress their ligature text */
+    /* Exclude icon fonts from global font override (prevents keyboard_arrow_* showing as text) */
     .material-icons,
     .material-icons-outlined,
     [class*="material-icons"],
     [style*="Material Icons"],
     [style*="Material-Icons"] {{
         font-family: "Material Icons" !important;
-        font-size: 0 !important;       /* hide ligature text like keyboard_arrow_right */
-        line-height: 0 !important;
-        width: 0 !important;
-        height: 0 !important;
-        overflow: hidden !important;
+        font-size: 20px !important;
+        line-height: 1 !important;
+        font-weight: normal !important;
+        font-style: normal !important;
+        letter-spacing: normal !important;
+        text-transform: none !important;
+        display: inline-block !important;
+        white-space: nowrap !important;
+        word-wrap: normal !important;
+        direction: ltr !important;
+        -webkit-font-smoothing: antialiased !important;
     }}
     
     /* ========== FORCE LIGHT MODE WITH PROFESSIONAL BACKGROUND ========== */
@@ -378,7 +384,12 @@ def generate_main_app_css() -> str:
         padding-top: 0 !important;
         padding-bottom: 0.5rem !important;
         max-width: 95% !important;
-        margin-top: -11rem !important; /* Further reduce top spacing */
+        margin-top: -13rem !important; /* Further reduce top spacing */
+    }}
+
+    /* Extra top padding removal (Streamlit sometimes adds this on the main container) */
+    section.main > div {{
+        padding-top: 0 !important;
     }}
     
     /* Hide the sidebar collapsed control to "get rid of the side on the left entirely" */
@@ -630,26 +641,12 @@ def generate_main_app_css() -> str:
     {generate_input_css()}
     
     /* ========== SELECTBOX (DROPDOWN) STYLING ========== */
-    /* Hide dropdown arrows (SVG icons) */
-    .stSelectbox [data-baseweb="select"] svg,
-    [data-testid="stSelectbox"] [data-baseweb="select"] svg,
-    .stSelectbox [data-baseweb="select"] > div > svg,
-    [data-testid="stSelectbox"] [data-baseweb="select"] > div > svg {{
-        display: none !important;
-    }}
-    
-    /* Hide any Material-Icons / keyboard text that can leak through as plain text inside selectboxes */
-    [data-testid="stSelectbox"] span[class*="keyboard"],
-    [data-testid="stSelectbox"] span[aria-label*="keyboard"],
-    [data-testid="stSelectbox"] [class*="material-icons"],
-    [data-testid="stSelectbox"] [class*="material-icons-outlined"],
-    [data-testid="stSelectbox"] *[style*="Material Icons"],
-    [data-testid="stSelectbox"] *[style*="Material-Icons"],
-    [data-testid="stSelectbox"] [aria-label*="keyboard_arrow"] {{
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        font-size: 0 !important;
+    /* Ensure the dropdown arrow is visible and the control looks clickable */
+    [data-testid="stSelectbox"] [data-baseweb="select"] svg {{
+        display: inline-block !important;
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+        fill: {Colors.GRAY_600} !important;
     }}
     
     /* Make the select control look like a clickable input */
@@ -657,21 +654,29 @@ def generate_main_app_css() -> str:
         border: 3px solid {Colors.RUBY_BORDER_STRONG} !important;
         background: {Colors.WHITE} !important;
         border-radius: {BorderRadius.LG} !important;
-        padding: 0.4rem 0.75rem !important;
+        padding: 0.25rem 0.75rem !important;
+        min-height: 48px !important;
+        display: flex !important;
+        align-items: center !important;
         cursor: pointer !important;
-        color: {Colors.GRAY_800} !important;
     }}
     
     [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover {{
         border-color: {Colors.RUBY_PRIMARY} !important;
     }}
     
-    /* Ensure all text inside the select control is readable (no white-on-white) */
-    [data-testid="stSelectbox"] [data-baseweb="select"] span,
-    [data-testid="stSelectbox"] [data-baseweb="select"] div,
-    [data-testid="stSelectbox"] [data-baseweb="select"] * {{
+    /* Ensure displayed value text inside the select is readable */
+    [data-testid="stSelectbox"] [data-baseweb="select"] input {{
         color: {Colors.GRAY_800} !important;
-        background-color: transparent !important;
+        -webkit-text-fill-color: {Colors.GRAY_800} !important;
+        background: transparent !important;
+        font-weight: 500 !important;
+        cursor: pointer !important;
+    }}
+    
+    /* Ensure dropdown menu items are readable */
+    [data-baseweb="menu"] * {{
+        color: {Colors.GRAY_800} !important;
     }}
     
     /* Reduce spacing between text input and selectbox */
@@ -748,15 +753,7 @@ def generate_main_app_css() -> str:
         color: {Colors.GRAY_800} !important;
     }}
     
-    /* Global safety: hide any remaining keyboard-arrow Material icon artifacts */
-    *[aria-label*="keyboard_arrow"],
-    *[aria-label*="keyboard arrow"],
-    *[class*="keyboard_arrow"],
-    *[class*="keyboard-arrow"] {{
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-    }}
+    /* Do NOT globally hide keyboard_arrow elements; fixing icon font above prevents the text overlays */
     
     /* ========== TABLES ========== */
     {generate_table_css()}
