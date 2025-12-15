@@ -330,9 +330,18 @@ def generate_main_app_css() -> str:
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
     }}
     
-    /* Exclude icon fonts from font override */
-    .material-icons, [class*="icon"], svg, svg * {{
-        font-family: inherit !important;
+    /* Exclude icon fonts from font override, and suppress their ligature text */
+    .material-icons,
+    .material-icons-outlined,
+    [class*="material-icons"],
+    [style*="Material Icons"],
+    [style*="Material-Icons"] {{
+        font-family: "Material Icons" !important;
+        font-size: 0 !important;       /* hide ligature text like keyboard_arrow_right */
+        line-height: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
     }}
     
     /* ========== FORCE LIGHT MODE WITH PROFESSIONAL BACKGROUND ========== */
@@ -369,7 +378,7 @@ def generate_main_app_css() -> str:
         padding-top: 0 !important;
         padding-bottom: 0.5rem !important;
         max-width: 95% !important;
-        margin-top: -9rem !important; /* Further reduce top spacing */
+        margin-top: -11rem !important; /* Further reduce top spacing */
     }}
     
     /* Hide the sidebar collapsed control to "get rid of the side on the left entirely" */
@@ -629,14 +638,18 @@ def generate_main_app_css() -> str:
         display: none !important;
     }}
     
-    /* Hide any Material-Icons \"keyboard\" text that can leak through as plain text inside selectboxes */
+    /* Hide any Material-Icons / keyboard text that can leak through as plain text inside selectboxes */
     [data-testid="stSelectbox"] span[class*="keyboard"],
     [data-testid="stSelectbox"] span[aria-label*="keyboard"],
     [data-testid="stSelectbox"] [class*="material-icons"],
+    [data-testid="stSelectbox"] [class*="material-icons-outlined"],
+    [data-testid="stSelectbox"] *[style*="Material Icons"],
+    [data-testid="stSelectbox"] *[style*="Material-Icons"],
     [data-testid="stSelectbox"] [aria-label*="keyboard_arrow"] {{
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
+        font-size: 0 !important;
     }}
     
     /* Make the select control look like a clickable input */
@@ -654,6 +667,8 @@ def generate_main_app_css() -> str:
     }}
     
     /* Ensure all text inside the select control is readable (no white-on-white) */
+    [data-testid="stSelectbox"] [data-baseweb="select"] span,
+    [data-testid="stSelectbox"] [data-baseweb="select"] div,
     [data-testid="stSelectbox"] [data-baseweb="select"] * {{
         color: {Colors.GRAY_800} !important;
         background-color: transparent !important;
@@ -734,7 +749,10 @@ def generate_main_app_css() -> str:
     }}
     
     /* Global safety: hide any remaining keyboard-arrow Material icon artifacts */
-    *[aria-label*="keyboard_arrow"] {{
+    *[aria-label*="keyboard_arrow"],
+    *[aria-label*="keyboard arrow"],
+    *[class*="keyboard_arrow"],
+    *[class*="keyboard-arrow"] {{
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;

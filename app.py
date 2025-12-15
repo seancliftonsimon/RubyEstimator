@@ -1319,14 +1319,17 @@ with left_col:
 
     # Year input (simple text input, no suggestions needed)
     with col1:
-        # Match label style used for Make/Model
-        st.markdown("**Year**")
+        # Match label style and spacing used for Make/Model
+        st.markdown(
+            "<div style='font-weight:600; font-size:1.1rem; margin-bottom:0.35rem;'>Year</div>",
+            unsafe_allow_html=True,
+        )
         year_input = st.text_input(
             "",
             placeholder="",
             value="",
             key="year_input_main",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
 
     # Make input with dropdown list and text field
