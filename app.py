@@ -1051,8 +1051,12 @@ with col_left:
         st.rerun()
 
 with col_center:
-    st.markdown('<div id="topbar-logo-anchor"></div>', unsafe_allow_html=True)
-    # Logo: always returns to main page
+    # Logo: Center Title (Markdown)
+    st.markdown(
+        f'<div class="topbar-logo-text" id="topbar-logo-anchor">Ruby G-E-M</div>', 
+        unsafe_allow_html=True
+    )
+    # Hidden button for click functionality if needed, but Title is just text per request
     if st.button("Ruby G-E-M", key="logo_home", use_container_width=False):
         st.session_state["admin_mode"] = False
         st.rerun()

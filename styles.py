@@ -441,101 +441,157 @@ def generate_main_app_css() -> str:
         padding-top: 4.25rem !important;
     }}
 
-    /* Reliable anchors for topbar widgets (lets us style specific buttons without JS) */
+    /* Hide anchor divs */
     #topbar-admin-anchor,
     #topbar-logo-anchor,
     #topbar-logout-anchor {{
+        display: none !important;
+    }}
+
+    /* Hide the row container that holds topbar columns so it doesn't create whitespace */
+    [data-testid="stHorizontalBlock"]:has(#topbar-admin-anchor),
+    [data-testid="stHorizontalBlock"]:has(#topbar-logo-anchor),
+    [data-testid="stHorizontalBlock"]:has(#topbar-logout-anchor) {{
         height: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
+        overflow: visible !important;
     }}
 
-    /* Collapse the Streamlit button wrapper height so it doesn't create vertical whitespace */
-    #topbar-admin-anchor + div[data-testid="stButton"],
-    #topbar-logo-anchor + div[data-testid="stButton"],
-    #topbar-logout-anchor + div[data-testid="stButton"] {{
-        height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }}
-
-    /* Admin button: far left */
-    #topbar-admin-anchor + div[data-testid="stButton"] button {{
+    /* Position the entire columns that contain topbar elements into the fixed bar */
+    [data-testid="column"]:has(#topbar-admin-anchor) {{
         position: fixed !important;
-        top: 26px !important;
-        transform: translateY(-50%) !important;
+        top: 0 !important;
         left: 16px !important;
+        height: 52px !important;
+        display: flex !important;
+        align-items: center !important;
         z-index: 1002 !important;
-        min-height: 30px !important;
-        padding: 0.2rem 0.6rem !important;
-        font-size: 0.85rem !important;
-        background: {Colors.GRAY_100} !important;
+        width: auto !important;
+        min-width: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }}
+
+    [data-testid="column"]:has(#topbar-admin-anchor) > div,
+    [data-testid="column"]:has(#topbar-admin-anchor) [data-testid="stButton"],
+    [data-testid="column"]:has(#topbar-admin-anchor) .stButton {{
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+
+    [data-testid="column"]:has(#topbar-logo-anchor) {{
+        position: fixed !important;
+        top: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        height: 52px !important;
+        display: flex !important;
+        align-items: center !important;
+        z-index: 1002 !important;
+        width: auto !important;
+        min-width: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }}
+
+    [data-testid="column"]:has(#topbar-logo-anchor) > div,
+    [data-testid="column"]:has(#topbar-logo-anchor) [data-testid="stButton"],
+    [data-testid="column"]:has(#topbar-logo-anchor) .stButton {{
+        display: flex !important;
+        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+
+    [data-testid="column"]:has(#topbar-logout-anchor) {{
+        position: fixed !important;
+        top: 0 !important;
+        right: 16px !important;
+        height: 52px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        z-index: 1002 !important;
+        width: auto !important;
+        min-width: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }}
+
+    [data-testid="column"]:has(#topbar-logout-anchor) > div,
+    [data-testid="column"]:has(#topbar-logout-anchor) [data-testid="stButton"],
+    [data-testid="column"]:has(#topbar-logout-anchor) .stButton {{
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+
+    /* Style Admin and Logout buttons (small, light gray) */
+    [data-testid="column"]:has(#topbar-admin-anchor) button,
+    [data-testid="column"]:has(#topbar-logout-anchor) button {{
+        background: {Colors.GRAY_200} !important;
+        color: {Colors.GRAY_700} !important;
         border: 1px solid {Colors.GRAY_300} !important;
+        box-shadow: none !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        padding: 0.375rem 0.875rem !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        height: 32px !important;
+        border-radius: {BorderRadius.MD} !important;
+        margin: 0 !important;
+        line-height: 1.2 !important;
+    }}
+
+    [data-testid="column"]:has(#topbar-admin-anchor) button:hover,
+    [data-testid="column"]:has(#topbar-logout-anchor) button:hover {{
+        background: {Colors.GRAY_300} !important;
         color: {Colors.GRAY_800} !important;
+        transform: none !important;
         box-shadow: none !important;
     }}
 
-    /* Center logo button */
-    #topbar-logo-anchor + div[data-testid="stButton"] button {{
-        position: fixed !important;
-        top: 26px !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        z-index: 1002 !important;
-        min-height: 30px !important;
-        padding: 0.15rem 0.4rem !important;
-        font-size: 1.0rem !important;
-        font-weight: 900 !important;
+    [data-testid="column"]:has(#topbar-admin-anchor) button *,
+    [data-testid="column"]:has(#topbar-logout-anchor) button * {{
+        color: {Colors.GRAY_700} !important;
+    }}
+
+    /* Style Logo button (text only, no button look) */
+    [data-testid="column"]:has(#topbar-logo-anchor) button {{
         background: transparent !important;
         border: none !important;
+        box-shadow: none !important;
         color: {Colors.RUBY_PRIMARY} !important;
-        box-shadow: none !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        padding: 0.25rem 0.5rem !important;
+        min-height: auto !important;
+        height: auto !important;
     }}
 
-    /* Logout button: far right */
-    #topbar-logout-anchor + div[data-testid="stButton"] button {{
-        position: fixed !important;
-        top: 26px !important;
-        transform: translateY(-50%) !important;
-        right: 16px !important;
-        z-index: 1002 !important;
-        min-height: 30px !important;
-        padding: 0.2rem 0.6rem !important;
-        font-size: 0.85rem !important;
-        background: {Colors.GRAY_100} !important;
-        border: 1px solid {Colors.GRAY_300} !important;
-        color: {Colors.GRAY_800} !important;
-        box-shadow: none !important;
-    }}
-
-    #topbar-logout-anchor + div[data-testid="stButton"] button:hover {{
-        background: {Colors.GRAY_200} !important;
-        border-color: {Colors.GRAY_400} !important;
-    }}
-
-    #topbar-admin-anchor + div[data-testid="stButton"] button:hover {{
-        background: {Colors.GRAY_200} !important;
-        border-color: {Colors.GRAY_400} !important;
-    }}
-
-    /* Ensure topbar button inner text isn't forced to white by global button CSS */
-    #topbar-admin-anchor + div[data-testid="stButton"] button *,
-    #topbar-logout-anchor + div[data-testid="stButton"] button *,
-    #topbar-logo-anchor + div[data-testid="stButton"] button * {{
-        color: inherit !important;
-    }}
-
-    #topbar-logo-anchor + div[data-testid="stButton"] button:hover {{
+    [data-testid="column"]:has(#topbar-logo-anchor) button:hover {{
         text-decoration: underline !important;
         background: transparent !important;
+        transform: none !important;
+        box-shadow: none !important;
     }}
 
-    /* User display name: immediately to the left of Logout */
+    [data-testid="column"]:has(#topbar-logo-anchor) button * {{
+        color: {Colors.RUBY_PRIMARY} !important;
+    }}
+
+    /* User display name inline in topbar column */
     .topbar-user {{
-        position: fixed;
-        top: 26px;
-        transform: translateY(-50%);
-        right: 92px; /* space for logout button + gap */
+        color: {Colors.GRAY_700};
+        font-size: 0.9rem;
+        font-weight: 500;
         z-index: 1002;
         color: {Colors.GRAY_700};
         font-size: 0.95rem;
