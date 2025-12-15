@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import logging
 import sys
 import re
+import time
 
 # Configure logging FIRST (before any other imports that might use logging)
 logging.basicConfig(
@@ -31,18 +32,6 @@ st.set_page_config(
         'About': "Ruby GEM - Vehicle Weight & Cost Calculator"
     }
 )
-
-# --- Buyer Login Gate ---
-# If we are not in admin mode, require buyer login.
-if not st.session_state.get("admin_mode", False):
-    is_logged_in = render_login_ui(session_key="buyer_user")
-    if not is_logged_in:
-        st.stop()
-
-# Get current buyer (if any)
-current_buyer = st.session_state.get("buyer_user")
-current_buyer_id = current_buyer["id"] if current_buyer else None
-current_buyer_name = current_buyer["username"] if current_buyer else "guest"
 
 import pandas as pd
 from vehicle_data import (
@@ -73,6 +62,18 @@ from styles import generate_main_app_css, generate_admin_mode_css, get_semantic_
 from cat_prices import CatPriceManager
 from sqlalchemy import text
 from datetime import datetime, timedelta
+
+# --- Buyer Login Gate ---
+# If we are not in admin mode, require buyer login.
+if not st.session_state.get("admin_mode", False):
+    is_logged_in = render_login_ui(session_key="buyer_user")
+    if not is_logged_in:
+        st.stop()
+
+# Get current buyer (if any)
+current_buyer = st.session_state.get("buyer_user")
+current_buyer_id = current_buyer["id"] if current_buyer else None
+current_buyer_name = current_buyer["username"] if current_buyer else "guest"
 
 # Default configuration values (used when DB has no overrides)
 DEFAULT_PRICE_PER_LB: Dict[str, float] = {
