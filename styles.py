@@ -915,6 +915,18 @@ def generate_main_app_css() -> str:
         box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(153, 12, 65, 0.2) !important;
     }}
     
+    /* Hide "Press Enter to submit form" help text in forms */
+    .stForm small,
+    [data-testid="stForm"] small,
+    .stForm > div > small,
+    form small {{
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    
     /* ========== MESSAGES ========== */
     .success-message {{
         background: linear-gradient(135deg, {Colors.SUCCESS_LIGHT} 0%, rgba(22, 163, 74, 0.15) 100%);
