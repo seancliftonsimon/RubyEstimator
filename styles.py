@@ -362,13 +362,14 @@ def generate_main_app_css() -> str:
     
     /* Minimize top padding on main content area */
     [data-testid="stAppViewContainer"] > div:first-child {{
-        padding-top: 0.15rem !important;
+        padding-top: 0 !important;
     }}
     
     .main .block-container {{
         padding-top: 0 !important;
         padding-bottom: 0.5rem !important;
         max-width: 95% !important;
+        margin-top: -1rem !important;
     }}
     
     .main {{

@@ -97,22 +97,58 @@ DEFAULT_ASSUMPTIONS: Dict[str, float] = {
 }
 
 ADMIN_FIELD_METADATA = {
+    # Assumptions
     "engine_weight_percent_of_curb": {
         "label": "Engine Weight % of Curb",
-        "helper": "Percentage of total vehicle weight attributed to the engine (e.g., 0.139 = 13.9%)."
+        "helper": "Percentage of total vehicle weight attributed to the engine (e.g., 0.139 = 13.9%).",
+        "format": "%.3f"
     },
     "battery_recovery_factor": {
         "label": "Battery Recovery Factor",
-        "helper": "Adjustment factor for battery weight recovery (e.g., 0.8 means 80% of baseline weight)."
+        "helper": "Adjustment factor for battery weight recovery (e.g., 0.8 means 80% of baseline weight).",
+        "format": "%.2f"
     },
     "cats_per_car_default_average": {
         "label": "Avg. Cats per Car",
-        "helper": "Default number of catalytic converters assumed if not specified."
+        "helper": "Default number of catalytic converters assumed if not specified.",
+        "format": "%.2f"
     },
     "unknown_engine_split_aluminum_percent": {
-        "label": "Assumed aluminum share when engine material is unknown (0–1)",
-        "helper": "0.75 means 75% aluminum / 25% iron in the estimate."
-    }
+        "label": "Assumed Aluminum Share (Unknown Engine)",
+        "helper": "0.75 means 75% aluminum / 25% iron in the estimate.",
+        "format": "%.2f"
+    },
+    # Prices
+    "ELV": {"label": "ELV (End of Life Vehicle)", "helper": "Price per lb for vehicle body scrap."},
+    "AL_ENGINE": {"label": "Aluminum Engine", "helper": "Price per lb for aluminum engines."},
+    "FE_ENGINE": {"label": "Iron Engine", "helper": "Price per lb for iron engines."},
+    "HARNESS": {"label": "Wiring Harness", "helper": "Price per lb for wiring harnesses."},
+    "FE_RAD": {"label": "Iron Radiator", "helper": "Price per lb for iron radiators."},
+    "BREAKAGE": {"label": "Breakage", "helper": "Price per lb for breakage material."},
+    "ALT": {"label": "Alternator", "helper": "Price per lb for alternators."},
+    "STARTER": {"label": "Starter", "helper": "Price per lb for starters."},
+    "AC_COMP": {"label": "A/C Compressor", "helper": "Price per lb for A/C compressors."},
+    "FUSE_BOX": {"label": "Fuse Box", "helper": "Price per lb for fuse boxes."},
+    "BATTERY": {"label": "Battery", "helper": "Price per lb for lead-acid batteries."},
+    "AL_RIMS": {"label": "Aluminum Rims", "helper": "Price per lb for aluminum rims."},
+    "CATS": {"label": "Catalytic Converters (Generic)", "helper": "Price per unit for generic cats (fallback)."},
+    "TIRES": {"label": "Tires", "helper": "Price per unit (or lb depending on usage) for tires."},
+    "ECM": {"label": "ECM", "helper": "Price per lb for Engine Control Modules."},
+    # Costs
+    "PURCHASE": {"label": "Flat Purchase Cost", "helper": "Fixed cost deducted per vehicle purchased."},
+    "TOW": {"label": "Flat Tow Fee", "helper": "Fixed cost deducted for towing per vehicle."},
+    "LEAD_PER_CAR": {"label": "Lead Fee (per car)", "helper": "Fixed environmental fee per car."},
+    "NUT_PER_LB": {"label": "Nut Fee (per lb)", "helper": "Processing fee per lb of material."},
+    # Weights
+    "rims_aluminum_weight_lbs": {"label": "Rims (Aluminum)", "helper": "Assumed total weight of aluminum rims."},
+    "battery_baseline_weight_lbs": {"label": "Battery (Baseline)", "helper": "Baseline weight for a car battery."},
+    "harness_weight_lbs": {"label": "Wiring Harness", "helper": "Assumed weight of wiring harness."},
+    "fe_radiator_weight_lbs": {"label": "Iron Radiator", "helper": "Assumed weight of radiator."},
+    "breakage_weight_lbs": {"label": "Breakage", "helper": "Assumed weight of breakage."},
+    "alternator_weight_lbs": {"label": "Alternator", "helper": "Assumed weight of alternator."},
+    "starter_weight_lbs": {"label": "Starter", "helper": "Assumed weight of starter."},
+    "ac_compressor_weight_lbs": {"label": "A/C Compressor", "helper": "Assumed weight of A/C compressor."},
+    "fuse_box_weight_lbs": {"label": "Fuse Box", "helper": "Assumed weight of fuse box."},
 }
 
 DEFAULT_HEURISTICS: Dict[str, Any] = {
@@ -343,16 +379,38 @@ def render_admin_ui():
                         st.session_state['restore_prices'] = True
                 
                 if st.session_state.get('restore_prices', False):
-                    price_df = pd.DataFrame(
-                        [(k, float(v)) for k, v in DEFAULT_PRICE_PER_LB.items()], columns=["key", "value"]
-                    ).sort_values("key").reset_index(drop=True)
+                    prices_to_use = DEFAULT_PRICE_PER_LB
                     st.session_state['restore_prices'] = False
                 else:
-                    price_df = pd.DataFrame(
-                        [(k, float(v)) for k, v in cfg["price_per_lb"].items()], columns=["key", "value"]
-                    ).sort_values("key").reset_index(drop=True)
+                    prices_to_use = cfg["price_per_lb"]
                 
-                price_df = st.data_editor(price_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_prices")
+                # Prepare data with metadata
+                price_rows = []
+                for k, v in prices_to_use.items():
+                    meta = ADMIN_FIELD_METADATA.get(k, {})
+                    label = meta.get("label", k)
+                    helper = meta.get("helper", "")
+                    price_rows.append({
+                        "key": k,
+                        "Description": label,
+                        "value": float(v),
+                        "Helper": helper
+                    })
+                
+                price_df = pd.DataFrame(price_rows).sort_values("Description")
+                
+                price_df = st.data_editor(
+                    price_df, 
+                    width='stretch', 
+                    num_rows="fixed", 
+                    hide_index=True, 
+                    key="editor_prices",
+                    column_order=["Description", "value"],
+                    column_config={
+                        "Description": st.column_config.TextColumn("Commodity", disabled=True, help="Description of the item"),
+                        "value": st.column_config.NumberColumn("Price ($/lb)", required=True, min_value=0.0, format="$%.4f")
+                    }
+                )
 
             with tab_costs:
                 col1, col2 = st.columns([3, 1])
@@ -366,12 +424,33 @@ def render_admin_ui():
                 if st.session_state.get('restore_costs', False):
                     st.session_state['restore_costs'] = False
                 
-                # Convert to DataFrame for editing
-                costs_df = pd.DataFrame(
-                    [(k, float(v)) for k, v in costs_to_use.items()], columns=["key", "value"]
-                ).sort_values("key").reset_index(drop=True)
+                # Prepare data with metadata
+                cost_rows = []
+                for k, v in costs_to_use.items():
+                    meta = ADMIN_FIELD_METADATA.get(k, {})
+                    label = meta.get("label", k)
+                    helper = meta.get("helper", "")
+                    cost_rows.append({
+                        "key": k,
+                        "Description": label,
+                        "value": float(v),
+                        "Helper": helper
+                    })
                 
-                costs_df = st.data_editor(costs_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_costs")
+                costs_df = pd.DataFrame(cost_rows).sort_values("Description")
+                
+                costs_df = st.data_editor(
+                    costs_df, 
+                    width='stretch', 
+                    num_rows="fixed", 
+                    hide_index=True, 
+                    key="editor_costs",
+                    column_order=["Description", "value"],
+                    column_config={
+                        "Description": st.column_config.TextColumn("Cost Item", disabled=True),
+                        "value": st.column_config.NumberColumn("Amount ($)", required=True, min_value=0.0, format="$%.2f")
+                    }
+                )
 
             with tab_weights:
                 col1, col2 = st.columns([3, 1])
@@ -385,12 +464,33 @@ def render_admin_ui():
                 if st.session_state.get('restore_weights', False):
                     st.session_state['restore_weights'] = False
                 
-                # Convert to DataFrame for editing
-                weights_df = pd.DataFrame(
-                    [(k, float(v)) for k, v in weights_to_use.items()], columns=["key", "value"]
-                ).sort_values("key").reset_index(drop=True)
+                # Prepare data with metadata
+                weight_rows = []
+                for k, v in weights_to_use.items():
+                    meta = ADMIN_FIELD_METADATA.get(k, {})
+                    label = meta.get("label", k)
+                    helper = meta.get("helper", "")
+                    weight_rows.append({
+                        "key": k,
+                        "Description": label,
+                        "value": float(v),
+                        "Helper": helper
+                    })
                 
-                weights_df = st.data_editor(weights_df, width='stretch', num_rows="fixed", hide_index=True, key="editor_weights")
+                weights_df = pd.DataFrame(weight_rows).sort_values("Description")
+                
+                weights_df = st.data_editor(
+                    weights_df, 
+                    width='stretch', 
+                    num_rows="fixed", 
+                    hide_index=True, 
+                    key="editor_weights",
+                    column_order=["Description", "value"],
+                    column_config={
+                        "Description": st.column_config.TextColumn("Component", disabled=True),
+                        "value": st.column_config.NumberColumn("Weight (lbs)", required=True, min_value=0.0, format="%.1f")
+                    }
+                )
 
             with tab_assumptions:
                 col1, col2 = st.columns([3, 1])
@@ -410,14 +510,26 @@ def render_admin_ui():
                     meta = ADMIN_FIELD_METADATA.get(k, {})
                     label = meta.get("label", k)
                     helper = meta.get("helper", "")
+                    fmt = meta.get("format", "%.4f")
                     assumption_rows.append({
                         "key": k,
                         "Description": label,
                         "value": float(v),
-                        "Helper": helper
+                        "Helper": helper,
+                        "format": fmt
                     })
                 
                 assumptions_df = pd.DataFrame(assumption_rows)
+                
+                # Since we can't apply per-row formatting in st.data_editor column_config easily,
+                # we'll stick to a high precision default or try to be smart.
+                # However, st.column_config applies to the whole column.
+                # If we want mixed formatting, it's tricky.
+                # But most assumptions are percentages (0.139) or small factors. %.4f is generally safe.
+                # The user asked for "show decimal places to places as fits a percentage".
+                # 0.139 -> 0.1390 (4 decimal places).
+                # 0.5 -> 0.5000.
+                # If we use %.3f, 0.139 -> 0.139. 0.5 -> 0.500.
                 
                 assumptions_df = st.data_editor(
                     assumptions_df,
@@ -427,7 +539,7 @@ def render_admin_ui():
                     column_order=["Description", "value"],
                     column_config={
                         "Description": st.column_config.TextColumn("Description", disabled=True),
-                        "value": st.column_config.NumberColumn("Value", required=True, step=0.001, format="%.4f")
+                        "value": st.column_config.NumberColumn("Value", required=True, step=0.001, format="%.3f")
                     },
                     key="editor_assumptions"
                 )
@@ -2285,7 +2397,7 @@ with right_col:
             # Show a message when no vehicle has been searched yet
             st.markdown("""
             <div style="background: rgba(156, 163, 175, 0.1); padding: 2rem; border-radius: 8px; text-align: center; border: 1px solid #9ca3af;">
-                <h3 style="color: #6b7280; margin-bottom: 1rem;">Search for a vehicle to see value estimate</h3>
+                <h3 style="color: #6b7280; margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">Search for a vehicle to see value estimate</h3>
             </div>
             """, unsafe_allow_html=True)
             
