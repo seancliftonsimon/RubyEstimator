@@ -552,6 +552,36 @@ def generate_main_app_css() -> str:
         align-items: center !important;
         justify-content: flex-end !important;
     }}
+
+    /* Key-based fallback targeting so topbar buttons stay gray even if structure changes */
+    button[key="top_admin_toggle_btn"],
+    .stButton button[key="top_admin_toggle_btn"],
+    button[key="buyer_logout_btn"],
+    .stButton button[key="buyer_logout_btn"] {{
+        background: {Colors.GRAY_200} !important;
+        color: {Colors.GRAY_700} !important;
+        border: 1px solid {Colors.GRAY_300} !important;
+        box-shadow: none !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        padding: 0.30rem 0.75rem !important;
+        min-height: 30px !important;
+        height: 30px !important;
+        border-radius: {BorderRadius.MD} !important;
+        margin: 0 !important;
+        transform: none !important;
+        white-space: nowrap !important;
+    }}
+
+    button[key="top_admin_toggle_btn"]:hover,
+    .stButton button[key="top_admin_toggle_btn"]:hover,
+    button[key="buyer_logout_btn"]:hover,
+    .stButton button[key="buyer_logout_btn"]:hover {{
+        background: {Colors.GRAY_300} !important;
+        color: {Colors.GRAY_800} !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }}
     
     /* Force all text elements to be dark - but NOT in buttons, tables, or special headers */
     p:not(button p):not(.stButton p), 
