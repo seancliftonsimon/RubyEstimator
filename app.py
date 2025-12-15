@@ -1032,42 +1032,42 @@ def exact_match_in_list(user_input: str, options_list: list) -> bool:
 # --- Top Title Bar ---
 st.markdown('<div class="topbar-bg"></div>', unsafe_allow_html=True)
 
-# Status bar showing real user
-user_display = f"User: {current_buyer_name}"
-if current_buyer and current_buyer.get("display_name"):
-    user_display += f" ({current_buyer['display_name']})"
+# Display name only (no username / nickname; no mode label)
+preferred_display_name = ""
+if current_buyer and (current_buyer.get("display_name") or "").strip():
+    preferred_display_name = (current_buyer.get("display_name") or "").strip()
 
-st.markdown(
-    f'<div class="topbar-status">{user_display} | Mode: {"Admin" if st.session_state.get("admin_mode", False) else "Main"}</div>',
-    unsafe_allow_html=True,
-)
+# Top Bar Layout: Admin (left) | Ruby G-E-M (center) | User + Logout (right)
+col_left, col_center, col_right = st.columns([1, 2, 1])
 
-# Top Bar Buttons: Logo (Home) | Logout | Admin Toggle
-col_logo, col_mid, col_logout, col_admin = st.columns([2, 4, 1, 1])
-
-with col_logo:
-    # Logo: always returns to main page
-    if st.button("Ruby G-E-M", key="logo_home", use_container_width=True):
-        st.session_state["admin_mode"] = False
-        st.rerun()
-
-with col_logout:
-    # Logout button
-    if st.button("Logout", key="buyer_logout_btn", use_container_width=True):
-         if "buyer_user" in st.session_state:
-             del st.session_state["buyer_user"]
-         # Clear admin auth too if present
-         clear_admin_auth()
-         st.session_state["admin_mode"] = False
-         st.rerun()
-
-with col_admin:
-    # Admin toggle button
+with col_left:
+    # Anchor lets CSS target just this button reliably
+    st.markdown('<div id="topbar-admin-anchor"></div>', unsafe_allow_html=True)
     admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
     if st.button(admin_label, key="top_admin_toggle_btn", use_container_width=True):
         st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
         if not st.session_state["admin_mode"]:
             clear_admin_auth()
+        st.rerun()
+
+with col_center:
+    st.markdown('<div id="topbar-logo-anchor"></div>', unsafe_allow_html=True)
+    # Logo: always returns to main page
+    if st.button("Ruby G-E-M", key="logo_home", use_container_width=True):
+        st.session_state["admin_mode"] = False
+        st.rerun()
+
+with col_right:
+    # User name sits just left of Logout (styled via CSS)
+    if preferred_display_name:
+        st.markdown(f'<div class="topbar-user">{preferred_display_name}</div>', unsafe_allow_html=True)
+
+    st.markdown('<div id="topbar-logout-anchor"></div>', unsafe_allow_html=True)
+    if st.button("Logout", key="buyer_logout_btn", use_container_width=True):
+        if "buyer_user" in st.session_state:
+            del st.session_state["buyer_user"]
+        clear_admin_auth()
+        st.session_state["admin_mode"] = False
         st.rerun()
 
 # Additional CSS to hide keyboard shortcuts but keep expander labels visible

@@ -436,57 +436,55 @@ def generate_main_app_css() -> str:
         z-index: 1000;
     }}
 
-    .topbar-status {{
-        position: fixed;
-        top: 16px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: {Colors.GRAY_600};
-        font-size: 0.9rem;
-        font-weight: 500;
-        z-index: 1001;
-        white-space: nowrap;
-    }}
-
     /* Make room for top bar */
     .main .block-container {{
-        padding-top: 4rem !important;
+        padding-top: 4.25rem !important;
     }}
 
-    /* Logo button */
-    button[key="logo_home"] {{
+    /* Reliable anchors for topbar widgets (lets us style specific buttons without JS) */
+    #topbar-admin-anchor,
+    #topbar-logo-anchor,
+    #topbar-logout-anchor {{
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+
+    /* Collapse the Streamlit button wrapper height so it doesn't create vertical whitespace */
+    #topbar-admin-anchor + div[data-testid="stButton"],
+    #topbar-logo-anchor + div[data-testid="stButton"],
+    #topbar-logout-anchor + div[data-testid="stButton"] {{
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+
+    /* Admin button: far left */
+    #topbar-admin-anchor + div[data-testid="stButton"] button {{
         position: fixed !important;
         top: 8px !important;
         left: 16px !important;
-        z-index: 1002 !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: {Colors.RUBY_PRIMARY} !important;
-        font-weight: 800 !important;
-        font-size: 1.05rem !important;
-        padding: 0.25rem 0.5rem !important;
-        min-height: auto !important;
-    }}
-
-    button[key="logo_home"]:hover {{
-        text-decoration: underline !important;
-        transform: none !important;
-    }}
-
-    /* Top bar admin toggle */
-    button[key="top_admin_toggle_btn"] {{
-        position: fixed !important;
-        top: 8px !important;
-        right: 110px !important;
         z-index: 1002 !important;
         min-height: 36px !important;
         padding: 0.35rem 0.75rem !important;
         font-size: 0.95rem !important;
     }}
 
-    /* Top bar logout */
-    button[key="logout_btn"] {{
+    /* Center logo button */
+    #topbar-logo-anchor + div[data-testid="stButton"] button {{
+        position: fixed !important;
+        top: 8px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 1002 !important;
+        min-height: 36px !important;
+        padding: 0.35rem 0.85rem !important;
+        font-size: 0.95rem !important;
+        font-weight: 800 !important;
+    }}
+
+    /* Logout button: far right */
+    #topbar-logout-anchor + div[data-testid="stButton"] button {{
         position: fixed !important;
         top: 8px !important;
         right: 16px !important;
@@ -497,8 +495,23 @@ def generate_main_app_css() -> str:
         background: {Colors.GRAY_700} !important;
     }}
 
-    button[key="logout_btn"]:hover {{
+    #topbar-logout-anchor + div[data-testid="stButton"] button:hover {{
         background: {Colors.GRAY_800} !important;
+    }}
+
+    /* User display name: immediately to the left of Logout */
+    .topbar-user {{
+        position: fixed;
+        top: 16px;
+        right: 120px; /* space for logout button + gap */
+        z-index: 1002;
+        color: {Colors.GRAY_700};
+        font-size: 0.95rem;
+        font-weight: 600;
+        white-space: nowrap;
+        max-width: 40vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }}
     
     /* Force all text elements to be dark - but NOT in buttons, tables, or special headers */
