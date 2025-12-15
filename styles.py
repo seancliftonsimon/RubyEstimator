@@ -434,7 +434,9 @@ def generate_main_app_css() -> str:
       We target the HorizontalBlock that CONTAINS .topbar-title using :has().
       This is robust as long as .topbar-title only exists in the intended top bar.
     */
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) {{
+    /* Fallback: also target the first HorizontalBlock so top bar still styles if :has is unsupported */
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title),
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type {{
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
@@ -451,7 +453,8 @@ def generate_main_app_css() -> str:
         box-sizing: border-box !important;
     }}
 
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"] {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"],
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"] {{
         display: flex !important;
         align-items: center !important;
         height: var(--topbar-height) !important;
@@ -459,19 +462,24 @@ def generate_main_app_css() -> str:
         margin: 0 !important;
     }}
 
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(1) {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(1),
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(1) {{
         justify-content: flex-start !important;
     }}
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(2) {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(2),
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(2) {{
         justify-content: center !important;
     }}
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(3) {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(3),
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(3) {{
         justify-content: flex-end !important;
     }}
 
     /* Topbar buttons (Admin and Logout) - smaller + gray */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button,
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button {{
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button,
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button,
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type button {{
         background: {Colors.GRAY_200} !important;
         color: {Colors.GRAY_700} !important;
         border: 1px solid {Colors.GRAY_300} !important;
@@ -488,7 +496,9 @@ def generate_main_app_css() -> str:
     }}
 
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button:hover,
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button:hover {{
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button:hover,
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button:hover,
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type button:hover {{
         background: {Colors.GRAY_300} !important;
         color: {Colors.GRAY_800} !important;
         box-shadow: none !important;
@@ -496,7 +506,9 @@ def generate_main_app_css() -> str:
     }}
 
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button *,
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button * {{
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button *,
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button *,
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type button * {{
         color: {Colors.GRAY_700} !important;
         font-weight: 600 !important;
     }}
@@ -534,7 +546,8 @@ def generate_main_app_css() -> str:
     }}
 
     /* Tighten spacing inside nested right-side columns (username + logout) */
-    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"] {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"],
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {{
         gap: 6px !important;
         align-items: center !important;
         justify-content: flex-end !important;
