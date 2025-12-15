@@ -462,48 +462,80 @@ def generate_main_app_css() -> str:
     /* Admin button: far left */
     #topbar-admin-anchor + div[data-testid="stButton"] button {{
         position: fixed !important;
-        top: 8px !important;
+        top: 26px !important;
+        transform: translateY(-50%) !important;
         left: 16px !important;
         z-index: 1002 !important;
-        min-height: 36px !important;
-        padding: 0.35rem 0.75rem !important;
-        font-size: 0.95rem !important;
+        min-height: 30px !important;
+        padding: 0.2rem 0.6rem !important;
+        font-size: 0.85rem !important;
+        background: {Colors.GRAY_100} !important;
+        border: 1px solid {Colors.GRAY_300} !important;
+        color: {Colors.GRAY_800} !important;
+        box-shadow: none !important;
     }}
 
     /* Center logo button */
     #topbar-logo-anchor + div[data-testid="stButton"] button {{
         position: fixed !important;
-        top: 8px !important;
+        top: 26px !important;
         left: 50% !important;
-        transform: translateX(-50%) !important;
+        transform: translate(-50%, -50%) !important;
         z-index: 1002 !important;
-        min-height: 36px !important;
-        padding: 0.35rem 0.85rem !important;
-        font-size: 0.95rem !important;
-        font-weight: 800 !important;
+        min-height: 30px !important;
+        padding: 0.15rem 0.4rem !important;
+        font-size: 1.0rem !important;
+        font-weight: 900 !important;
+        background: transparent !important;
+        border: none !important;
+        color: {Colors.RUBY_PRIMARY} !important;
+        box-shadow: none !important;
     }}
 
     /* Logout button: far right */
     #topbar-logout-anchor + div[data-testid="stButton"] button {{
         position: fixed !important;
-        top: 8px !important;
+        top: 26px !important;
+        transform: translateY(-50%) !important;
         right: 16px !important;
         z-index: 1002 !important;
-        min-height: 36px !important;
-        padding: 0.35rem 0.75rem !important;
-        font-size: 0.95rem !important;
-        background: {Colors.GRAY_700} !important;
+        min-height: 30px !important;
+        padding: 0.2rem 0.6rem !important;
+        font-size: 0.85rem !important;
+        background: {Colors.GRAY_100} !important;
+        border: 1px solid {Colors.GRAY_300} !important;
+        color: {Colors.GRAY_800} !important;
+        box-shadow: none !important;
     }}
 
     #topbar-logout-anchor + div[data-testid="stButton"] button:hover {{
-        background: {Colors.GRAY_800} !important;
+        background: {Colors.GRAY_200} !important;
+        border-color: {Colors.GRAY_400} !important;
+    }}
+
+    #topbar-admin-anchor + div[data-testid="stButton"] button:hover {{
+        background: {Colors.GRAY_200} !important;
+        border-color: {Colors.GRAY_400} !important;
+    }}
+
+    /* Ensure topbar button inner text isn't forced to white by global button CSS */
+    #topbar-admin-anchor + div[data-testid="stButton"] button *,
+    #topbar-logout-anchor + div[data-testid="stButton"] button *,
+    #topbar-logo-anchor + div[data-testid="stButton"] button * {{
+        color: inherit !important;
+    }}
+
+    #topbar-logo-anchor + div[data-testid="stButton"] button:hover {{
+        text-decoration: underline !important;
+        background: transparent !important;
     }}
 
     /* User display name: immediately to the left of Logout */
     .topbar-user {{
         position: fixed;
-        top: 16px;
-        right: 120px; /* space for logout button + gap */
+        top: 26px;
+        transform: translateY(-50%);
+        right: 92px; /* space for logout button + gap */
         z-index: 1002;
         color: {Colors.GRAY_700};
         font-size: 0.95rem;

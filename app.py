@@ -1044,7 +1044,7 @@ with col_left:
     # Anchor lets CSS target just this button reliably
     st.markdown('<div id="topbar-admin-anchor"></div>', unsafe_allow_html=True)
     admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
-    if st.button(admin_label, key="top_admin_toggle_btn", use_container_width=True):
+    if st.button(admin_label, key="top_admin_toggle_btn", use_container_width=False):
         st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
         if not st.session_state["admin_mode"]:
             clear_admin_auth()
@@ -1053,7 +1053,7 @@ with col_left:
 with col_center:
     st.markdown('<div id="topbar-logo-anchor"></div>', unsafe_allow_html=True)
     # Logo: always returns to main page
-    if st.button("Ruby G-E-M", key="logo_home", use_container_width=True):
+    if st.button("Ruby G-E-M", key="logo_home", use_container_width=False):
         st.session_state["admin_mode"] = False
         st.rerun()
 
@@ -1063,7 +1063,7 @@ with col_right:
         st.markdown(f'<div class="topbar-user">{preferred_display_name}</div>', unsafe_allow_html=True)
 
     st.markdown('<div id="topbar-logout-anchor"></div>', unsafe_allow_html=True)
-    if st.button("Logout", key="buyer_logout_btn", use_container_width=True):
+    if st.button("Logout", key="buyer_logout_btn", use_container_width=False):
         if "buyer_user" in st.session_state:
             del st.session_state["buyer_user"]
         clear_admin_auth()
