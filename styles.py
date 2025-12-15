@@ -326,7 +326,8 @@ def generate_main_app_css() -> str:
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap');
     
     /* ========== PROFESSIONAL FONT FAMILY ========== */
-    body, p, h1, h2, h3, h4, h5, h6, span, div, label, input, button, textarea, select {{
+    /* IMPORTANT: Do NOT force font-family on all spans/divs; Streamlit icons use font ligatures */
+    body, p, h1, h2, h3, h4, h5, h6, label, input, button, textarea, select {{
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
     }}
     
@@ -822,20 +823,21 @@ def generate_main_app_css() -> str:
         margin-bottom: 1rem !important;
     }}
 
-    /* Expander chevron fix: hide Material-Icon ligature text (e.g., keyboard_arrow_right) */
+    /* Expander chevron fix: restore proper icon font so ligatures don't show as text */
     [data-testid="stExpander"] .material-icons,
     [data-testid="stExpander"] .material-icons-outlined,
     [data-testid="stExpander"] [class*="material-icons"],
     [data-testid="stExpander"] *[style*="Material Icons"],
     [data-testid="stExpander"] *[style*="Material-Icons"] {{
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        width: 0 !important;
-        height: 0 !important;
-        overflow: hidden !important;
-        font-size: 0 !important;
-        line-height: 0 !important;
+        font-family: "Material Icons" !important;
+        font-size: 20px !important;
+        line-height: 1 !important;
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
     }}
     
     .streamlit-expanderHeader {{
