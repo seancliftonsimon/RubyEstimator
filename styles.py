@@ -369,7 +369,7 @@ def generate_main_app_css() -> str:
         padding-top: 0 !important;
         padding-bottom: 0.5rem !important;
         max-width: 95% !important;
-        margin-top: -8rem !important; /* Reduce top spacing significantly */
+        margin-top: -9rem !important; /* Further reduce top spacing */
     }}
     
     /* Hide the sidebar collapsed control to "get rid of the side on the left entirely" */
@@ -629,7 +629,7 @@ def generate_main_app_css() -> str:
         display: none !important;
     }}
     
-    /* Hide any Material-Icons \"keyboard\" text that can leak through as plain text */
+    /* Hide any Material-Icons \"keyboard\" text that can leak through as plain text inside selectboxes */
     [data-testid="stSelectbox"] span[class*="keyboard"],
     [data-testid="stSelectbox"] span[aria-label*="keyboard"],
     [data-testid="stSelectbox"] [class*="material-icons"],
@@ -646,10 +646,17 @@ def generate_main_app_css() -> str:
         border-radius: {BorderRadius.LG} !important;
         padding: 0.4rem 0.75rem !important;
         cursor: pointer !important;
+        color: {Colors.GRAY_800} !important;
     }}
     
     [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover {{
         border-color: {Colors.RUBY_PRIMARY} !important;
+    }}
+    
+    /* Ensure all text inside the select control is readable (no white-on-white) */
+    [data-testid="stSelectbox"] [data-baseweb="select"] * {{
+        color: {Colors.GRAY_800} !important;
+        background-color: transparent !important;
     }}
     
     /* Reduce spacing between text input and selectbox */
@@ -724,6 +731,13 @@ def generate_main_app_css() -> str:
     [data-baseweb="select"] input::-moz-selection {{
         background: rgba(153, 12, 65, 0.2) !important;
         color: {Colors.GRAY_800} !important;
+    }}
+    
+    /* Global safety: hide any remaining keyboard-arrow Material icon artifacts */
+    *[aria-label*="keyboard_arrow"] {{
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }}
     
     /* ========== TABLES ========== */
