@@ -1,10 +1,265 @@
 import streamlit as st
 import hashlib
 import os
+import re
+from typing import Any, Dict, Optional, Tuple
+
+from sqlalchemy import text
+
+from database_config import create_database_engine
+from persistence import ensure_schema
+
+try:  # bcrypt is optional at import-time; required if any user uses passwords
+    import bcrypt  # type: ignore
+except Exception:  # pragma: no cover
+    bcrypt = None  # type: ignore
 
 def hash_password(password):
     """Hash a password using SHA-256"""
     return hashlib.sha256(password.encode()).hexdigest()
+
+
+# -----------------------------------------------------------------------------
+# Buyer/user auth (DB-backed, per-session; no global "current user" in DB)
+# -----------------------------------------------------------------------------
+
+_USERNAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def normalize_username(username: str) -> str:
+    return (username or "").strip().lower()
+
+
+def is_valid_username(username: str) -> bool:
+    u = normalize_username(username)
+    return bool(u) and bool(_USERNAME_RE.match(u))
+
+
+def _bcrypt_hash_password(password: str) -> str:
+    if bcrypt is None:  # pragma: no cover
+        raise RuntimeError("bcrypt is required for password support but is not installed.")
+    pw_bytes = password.encode("utf-8")
+    hashed = bcrypt.hashpw(pw_bytes, bcrypt.gensalt())
+    return hashed.decode("utf-8")
+
+
+def _bcrypt_verify_password(password: str, password_hash: str) -> bool:
+    if bcrypt is None:  # pragma: no cover
+        raise RuntimeError("bcrypt is required for password support but is not installed.")
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    except Exception:
+        return False
+
+
+def create_user(
+    username: str,
+    display_name: Optional[str] = None,
+    password: Optional[str] = None,
+    is_admin: bool = False,
+) -> Tuple[bool, str]:
+    """
+    Create a new user (buyer).
+
+    Rules:
+    - username must be unique and match [A-Za-z0-9_-]+ (stored normalized to lowercase)
+    - password is optional; if provided, store only bcrypt hash
+    """
+    ensure_schema()
+
+    username_norm = normalize_username(username)
+    if not is_valid_username(username_norm):
+        return False, "Invalid username. Use only letters, numbers, underscore, or hyphen."
+
+    pw_hash: Optional[str] = None
+    if password and password.strip():
+        pw_hash = _bcrypt_hash_password(password.strip())
+
+    engine = create_database_engine()
+    with engine.connect() as conn:
+        try:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO users (username, display_name, password_hash, is_admin, created_at)
+                    VALUES (:username, :display_name, :password_hash, :is_admin, CURRENT_TIMESTAMP)
+                    """
+                ),
+                {
+                    "username": username_norm,
+                    "display_name": (display_name or "").strip() or None,
+                    "password_hash": pw_hash,
+                    "is_admin": bool(is_admin),
+                },
+            )
+            conn.commit()
+            return True, f"Created user '{username_norm}'"
+        except Exception as exc:
+            # Likely uniqueness violation; keep message generic.
+            return False, f"Could not create user: {exc}"
+
+
+def list_users(limit: int = 200) -> list[Dict[str, Any]]:
+    ensure_schema()
+    engine = create_database_engine()
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT id, username, display_name, password_hash, is_admin, created_at
+                FROM users
+                ORDER BY created_at DESC
+                LIMIT :limit
+                """
+            ),
+            {"limit": int(limit)},
+        ).fetchall()
+    users = []
+    for row in rows:
+        user_id, username, display_name, password_hash, is_admin, created_at = row
+        users.append(
+            {
+                "id": user_id,
+                "username": username,
+                "display_name": display_name,
+                "has_password": bool(password_hash),
+                "is_admin": bool(is_admin),
+                "created_at": created_at,
+            }
+        )
+    return users
+
+
+def get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
+    ensure_schema()
+    username_norm = normalize_username(username)
+    if not username_norm:
+        return None
+
+    engine = create_database_engine()
+    with engine.connect() as conn:
+        row = conn.execute(
+            text(
+                """
+                SELECT id, username, display_name, password_hash, is_admin, created_at
+                FROM users
+                WHERE username = :username
+                """
+            ),
+            {"username": username_norm},
+        ).fetchone()
+
+    if not row:
+        return None
+
+    user_id, uname, display_name, password_hash, is_admin, created_at = row
+    return {
+        "id": user_id,
+        "username": uname,
+        "display_name": display_name,
+        "password_hash": password_hash,
+        "has_password": bool(password_hash),
+        "is_admin": bool(is_admin),
+        "created_at": created_at,
+    }
+
+
+def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    ensure_schema()
+    engine = create_database_engine()
+    with engine.connect() as conn:
+        row = conn.execute(
+            text(
+                """
+                SELECT id, username, display_name, password_hash, is_admin, created_at
+                FROM users
+                WHERE id = :id
+                """
+            ),
+            {"id": int(user_id)},
+        ).fetchone()
+
+    if not row:
+        return None
+
+    uid, uname, display_name, password_hash, is_admin, created_at = row
+    return {
+        "id": uid,
+        "username": uname,
+        "display_name": display_name,
+        "password_hash": password_hash,
+        "has_password": bool(password_hash),
+        "is_admin": bool(is_admin),
+        "created_at": created_at,
+    }
+
+
+def login_user(username: str, password: Optional[str] = None) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    """
+    Login rules:
+    - If user has no password_hash: username alone is sufficient.
+    - If user has password_hash: require password and verify bcrypt hash.
+    """
+    user = get_user_by_username(username)
+    if not user:
+        return False, "Unknown username. Ask admin to create it.", None
+
+    pw_hash = user.get("password_hash")
+    if not pw_hash:
+        # Passwordless login
+        user.pop("password_hash", None)
+        return True, "Logged in", user
+
+    if not password:
+        return False, "Password required for this user.", None
+
+    ok = _bcrypt_verify_password(password, pw_hash)
+    if not ok:
+        return False, "Incorrect password.", None
+
+    user.pop("password_hash", None)
+    return True, "Logged in", user
+
+
+def render_login_ui(session_key: str = "buyer_user") -> bool:
+    """
+    Streamlit-native login UI. Stores user dict in st.session_state[session_key].
+
+    Returns True when logged in.
+    """
+    if st.session_state.get(session_key):
+        return True
+
+    st.markdown("### Buyer Login")
+    st.caption("Passwords cannot be reset. If forgotten, admin must create a new username.")
+
+    # Optional dropdown for convenience (still allows typing)
+    try:
+        users = list_users(limit=200)
+        usernames = [u["username"] for u in users]
+    except Exception:
+        usernames = []
+
+    chosen = st.selectbox("Choose username (optional)", [""] + usernames, index=0, key="buyer_login_pick")
+
+    with st.form("buyer_login_form", clear_on_submit=False):
+        username = st.text_input("Username", value=chosen or "", key="buyer_login_username")
+        password = st.text_input("Password (only if your account has one)", type="password", key="buyer_login_password")
+        submitted = st.form_submit_button("Log in")
+
+    if submitted:
+        ok, msg, user = login_user(username=username, password=password)
+        if ok and user:
+            st.session_state[session_key] = user
+            # Clear password field from state
+            for k in ["buyer_login_password"]:
+                if k in st.session_state:
+                    del st.session_state[k]
+            st.rerun()
+        else:
+            st.error(msg)
+
+    return False
 
 def _get_stored_password_hash() -> str:
     """Return the configured password hash (env first, then secrets). Empty means disabled."""

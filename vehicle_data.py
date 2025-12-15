@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -28,15 +29,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def process_vehicle(year: int, make: str, model: str, progress_callback=None) -> Dict[str, Any]:
+def process_vehicle(year: int, make: str, model: str, progress_callback=None, user_id: Optional[int] = None) -> Dict[str, Any]:
     """Resolve vehicle specifications using single-call Gemini with Search Grounding."""
-    logger.info(f"🔍 Processing vehicle request: {year} {make} {model}")
+    logger.info(f"🔍 Processing vehicle request: {year} {make} {model} (user_id={user_id})")
     
     if progress_callback:
         progress_callback("searching", None, "Searching with Gemini + Google Search")
 
     try:
-        resolution = single_call_resolver.resolve_vehicle(year, make, model)
+        resolution = single_call_resolver.resolve_vehicle(year, make, model, user_id=user_id)
         logger.info(f"✓ Vehicle resolution completed successfully for {year} {make} {model}")
         logger.debug(f"Resolution run_id: {resolution.run_id}, latency: {resolution.latency_ms:.2f}ms")
     except Exception as exc:
@@ -124,6 +125,65 @@ def process_vehicle(year: int, make: str, model: str, progress_callback=None) ->
 
     logger.info(f"✓ Returning output for {year} {make} {model} (run_id: {output['run_id']})")
     return output
+
+
+def mark_run_bought(run_id: str, purchase_price: float, dispatch_number: str, notes: Optional[str] = None) -> bool:
+    """
+    Mark a specific search run as 'bought'.
+    
+    Args:
+        run_id: The unique ID of the search run
+        purchase_price: The amount paid for the car
+        dispatch_number: The dispatch/reference number
+        notes: Optional notes about the purchase
+        
+    Returns:
+        bool: True if successful
+    """
+    logger.info(f"💰 Marking run {run_id} as bought: ${purchase_price}, Dispatch: {dispatch_number}")
+    
+    if not run_id:
+        return False
+        
+    try:
+        ensure_schema()
+        engine = create_database_engine()
+        
+        # We don't have a 'notes' column in the plan, but we can store it in timings_json or ignore it for now.
+        # The plan specified: purchase_price, dispatch_number, was_bought, bought_at.
+        
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    """
+                    UPDATE runs 
+                    SET was_bought = TRUE,
+                        purchase_price = :price,
+                        dispatch_number = :dispatch,
+                        bought_at = CURRENT_TIMESTAMP
+                    WHERE run_id = :run_id
+                    """
+                ),
+                {
+                    "run_id": run_id,
+                    "price": float(purchase_price),
+                    "dispatch": str(dispatch_number).strip(),
+                }
+            )
+            conn.commit()
+            
+            # Check if any row was actually updated
+            if result.rowcount > 0:
+                logger.info(f"✓ successfully marked run {run_id} as bought")
+                return True
+            else:
+                logger.warning(f"⚠️ Run {run_id} not found to mark as bought")
+                return False
+                
+    except Exception as e:
+        logger.error(f"❌ Failed to mark run as bought: {e}", exc_info=True)
+        return False
+
 
 
 def get_last_ten_entries() -> pd.DataFrame:
@@ -1028,5 +1088,115 @@ def filter_model_suggestions(make: str, raw_input: str, max_suggestions: int = 1
     except Exception as e:
         logger.error(f"❌ Error in filter_model_suggestions: {e}", exc_info=True)
         return []
+
+
+def get_admin_history(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    user_id: Optional[int] = None,
+    bought_only: bool = False
+) -> pd.DataFrame:
+    """Fetch history for admin view."""
+    ensure_schema()
+    engine = create_database_engine()
+    
+    params = {}
+    where_clauses = ["1=1"]
+    
+    if start_date:
+        where_clauses.append("r.started_at >= :start_date")
+        params["start_date"] = start_date
+    if end_date:
+        where_clauses.append("r.started_at <= :end_date")
+        params["end_date"] = end_date
+    if user_id:
+        where_clauses.append("r.user_id = :user_id")
+        params["user_id"] = user_id
+    if bought_only:
+        where_clauses.append("r.was_bought = TRUE")
+        
+    query_str = f"""
+        SELECT 
+            r.started_at,
+            u.username,
+            COALESCE(v.year::text || ' ' || v.make || ' ' || v.model, r.vehicle_key) as vehicle,
+            r.was_bought,
+            r.purchase_price,
+            r.dispatch_number,
+            r.run_id
+        FROM runs r
+        LEFT JOIN users u ON r.user_id = u.id
+        LEFT JOIN vehicles v ON r.vehicle_key = v.vehicle_key
+        WHERE {' AND '.join(where_clauses)}
+        ORDER BY r.started_at DESC
+        LIMIT 500
+    """
+    
+    with engine.connect() as conn:
+        rows = conn.execute(text(query_str), params).fetchall()
+        
+    if not rows:
+        return pd.DataFrame()
+        
+    # Convert to DataFrame
+    data = []
+    for row in rows:
+        data.append({
+            "Date": row[0],
+            "User": row[1] or "Anonymous",
+            "Vehicle": row[2],
+            "Bought": "✅" if row[3] else "❌",
+            "Price": float(row[4]) if row[4] is not None else 0.0,
+            "Dispatch": row[5] or ""
+        })
+    return pd.DataFrame(data)
+
+
+def get_admin_profit_stats(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+) -> pd.DataFrame:
+    """Fetch profit stats grouped by user."""
+    ensure_schema()
+    engine = create_database_engine()
+    
+    params = {}
+    where_clauses = ["r.was_bought = TRUE"]
+    
+    if start_date:
+        where_clauses.append("r.bought_at >= :start_date")
+        params["start_date"] = start_date
+    if end_date:
+        where_clauses.append("r.bought_at <= :end_date")
+        params["end_date"] = end_date
+
+    query_str = f"""
+        SELECT 
+            u.username,
+            COUNT(r.run_id) as purchase_count,
+            SUM(r.purchase_price) as total_spend,
+            AVG(r.purchase_price) as avg_price
+        FROM runs r
+        LEFT JOIN users u ON r.user_id = u.id
+        WHERE {' AND '.join(where_clauses)}
+        GROUP BY u.username
+        ORDER BY total_spend DESC
+    """
+    
+    with engine.connect() as conn:
+        rows = conn.execute(text(query_str), params).fetchall()
+        
+    if not rows:
+        return pd.DataFrame(columns=["User", "Purchases", "Total Spend", "Avg Price"])
+        
+    data = []
+    for row in rows:
+        data.append({
+            "User": row[0] or "Anonymous",
+            "Purchases": row[1],
+            "Total Spend": float(row[2]) if row[2] else 0.0,
+            "Avg Price": float(row[3]) if row[3] else 0.0
+        })
+    return pd.DataFrame(data)
 
 

@@ -194,10 +194,10 @@ RETURN JSON:
   "catalytic_converters": {{"value": 2, "status": "found", "citations": [...]}}
 }}"""
     
-    def resolve_vehicle(self, year: int, make: str, model: str) -> VehicleResolution:
+    def resolve_vehicle(self, year: int, make: str, model: str, user_id: Optional[int] = None) -> VehicleResolution:
         """Resolve vehicle specifications with single API call."""
         logger.info("="*70)
-        logger.info(f"🚗 RESOLVING: {year} {make} {model}")
+        logger.info(f"🚗 RESOLVING: {year} {make} {model} (user_id={user_id})")
         logger.info("="*70)
         
         start_time = time.time()
@@ -214,6 +214,14 @@ RETURN JSON:
         if cached_data:
             cache_time = (time.time() - start_time) * 1000
             logger.info(f"✓ Cache hit! Retrieved data in {cache_time:.2f}ms")
+            
+            # Even on cache hit, we should record this "run" so it shows up in history for this user
+            # We'll do a lightweight record of the run
+            self._record_cache_hit_run(run_id, vehicle_key, user_id)
+            
+            # Update the cached object with the current run_id so downstream purchase tracking works correctly
+            cached_data.run_id = run_id
+            
             logger.info("="*70)
             logger.info(f"✅ RESOLUTION COMPLETE (from cache)")
             logger.info(f"Total Time: {cache_time:.2f}ms ({cache_time/1000:.2f}s)")
@@ -374,7 +382,8 @@ RETURN JSON:
             make=make,
             model=model,
             fields=validated_fields,
-            latency_ms=preliminary_latency_ms
+            latency_ms=preliminary_latency_ms,
+            user_id=user_id
         )
         db_time = (time.time() - db_start) * 1000
         logger.info(f"✓ Database write completed in {db_time:.2f}ms")
@@ -746,6 +755,31 @@ RETURN JSON:
             logger.error(f"❌ Cache lookup failed: {e}", exc_info=True)
             return None
     
+    def _record_cache_hit_run(self, run_id: str, vehicle_key: str, user_id: Optional[int]):
+        """Record a lightweight run entry for a cache hit so it appears in history."""
+        try:
+            ensure_schema()
+            engine = create_database_engine()
+            with engine.connect() as conn:
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO runs (run_id, vehicle_key, started_at, finished_at, total_ms, status, user_id)
+                        VALUES (:run_id, :vehicle_key, :now, :now, 0, 'cache_hit', :user_id)
+                        """
+                    ),
+                    {
+                        "run_id": run_id,
+                        "vehicle_key": vehicle_key,
+                        "now": datetime.utcnow(),
+                        "user_id": user_id
+                    }
+                )
+                conn.commit()
+                logger.debug(f"Recorded cache hit run {run_id} for user {user_id}")
+        except Exception as e:
+            logger.warning(f"Failed to record cache hit run: {e}")
+
     def _persist_to_db(
         self,
         run_id: str,
@@ -754,7 +788,8 @@ RETURN JSON:
         make: str,
         model: str,
         fields: Dict[str, Any],
-        latency_ms: float
+        latency_ms: float,
+        user_id: Optional[int] = None
     ):
         """Persist results and evidence to database."""
         logger.info(f"💾 Persisting to database: {year} {make} {model} (vehicle_key={vehicle_key}, run_id={run_id})")
@@ -766,15 +801,17 @@ RETURN JSON:
             logger.debug(f"✍️  Writing to 'runs' table: run_id={run_id}, latency={latency_ms:.2f}ms")
             conn.execute(
                 text(
-                    "INSERT INTO runs (run_id, started_at, finished_at, total_ms, status) "
-                    "VALUES (:run_id, :started_at, :finished_at, :total_ms, :status)"
+                    "INSERT INTO runs (run_id, vehicle_key, started_at, finished_at, total_ms, status, user_id) "
+                    "VALUES (:run_id, :vehicle_key, :started_at, :finished_at, :total_ms, :status, :user_id)"
                 ),
                 {
                     "run_id": run_id,
+                    "vehicle_key": vehicle_key,
                     "started_at": datetime.utcnow(),
                     "finished_at": datetime.utcnow(),
                     "total_ms": int(latency_ms),
-                    "status": "complete"
+                    "status": "complete",
+                    "user_id": user_id
                 }
             )
             logger.info("  ✓ Run record inserted into 'runs' table")

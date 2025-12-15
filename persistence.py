@@ -36,6 +36,23 @@ def ensure_schema() -> None:
     with _connect() as conn:
         logger.info("🗄️  Creating schema for PostgreSQL database")
         logger.debug("Creating PostgreSQL tables (if not exist) with JSONB support...")
+        # --- Users (buyers) ---
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL UNIQUE,
+                    display_name TEXT,
+                    password_hash TEXT,
+                    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        )
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)"))
+        logger.debug("  ✓ users table ready")
         conn.execute(
             text(
                 """
@@ -150,6 +167,35 @@ def ensure_schema() -> None:
             )
         )
         logger.debug("  ✓ runs table ready")
+        # Extend runs for multi-user usage + purchases (idempotent migrations)
+        conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS user_id INTEGER"))
+        conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS vehicle_key TEXT"))
+        conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS was_bought BOOLEAN NOT NULL DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS purchase_price NUMERIC"))
+        conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS dispatch_number TEXT"))
+        conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS bought_at TIMESTAMP"))
+
+        # Add FK constraint safely (PostgreSQL has no ADD CONSTRAINT IF NOT EXISTS)
+        conn.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint WHERE conname = 'fk_runs_user'
+                    ) THEN
+                        ALTER TABLE runs
+                        ADD CONSTRAINT fk_runs_user
+                        FOREIGN KEY (user_id) REFERENCES users(id);
+                    END IF;
+                END $$;
+                """
+            )
+        )
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_runs_user_started_at ON runs(user_id, started_at DESC)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_runs_vehicle_key ON runs(vehicle_key)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_runs_bought_at ON runs(bought_at DESC)"))
+        logger.debug("  ✓ runs columns/indexes for purchases/users ready")
         conn.execute(
             text(
                 """

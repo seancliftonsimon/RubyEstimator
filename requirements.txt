@@ -8,3 +8,4 @@ requests
 beautifulsoup4
 lxml
 rapidfuzz>=3.0.0
+bcrypt>=4.1.0

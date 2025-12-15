@@ -32,24 +32,47 @@ st.set_page_config(
     }
 )
 
+# --- Buyer Login Gate ---
+# If we are not in admin mode, require buyer login.
+if not st.session_state.get("admin_mode", False):
+    is_logged_in = render_login_ui(session_key="buyer_user")
+    if not is_logged_in:
+        st.stop()
+
+# Get current buyer (if any)
+current_buyer = st.session_state.get("buyer_user")
+current_buyer_id = current_buyer["id"] if current_buyer else None
+current_buyer_name = current_buyer["username"] if current_buyer else "guest"
+
 import pandas as pd
 from vehicle_data import (
     process_vehicle, get_last_ten_entries,
     suggest_make, suggest_model,
     get_all_makes, get_models_for_make, get_catalog_stats,
-    import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache
+    import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache,
+    mark_run_bought,
+    get_admin_history,
+    get_admin_profit_stats
 )
-from auth import require_admin_password, clear_admin_auth
-from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config
+from auth import (
+    require_admin_password, 
+    clear_admin_auth, 
+    render_login_ui, 
+    create_user, 
+    list_users
+)
+from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config, create_database_engine
 from confidence_ui import (
     render_confidence_badge, render_warning_banner, 
     add_confidence_css
 )
 
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 import os
 from styles import generate_main_app_css, generate_admin_mode_css, get_semantic_colors, Colors
 from cat_prices import CatPriceManager
+from sqlalchemy import text
+from datetime import datetime, timedelta
 
 # Default configuration values (used when DB has no overrides)
 DEFAULT_PRICE_PER_LB: Dict[str, float] = {
@@ -336,8 +359,8 @@ def render_admin_ui():
         unsafe_allow_html=True,
     )
 
-    # Main tabs: General Settings and Cat Prices
-    tab_general, tab_cat_prices = st.tabs(["General Settings", "Cat Prices"])
+    # Main tabs: General Settings, Cat Prices, Manage Users, History
+    tab_general, tab_cat_prices, tab_users, tab_history = st.tabs(["General Settings", "Cat Prices", "Manage Users", "History & Stats"])
     
     with tab_general:
         with st.form("admin_settings_form"):
@@ -626,6 +649,98 @@ def render_admin_ui():
                     except Exception as e:
                         st.error(f"❌ Error saving cat prices: {e}")
                         logger.error(f"Error saving cat prices: {e}", exc_info=True)
+
+    with tab_users:
+        st.subheader("Manage Buyers")
+        
+        # Create User
+        with st.expander("Create New Buyer", expanded=False):
+            with st.form("create_user_form"):
+                new_username = st.text_input("Username (alphanumeric)")
+                new_display_name = st.text_input("Display Name (optional)")
+                new_password = st.text_input("Password (optional - leave empty for passwordless)", type="password")
+                
+                if st.form_submit_button("Create User"):
+                    if not new_username:
+                        st.error("Username required.")
+                    else:
+                        ok, msg = create_user(new_username, new_display_name, new_password)
+                        if ok:
+                            st.success(msg)
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                            
+        # List Users
+        st.markdown("### Existing Buyers")
+        users = list_users()
+        if users:
+            udf = pd.DataFrame(users)
+            # Hide technical fields
+            udf = udf.drop(columns=["id", "password_hash"], errors="ignore")
+            # Rename for display
+            udf = udf.rename(columns={
+                "username": "Username",
+                "display_name": "Display Name",
+                "has_password": "Has Password",
+                "is_admin": "Is Admin",
+                "created_at": "Created At"
+            })
+            st.dataframe(udf, use_container_width=True, hide_index=True)
+        else:
+            st.info("No users found.")
+
+    with tab_history:
+        st.subheader("Activity History & Stats")
+        
+        # Filters
+        col_f1, col_f2, col_f3 = st.columns(3)
+        with col_f1:
+            date_range = st.date_input(
+                "Date Range", 
+                value=(datetime.now() - timedelta(days=30), datetime.now()),
+                max_value=datetime.now()
+            )
+        
+        start_date, end_date = None, None
+        if isinstance(date_range, tuple):
+            if len(date_range) > 0: start_date = datetime.combine(date_range[0], datetime.min.time())
+            if len(date_range) > 1: end_date = datetime.combine(date_range[1], datetime.max.time())
+            if len(date_range) == 1: end_date = datetime.combine(date_range[0], datetime.max.time())
+            
+        with col_f2:
+            # User filter
+            all_users = list_users()
+            user_opts = {u["username"]: u["id"] for u in all_users}
+            sel_usernames = st.multiselect("Filter by Buyer", list(user_opts.keys()))
+            sel_user_id = user_opts[sel_usernames[0]] if len(sel_usernames) == 1 else None 
+            
+        with col_f3:
+            bought_only = st.checkbox("Bought Only", value=True)
+            
+        # Stats
+        if st.button("Refresh Data", type="primary"):
+            st.rerun()
+            
+        st.markdown("### Performance (Profit by Buyer)")
+        profit_stats = get_admin_profit_stats(start_date, end_date)
+        if not profit_stats.empty:
+            # Highlight top performer
+            st.dataframe(
+                profit_stats.style.background_gradient(subset=["Total Spend"], cmap="Greens"), 
+                use_container_width=True, 
+                hide_index=True
+            )
+        else:
+            st.info("No purchase data in this range.")
+            
+        st.markdown("### Detailed Activity Log")
+        # Fetch log
+        activity_log = get_admin_history(start_date, end_date, user_id=sel_user_id, bought_only=bought_only)
+        if not activity_log.empty:
+            st.dataframe(activity_log, use_container_width=True, hide_index=True)
+        else:
+            st.info("No activity found.")
 
 
 # Load current config (fallback to defaults)
@@ -917,27 +1032,44 @@ st.markdown(generate_main_app_css(), unsafe_allow_html=True)
 
 # --- Top Title Bar ---
 st.markdown('<div class="topbar-bg"></div>', unsafe_allow_html=True)
+
+# Status bar showing real user
+user_display = f"User: {current_buyer_name}"
+if current_buyer and current_buyer.get("display_name"):
+    user_display += f" ({current_buyer['display_name']})"
+
 st.markdown(
-    f'<div class="topbar-status">User: placeholder | Mode: {"Admin" if st.session_state.get("admin_mode", False) else "Main"}</div>',
+    f'<div class="topbar-status">{user_display} | Mode: {"Admin" if st.session_state.get("admin_mode", False) else "Main"}</div>',
     unsafe_allow_html=True,
 )
 
-# Logo: always returns to main page
-if st.button("Ruby G-E-M", key="logo_home"):
-    st.session_state["admin_mode"] = False
-    st.rerun()
+# Top Bar Buttons: Logo (Home) | Logout | Admin Toggle
+col_logo, col_mid, col_logout, col_admin = st.columns([2, 4, 1, 1])
 
-# Admin toggle in top bar
-admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
-if st.button(admin_label, key="top_admin_toggle_btn"):
-    st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
-    st.rerun()
+with col_logo:
+    # Logo: always returns to main page
+    if st.button("Ruby G-E-M", key="logo_home", use_container_width=True):
+        st.session_state["admin_mode"] = False
+        st.rerun()
 
-# Logout in top bar
-if st.button("Logout", key="logout_btn"):
-    clear_admin_auth()
-    st.session_state["admin_mode"] = False
-    st.rerun()
+with col_logout:
+    # Logout button
+    if st.button("Logout", key="buyer_logout_btn", use_container_width=True):
+         if "buyer_user" in st.session_state:
+             del st.session_state["buyer_user"]
+         # Clear admin auth too if present
+         clear_admin_auth()
+         st.session_state["admin_mode"] = False
+         st.rerun()
+
+with col_admin:
+    # Admin toggle button
+    admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
+    if st.button(admin_label, key="top_admin_toggle_btn", use_container_width=True):
+        st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
+        if not st.session_state["admin_mode"]:
+            clear_admin_auth()
+        st.rerun()
 
 # Additional CSS to hide keyboard shortcuts but keep expander labels visible
 st.markdown("""
@@ -1867,7 +1999,13 @@ with left_col:
                                 """, unsafe_allow_html=True)
                             
                             # Process vehicle (single API call gets all specs at once)
-                            vehicle_data = process_vehicle(year_int, make_input, model_input)
+                            # Process vehicle with current buyer ID
+                            vehicle_data = process_vehicle(
+                                year_int, 
+                                make_input, 
+                                model_input, 
+                                user_id=current_buyer_id
+                            )
                             
                             # Clear progress indicator
                             progress_container.empty()
@@ -1933,7 +2071,8 @@ with left_col:
                                 'validation_warnings': validation_warnings,
                                 'source_attribution': source_attribution,
                                 'citations': citations,
-                                'cat_value_override': vehicle_data.get('cat_value_override')
+                                'cat_value_override': vehicle_data.get('cat_value_override'),
+                                'run_id': vehicle_data.get('run_id')
                             }
                             
                             # Store the data in session state for the cost estimator
@@ -2057,43 +2196,6 @@ with left_col:
                 </div>
                 """, unsafe_allow_html=True)
 
-    # --- Display Recent Entries (Minimized) ---
-    with st.expander("Recently Searched Vehicles (Last 20)", expanded=False):
-        try:
-            recent_entries_df = get_last_ten_entries()
-            if not recent_entries_df.empty:
-                # Take only the last 20 entries
-                recent_entries_df = recent_entries_df.head(20)
-                
-                # Format the aluminum columns for better display
-                def format_aluminum(value):
-                    if value is None:
-                        return "?"
-                    elif value:
-                        return "Al"
-                    else:
-                        return "Fe/St"
-                
-                # Create a copy for display with formatted columns
-                display_df = recent_entries_df.copy()
-                display_df['E'] = display_df['aluminum_engine'].apply(format_aluminum)
-                display_df['W'] = display_df['aluminum_rims'].apply(format_aluminum)
-                
-                display_df['C'] = display_df['catalytic_converters'].apply(lambda x: str(int(x)) if pd.notna(x) else "?")
-
-                # Select and rename columns for display (more compact)
-                display_df = display_df[['year', 'make', 'model', 'curb_weight_lbs', 'E', 'W', 'C']]
-                display_df.columns = ['Year', 'Make', 'Model', 'Weight', 'E', 'W', 'C']
-                
-                # Format the dataframe for display
-                display_df['Weight'] = display_df['Weight'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "?")
-                
-                st.dataframe(display_df, width='stretch', hide_index=True)
-                st.caption("E = Engine (Al=Aluminum, Fe=Iron), W = Wheels (Al=Aluminum, St=Steel), C = Catalytic Converters")
-            else:
-                st.info("No vehicles searched yet.")
-        except Exception as e:
-            st.error(f"Error fetching recent entries: {e}")
 
 # --- Right Column: Cost Estimator Results ---
 with right_col:
@@ -2349,6 +2451,47 @@ with right_col:
                             st.error("Please enter valid numbers for purchase price and tow fee.")
                         except Exception as e:
                             st.error(f"Error during recalculation: {e}")
+
+                # --- Mark as Bought UI ---
+                current_info = st.session_state.get('detailed_vehicle_info', {})
+                current_run_id = current_info.get('run_id')
+                
+                # Check if we've already marked this specific run as bought in this session
+                is_bought_session = st.session_state.get(f'run_bought_{current_run_id}', False)
+
+                if current_run_id:
+                    if not is_bought_session:
+                        # Use a clear container/card for this action
+                        st.markdown("---")
+                        
+                        with st.expander("💰 Bought this car", expanded=False):
+                            with st.form(key=f"buy_form_{current_run_id}"):
+                                st.caption("Record this purchase to your history.")
+                                
+                                # Pre-fill purchase price from current calculation
+                                current_calc_price = st.session_state.get('calculation_results', {}).get('purchase_price', 0.0)
+                                
+                                b_price = st.number_input("Final Purchase Price ($)", value=float(current_calc_price), min_value=0.0, step=10.0)
+                                b_dispatch = st.text_input("Dispatch Number", help="e.g. 123456")
+                                
+                                if st.form_submit_button("Confirm Purchase", type="primary", use_container_width=True):
+                                    if not b_dispatch:
+                                        st.error("Please enter a dispatch number.")
+                                    else:
+                                        success = mark_run_bought(current_run_id, b_price, b_dispatch)
+                                        if success:
+                                            st.session_state[f'run_bought_{current_run_id}'] = True
+                                            st.success("Purchase recorded! 🎉")
+                                            time.sleep(1) # Brief pause to show success
+                                            st.rerun()
+                                        else:
+                                            st.error("Failed to record purchase. It may have already been marked or the ID is invalid.")
+                    else:
+                         st.markdown("""
+                         <div style="background: #ecfdf5; color: #065f46; padding: 1rem; border-radius: 8px; border: 1px solid #6ee7b7; margin-top: 1rem; text-align: center;">
+                            <strong>✓ Purchase Recorded</strong>
+                         </div>
+                         """, unsafe_allow_html=True)
 
                 # Display weight-based commodities
                 if weight_based:
