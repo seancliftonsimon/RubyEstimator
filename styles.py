@@ -343,6 +343,9 @@ def generate_main_app_css() -> str:
     """Generate the complete CSS for the main application."""
     return f"""
 <style>
+    :root {{
+        --topbar-height: 52px;
+    }}
     /* ========== GOOGLE FONTS IMPORT ========== */
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap');
     
@@ -403,10 +406,10 @@ def generate_main_app_css() -> str:
     }}
     
     .main .block-container {{
-        padding-top: 0 !important;
+        padding-top: calc(var(--topbar-height) + 0.25rem) !important; /* make room for fixed topbar */
         padding-bottom: 0.5rem !important;
         max-width: 95% !important;
-        margin-top: -13rem !important; /* Further reduce top spacing */
+        margin-top: 0 !important;
     }}
 
     /* Extra top padding removal (Streamlit sometimes adds this on the main container) */
@@ -425,119 +428,113 @@ def generate_main_app_css() -> str:
     }}
 
     /* ========== TOP BAR ========== */
-    /* Fixed topbar container */
-    .topbar-start {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 52px;
-        background: {Colors.WHITE};
-        border-bottom: 1px solid {Colors.GRAY_200};
-        z-index: 1000;
-    }}
-
-    /* Make room for top bar */
-    .main .block-container {{
-        padding-top: 4.25rem !important;
-    }}
-
-    /* Move the topbar columns container into the fixed header */
-    .topbar-start + [data-testid="stHorizontalBlock"] {{
+    /*
+      IMPORTANT: Do not rely on marker div sibling combinators.
+      Streamlit may wrap/insert nodes between a st.markdown block and st.columns.
+      Instead, treat the FIRST HorizontalBlock on the page (post-login) as the topbar.
+    */
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type {{
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        height: 52px !important;
-        z-index: 1001 !important;
-        background: transparent !important;
+        height: var(--topbar-height) !important;
+        z-index: 1000 !important;
+        background: {Colors.WHITE} !important;
+        border-bottom: 1px solid {Colors.GRAY_200} !important;
         display: flex !important;
         align-items: center !important;
-        padding: 0 16px !important;
+        padding: 0 12px !important;
         margin: 0 !important;
-        gap: 16px !important;
+        gap: 12px !important;
     }}
 
-    /* Style the three columns in topbar */
-    .topbar-start + [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"] {{
         display: flex !important;
         align-items: center !important;
-        height: 52px !important;
+        height: var(--topbar-height) !important;
         padding: 0 !important;
         margin: 0 !important;
     }}
 
-    /* Left column (Admin) */
-    .topbar-start + [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(1) {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(1) {{
         justify-content: flex-start !important;
     }}
-
-    /* Center column (Title) */
-    .topbar-start + [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(2) {{
         justify-content: center !important;
     }}
-
-    /* Right column (User + Logout) */
-    .topbar-start + [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(3) {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(3) {{
         justify-content: flex-end !important;
     }}
 
-    /* Hide marker divs */
-    .topbar-section,
-    .topbar-end {{
-        display: none !important;
-    }}
-
-    /* Style the title text */
-    .topbar-title {{
-        color: {Colors.GRAY_900} !important;
-        font-size: 1.1rem !important;
-        font-weight: 600 !important;
-        text-align: center !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        line-height: 52px !important;
-    }}
-
-    /* Style topbar buttons (Admin and Logout) - gray, small */
-    .topbar-start + [data-testid="stHorizontalBlock"] button {{
+    /* Topbar buttons (Admin and Logout) - smaller + gray */
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type .stButton > button,
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type button {{
         background: {Colors.GRAY_200} !important;
         color: {Colors.GRAY_700} !important;
         border: 1px solid {Colors.GRAY_300} !important;
         box-shadow: none !important;
         font-size: 0.875rem !important;
-        font-weight: 500 !important;
-        padding: 0.375rem 0.875rem !important;
-        min-height: 32px !important;
-        max-height: 32px !important;
-        height: 32px !important;
+        font-weight: 600 !important;
+        padding: 0.30rem 0.75rem !important;
+        min-height: 30px !important;
+        height: 30px !important;
         border-radius: {BorderRadius.MD} !important;
         margin: 0 !important;
+        transform: none !important;
     }}
 
-    .topbar-start + [data-testid="stHorizontalBlock"] button:hover {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type .stButton > button:hover,
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type button:hover {{
         background: {Colors.GRAY_300} !important;
         color: {Colors.GRAY_800} !important;
-        transform: none !important;
         box-shadow: none !important;
+        transform: none !important;
     }}
 
-    .topbar-start + [data-testid="stHorizontalBlock"] button *,
-    .topbar-start + [data-testid="stHorizontalBlock"] button span,
-    .topbar-start + [data-testid="stHorizontalBlock"] button p,
-    .topbar-start + [data-testid="stHorizontalBlock"] button div {{
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type .stButton > button *,
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type button * {{
         color: {Colors.GRAY_700} !important;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
     }}
 
-    /* User display name */
+    /* Center the title across the entire bar, independent of side widths */
+    .topbar-title {{
+        position: fixed !important;
+        top: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        height: var(--topbar-height) !important;
+        line-height: var(--topbar-height) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: {Colors.GRAY_900} !important;
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.06em !important;
+        text-align: center !important;
+        pointer-events: none !important;
+        z-index: 1001 !important;
+        white-space: nowrap !important;
+    }}
+
+    /* Username: right-aligned, snug to Logout */
     .topbar-user {{
         color: {Colors.GRAY_700} !important;
         font-size: 0.9rem !important;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
         white-space: nowrap !important;
-        line-height: 52px !important;
-        margin-right: 12px !important;
+        margin: 0 0.35rem 0 0 !important;
+        padding: 0 !important;
+        text-align: right !important;
+        line-height: 1 !important;
+    }}
+
+    /* Tighten spacing inside nested right-side columns (username + logout) */
+    section.main .block-container [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {{
+        gap: 6px !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
     }}
     
     /* Force all text elements to be dark - but NOT in buttons, tables, or special headers */

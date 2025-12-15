@@ -1037,14 +1037,12 @@ if current_buyer and (current_buyer.get("display_name") or "").strip():
 
 admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
 
-# Topbar structure: put actual Streamlit buttons in proper layout
-st.markdown('<div class="topbar-start"></div>', unsafe_allow_html=True)
-
-# Create inline horizontal layout for topbar
+# Topbar structure: keep it Streamlit-native (st.columns) so CSS can reliably target it.
+# IMPORTANT: This should be the FIRST st.columns rendered after login so the CSS
+# can treat the first HorizontalBlock as the fixed topbar.
 topbar_col1, topbar_col2, topbar_col3 = st.columns([1, 3, 2], gap="small")
 
 with topbar_col1:
-    st.markdown('<div class="topbar-section topbar-left"></div>', unsafe_allow_html=True)
     if st.button(admin_label, key="top_admin_toggle_btn"):
         st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
         if not st.session_state["admin_mode"]:
@@ -1052,13 +1050,11 @@ with topbar_col1:
         st.rerun()
 
 with topbar_col2:
-    st.markdown('<div class="topbar-section topbar-center"></div>', unsafe_allow_html=True)
     st.markdown('<div class="topbar-title">Ruby G-E-M</div>', unsafe_allow_html=True)
 
 with topbar_col3:
-    st.markdown('<div class="topbar-section topbar-right"></div>', unsafe_allow_html=True)
     # Right side: user name + logout button in a sub-column layout
-    user_col, logout_col = st.columns([2, 1], gap="small")
+    user_col, logout_col = st.columns([3, 1], gap="small")
     with user_col:
         if preferred_display_name:
             st.markdown(f'<div class="topbar-user">{preferred_display_name}</div>', unsafe_allow_html=True)
@@ -1069,8 +1065,6 @@ with topbar_col3:
             clear_admin_auth()
             st.session_state["admin_mode"] = False
             st.rerun()
-
-st.markdown('<div class="topbar-end"></div>', unsafe_allow_html=True)
 
 # Additional CSS to hide keyboard shortcuts but keep expander labels visible
 st.markdown("""
