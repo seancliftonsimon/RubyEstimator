@@ -1054,7 +1054,7 @@ with topbar_col2:
 
 with topbar_col3:
     # Right side: user name + logout button in a sub-column layout
-    user_col, logout_col = st.columns([3, 1], gap="small")
+    user_col, logout_col = st.columns([6, 2], gap="small")
     with user_col:
         if preferred_display_name:
             st.markdown(f'<div class="topbar-user">{preferred_display_name}</div>', unsafe_allow_html=True)
