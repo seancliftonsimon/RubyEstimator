@@ -425,7 +425,8 @@ def generate_main_app_css() -> str:
     }}
 
     /* ========== TOP BAR ========== */
-    .topbar-bg {{
+    /* Fixed topbar container */
+    .topbar-start {{
         position: fixed;
         top: 0;
         left: 0;
@@ -441,100 +442,65 @@ def generate_main_app_css() -> str:
         padding-top: 4.25rem !important;
     }}
 
-    /* Hide anchor divs */
-    #topbar-admin-anchor,
-    #topbar-logo-anchor,
-    #topbar-logout-anchor {{
+    /* Move the topbar columns container into the fixed header */
+    .topbar-start + [data-testid="stHorizontalBlock"] {{
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 52px !important;
+        z-index: 1001 !important;
+        background: transparent !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 16px !important;
+        margin: 0 !important;
+        gap: 16px !important;
+    }}
+
+    /* Style the three columns in topbar */
+    .topbar-start + [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
+        display: flex !important;
+        align-items: center !important;
+        height: 52px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }}
+
+    /* Left column (Admin) */
+    .topbar-start + [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(1) {{
+        justify-content: flex-start !important;
+    }}
+
+    /* Center column (Title) */
+    .topbar-start + [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) {{
+        justify-content: center !important;
+    }}
+
+    /* Right column (User + Logout) */
+    .topbar-start + [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(3) {{
+        justify-content: flex-end !important;
+    }}
+
+    /* Hide marker divs */
+    .topbar-section,
+    .topbar-end {{
         display: none !important;
     }}
 
-    /* Hide the row container that holds topbar columns so it doesn't create whitespace */
-    [data-testid="stHorizontalBlock"]:has(#topbar-admin-anchor),
-    [data-testid="stHorizontalBlock"]:has(#topbar-logo-anchor),
-    [data-testid="stHorizontalBlock"]:has(#topbar-logout-anchor) {{
-        height: 0 !important;
+    /* Style the title text */
+    .topbar-title {{
+        color: {Colors.GRAY_900} !important;
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        text-align: center !important;
         margin: 0 !important;
         padding: 0 !important;
-        overflow: visible !important;
+        line-height: 52px !important;
     }}
 
-    /* Position the entire columns that contain topbar elements into the fixed bar */
-    [data-testid="column"]:has(#topbar-admin-anchor) {{
-        position: fixed !important;
-        top: 0 !important;
-        left: 16px !important;
-        height: 52px !important;
-        display: flex !important;
-        align-items: center !important;
-        z-index: 1002 !important;
-        width: auto !important;
-        min-width: auto !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }}
-
-    [data-testid="column"]:has(#topbar-admin-anchor) > div,
-    [data-testid="column"]:has(#topbar-admin-anchor) [data-testid="stButton"],
-    [data-testid="column"]:has(#topbar-admin-anchor) .stButton {{
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }}
-
-    [data-testid="column"]:has(#topbar-logo-anchor) {{
-        position: fixed !important;
-        top: 0 !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        height: 52px !important;
-        display: flex !important;
-        align-items: center !important;
-        z-index: 1002 !important;
-        width: auto !important;
-        min-width: auto !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }}
-
-    [data-testid="column"]:has(#topbar-logo-anchor) > div,
-    [data-testid="column"]:has(#topbar-logo-anchor) [data-testid="stButton"],
-    [data-testid="column"]:has(#topbar-logo-anchor) .stButton {{
-        display: flex !important;
-        align-items: center !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }}
-
-    [data-testid="column"]:has(#topbar-logout-anchor) {{
-        position: fixed !important;
-        top: 0 !important;
-        right: 16px !important;
-        height: 52px !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 12px !important;
-        z-index: 1002 !important;
-        width: auto !important;
-        min-width: auto !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }}
-
-    [data-testid="column"]:has(#topbar-logout-anchor) > div,
-    [data-testid="column"]:has(#topbar-logout-anchor) [data-testid="stButton"],
-    [data-testid="column"]:has(#topbar-logout-anchor) .stButton {{
-        display: flex !important;
-        align-items: center !important;
-        gap: 12px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }}
-
-    /* Style Admin and Logout buttons (small, light gray) */
-    [data-testid="column"]:has(#topbar-admin-anchor) button,
-    [data-testid="column"]:has(#topbar-logout-anchor) button {{
+    /* Style topbar buttons (Admin and Logout) - gray, small */
+    .topbar-start + [data-testid="stHorizontalBlock"] button {{
         background: {Colors.GRAY_200} !important;
         color: {Colors.GRAY_700} !important;
         border: 1px solid {Colors.GRAY_300} !important;
@@ -547,59 +513,31 @@ def generate_main_app_css() -> str:
         height: 32px !important;
         border-radius: {BorderRadius.MD} !important;
         margin: 0 !important;
-        line-height: 1.2 !important;
     }}
 
-    [data-testid="column"]:has(#topbar-admin-anchor) button:hover,
-    [data-testid="column"]:has(#topbar-logout-anchor) button:hover {{
+    .topbar-start + [data-testid="stHorizontalBlock"] button:hover {{
         background: {Colors.GRAY_300} !important;
         color: {Colors.GRAY_800} !important;
         transform: none !important;
         box-shadow: none !important;
     }}
 
-    [data-testid="column"]:has(#topbar-admin-anchor) button *,
-    [data-testid="column"]:has(#topbar-logout-anchor) button * {{
+    .topbar-start + [data-testid="stHorizontalBlock"] button *,
+    .topbar-start + [data-testid="stHorizontalBlock"] button span,
+    .topbar-start + [data-testid="stHorizontalBlock"] button p,
+    .topbar-start + [data-testid="stHorizontalBlock"] button div {{
         color: {Colors.GRAY_700} !important;
+        font-weight: 500 !important;
     }}
 
-    /* Style Logo button (text only, no button look) */
-    [data-testid="column"]:has(#topbar-logo-anchor) button {{
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: {Colors.RUBY_PRIMARY} !important;
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
-        padding: 0.25rem 0.5rem !important;
-        min-height: auto !important;
-        height: auto !important;
-    }}
-
-    [data-testid="column"]:has(#topbar-logo-anchor) button:hover {{
-        text-decoration: underline !important;
-        background: transparent !important;
-        transform: none !important;
-        box-shadow: none !important;
-    }}
-
-    [data-testid="column"]:has(#topbar-logo-anchor) button * {{
-        color: {Colors.RUBY_PRIMARY} !important;
-    }}
-
-    /* User display name inline in topbar column */
+    /* User display name */
     .topbar-user {{
-        color: {Colors.GRAY_700};
-        font-size: 0.9rem;
-        font-weight: 500;
-        z-index: 1002;
-        color: {Colors.GRAY_700};
-        font-size: 0.95rem;
-        font-weight: 600;
-        white-space: nowrap;
-        max-width: 40vw;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        color: {Colors.GRAY_700} !important;
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        white-space: nowrap !important;
+        line-height: 52px !important;
+        margin-right: 12px !important;
     }}
     
     /* Force all text elements to be dark - but NOT in buttons, tables, or special headers */
