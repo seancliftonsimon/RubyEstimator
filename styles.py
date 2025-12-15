@@ -336,14 +336,14 @@ def generate_main_app_css() -> str:
     }}
     
     /* ========== FORCE LIGHT MODE WITH PROFESSIONAL BACKGROUND ========== */
-    .stApp {
+    .stApp {{
         background-color: #f8fafc !important; /* Slate 50 */
         color: {Colors.GRAY_800} !important;
-    }
+    }}
     
-    [data-testid="stAppViewContainer"] {
+    [data-testid="stAppViewContainer"] {{
         background-color: #f8fafc !important;
-    }
+    }}
     
     [data-testid="stHeader"] {{
         background: {Colors.WHITE} !important;
@@ -495,7 +495,7 @@ def generate_main_app_css() -> str:
     }}
     
     /* ========== CARDS & CONTAINERS ========== */
-    .main-section-card {
+    .main-section-card {{
         background: {Colors.WHITE};
         border-radius: {BorderRadius.LG};
         border: 1px solid {Colors.GRAY_200};
@@ -503,13 +503,13 @@ def generate_main_app_css() -> str:
         padding: 1.5rem;
         margin-bottom: 1.5rem;
         transition: all 0.2s ease;
-    }
+    }}
     
-    .main-section-card:hover {
+    .main-section-card:hover {{
         border-color: {Colors.RUBY_BORDER_MEDIUM};
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
         transform: translateY(-1px);
-    }
+    }}
     
     /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
     /* Only target buttons within the main content area, not Streamlit's UI chrome */
@@ -519,7 +519,7 @@ def generate_main_app_css() -> str:
     button[kind="primary"],
     button[kind="secondary"],
     .stFormSubmitButton button,
-    .stFormSubmitButton > button {
+    .stFormSubmitButton > button {{
         background: #2563eb !important; /* Blue 600 */
         color: {Colors.WHITE} !important;
         border: none !important;
@@ -535,24 +535,24 @@ def generate_main_app_css() -> str:
         cursor: pointer !important;
         text-transform: none !important; /* Removed uppercase */
         min-height: 42px !important;
-    }
+    }}
     
     .stButton button:hover,
     .stButton > button:hover,
-    .stFormSubmitButton button:hover {
+    .stFormSubmitButton button:hover {{
         background: #1d4ed8 !important; /* Blue 700 */
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
         color: {Colors.WHITE} !important;
-    }
+    }}
     
     .stButton button:focus,
     .stButton > button:focus,
-    .stFormSubmitButton button:focus {
+    .stFormSubmitButton button:focus {{
         outline: none !important;
         border: none !important;
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3) !important;
-    }
+    }}
     
     /* Ensure all button text and children are white */
     .stButton button *,
