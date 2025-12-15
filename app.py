@@ -24,7 +24,7 @@ st.set_page_config(
     page_title="Ruby GEM - Vehicle Weight & Cost Calculator",
     page_icon="🚗",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
     menu_items={
         'Get Help': None,
         'Report a bug': None,
@@ -1197,7 +1197,7 @@ if st.session_state['admin_mode']:
     st.stop()  # Don't show the main app when in admin mode
 
 # Create two columns for the main layout with better spacing (2:1 ratio for vehicle search:cost estimate)
-left_col, spacer, right_col = st.columns([2, 0.1, 1])
+left_col, right_col = st.columns([1.5, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
@@ -1215,8 +1215,8 @@ with left_col:
             # Display vehicle name with blue styling
             vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1rem; border-radius: 8px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
-                <div style="margin: 0; color: #1e40af; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5); font-size: 1.25rem;">{vehicle_name}</div>
+            <div style="background: #eff6ff; padding: 1rem; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 1rem;">
+                <div style="margin: 0; color: #1e40af; font-weight: 700; text-align: center; font-size: 1.25rem;">{vehicle_name}</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1226,49 +1226,52 @@ with left_col:
             
             with col1:
                 st.markdown(f"""
-                <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6; text-align: center;">
-                    <strong>Weight</strong><br>
-                    <span style="color: #1e40af; font-weight: 600;">{vehicle_info['weight']} lbs</span>
+                <div style="background: #f8fafc; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border: 1px solid #e2e8f0; text-align: center;">
+                    <strong style="color: #64748b; font-size: 0.8rem;">WEIGHT</strong><br>
+                    <span style="color: #0f172a; font-weight: 600;">{vehicle_info['weight']} lbs</span>
                 </div>
                 """, unsafe_allow_html=True)
             
             with col2:
                 if vehicle_info['aluminum_engine'] is not None:
                     engine_status = "Al" if vehicle_info['aluminum_engine'] else "Fe"
-                    engine_color = "#14b8a6" if vehicle_info['aluminum_engine'] else "#f59e0b"
-                    engine_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_engine'] else "rgba(245, 158, 11, 0.1)"
+                    # Teal for Al, Orange for Fe
+                    engine_color = "#0d9488" if vehicle_info['aluminum_engine'] else "#d97706"
+                    engine_bg = "#f0fdfa" if vehicle_info['aluminum_engine'] else "#fffbeb"
+                    engine_border = "#ccfbf1" if vehicle_info['aluminum_engine'] else "#fef3c7"
                     
                     st.markdown(f"""
-                    <div style="background: {engine_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {engine_color}; text-align: center;">
-                        <strong>Engine</strong><br>
+                    <div style="background: {engine_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border: 1px solid {engine_border}; text-align: center;">
+                        <strong style="color: {engine_color}; font-size: 0.8rem;">ENGINE</strong><br>
                         <span style="color: {engine_color}; font-weight: 600;">{engine_status}</span>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
                     st.markdown("""
-                    <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
-                        <strong>Engine</strong><br>
-                        <span style="color: #6b7280;">Unknown</span>
+                    <div style="background: #f8fafc; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border: 1px solid #e2e8f0; text-align: center;">
+                        <strong style="color: #64748b; font-size: 0.8rem;">ENGINE</strong><br>
+                        <span style="color: #94a3b8;">?</span>
                     </div>
                     """, unsafe_allow_html=True)
             
             with col3:
                 if vehicle_info['aluminum_rims'] is not None:
                     rims_status = "Al" if vehicle_info['aluminum_rims'] else "Fe"
-                    rims_color = "#14b8a6" if vehicle_info['aluminum_rims'] else "#f59e0b"
-                    rims_bg = "rgba(20, 184, 166, 0.1)" if vehicle_info['aluminum_rims'] else "rgba(245, 158, 11, 0.1)"
+                    rims_color = "#0d9488" if vehicle_info['aluminum_rims'] else "#d97706"
+                    rims_bg = "#f0fdfa" if vehicle_info['aluminum_rims'] else "#fffbeb"
+                    rims_border = "#ccfbf1" if vehicle_info['aluminum_rims'] else "#fef3c7"
                     
                     st.markdown(f"""
-                    <div style="background: {rims_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid {rims_color}; text-align: center;">
-                        <strong>Rims</strong><br>
+                    <div style="background: {rims_bg}; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border: 1px solid {rims_border}; text-align: center;">
+                        <strong style="color: {rims_color}; font-size: 0.8rem;">RIMS</strong><br>
                         <span style="color: {rims_color}; font-weight: 600;">{rims_status}</span>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
                     st.markdown("""
-                    <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
-                        <strong>Rims</strong><br>
-                        <span style="color: #6b7280;">Unknown</span>
+                    <div style="background: #f8fafc; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border: 1px solid #e2e8f0; text-align: center;">
+                        <strong style="color: #64748b; font-size: 0.8rem;">RIMS</strong><br>
+                        <span style="color: #94a3b8;">?</span>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -1277,16 +1280,16 @@ with left_col:
                     cats_count = vehicle_info['catalytic_converters']
                     
                     st.markdown(f"""
-                    <div style="background: rgba(59, 130, 246, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #3b82f6; text-align: center;">
-                        <strong>Cats</strong><br>
-                        <span style="color: #1e40af; font-weight: 600;">{cats_count}</span>
+                    <div style="background: #eff6ff; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border: 1px solid #bfdbfe; text-align: center;">
+                        <strong style="color: #3b82f6; font-size: 0.8rem;">CATS</strong><br>
+                        <span style="color: #1d4ed8; font-weight: 600;">{cats_count}</span>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
                     st.markdown("""
-                    <div style="background: rgba(156, 163, 175, 0.1); padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border-left: 3px solid #9ca3af; text-align: center;">
-                        <strong>Cats</strong><br>
-                        <span style="color: #6b7280;">Unknown</span>
+                    <div style="background: #f8fafc; padding: 0.5rem; border-radius: 6px; margin: 0.25rem 0; border: 1px solid #e2e8f0; text-align: center;">
+                        <strong style="color: #64748b; font-size: 0.8rem;">CATS</strong><br>
+                        <span style="color: #94a3b8;">?</span>
                     </div>
                     """, unsafe_allow_html=True)
             
@@ -1311,9 +1314,8 @@ with left_col:
         # Source attribution removed - using Gemini Search Grounding for all lookups
 
     # --- Main Form ---
-    # Add small gaps between columns to prevent rendering issues
-    # Year is 2/3 of previous size, Make and Model are 2/3 of previous size, reduced gap between Year and Make
-    col1, gap1, col2, gap2, col3 = st.columns([1.0, 0.05, 1.5, 0.1, 2])
+    # Simplified column layout for cleaner professional look
+    col1, col2, col3 = st.columns([1, 2, 2])
 
     # Year input (simple text input, no suggestions needed)
     with col1:
@@ -2219,15 +2221,16 @@ with right_col:
                     # Display summary metrics with semantic colors
                     # Row 1: Net Profit (full width)
                     profit_colors = get_semantic_colors(totals["net"], "profit")
-                    profit_bg = "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)" if totals["net"] >= 0 else "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)"
-                    profit_border = "#16a34a" if totals["net"] >= 0 else "#dc2626"
-                    profit_text = "#15803d" if totals["net"] >= 0 else "#991b1b"
+                    # Solid colors for professional look
+                    profit_bg = "#ecfdf5" if totals["net"] >= 0 else "#fef2f2" # Emerald 50 / Red 50
+                    profit_border = "#10b981" if totals["net"] >= 0 else "#ef4444" # Emerald 500 / Red 500
+                    profit_text = "#047857" if totals["net"] >= 0 else "#b91c1c" # Emerald 700 / Red 700
                     profit_icon = "✅" if totals["net"] >= 0 else "⚠️"
                     st.markdown(f"""
-                <div style="background: {profit_bg}; padding: 1.5rem; border-radius: 12px; border: 3px solid {profit_border}; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba({profit_colors['text']}, 0.2);">
+                <div style="background: {profit_bg}; padding: 1.5rem; border-radius: 8px; border: 1px solid {profit_border}; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: {profit_text}; font-weight: 600; margin-bottom: 0.5rem;">{profit_icon} Net Profit</div>
-                        <div style="font-size: 1.5rem; color: {profit_text}; font-weight: 700; white-space: nowrap;">{format_currency(totals["net"])}</div>
+                        <div style="font-size: 0.875rem; color: {profit_text}; font-weight: 600; margin-bottom: 0.25rem;">{profit_icon} NET PROFIT</div>
+                        <div style="font-size: 2rem; color: {profit_text}; font-weight: 700; white-space: nowrap;">{format_currency(totals["net"])}</div>
                     </div>
                 </div>
                     """, unsafe_allow_html=True)
@@ -2237,20 +2240,20 @@ with right_col:
                     with col1:
                         # Total Sale Value - Blue/Info styling
                         st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #3b82f6; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+                <div style="background: #eff6ff; padding: 1rem; border-radius: 8px; border: 1px solid #bfdbfe; margin-bottom: 1rem;">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: #1e40af; font-weight: 600; margin-bottom: 0.5rem;">💰 Total Sale Value</div>
-                        <div style="font-size: 1.5rem; color: #1e40af; font-weight: 700; white-space: nowrap;">{format_currency(totals["total_sale"])}</div>
+                        <div style="font-size: 0.75rem; color: #1e40af; font-weight: 600; margin-bottom: 0.25rem; text-transform: uppercase;">Total Sale Value</div>
+                        <div style="font-size: 1.25rem; color: #1e40af; font-weight: 700; white-space: nowrap;">{format_currency(totals["total_sale"])}</div>
                     </div>
                 </div>
                     """, unsafe_allow_html=True)
                     with col2:
                         # Total Costs - Neutral styling
                         st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #9ca3af; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.2);">
+                <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: #4b5563; font-weight: 600; margin-bottom: 0.5rem;">📉 Total Costs</div>
-                        <div style="font-size: 1.5rem; color: #1f2937; font-weight: 700; white-space: nowrap;">{format_currency(totals["total_costs"])}</div>
+                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-bottom: 0.25rem; text-transform: uppercase;">Total Costs</div>
+                        <div style="font-size: 1.25rem; color: #0f172a; font-weight: 700; white-space: nowrap;">{format_currency(totals["total_costs"])}</div>
                     </div>
                 </div>
                     """, unsafe_allow_html=True)
@@ -2396,8 +2399,8 @@ with right_col:
         else:
             # Show a message when no vehicle has been searched yet
             st.markdown("""
-            <div style="background: rgba(156, 163, 175, 0.1); padding: 2rem; border-radius: 8px; text-align: center; border: 1px solid #9ca3af;">
-                <h3 style="color: #6b7280; margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">Search for a vehicle to see value estimate</h3>
+            <div style="background: #f8fafc; padding: 3rem 1.5rem; border-radius: 8px; text-align: center; border: 1px dashed #cbd5e1;">
+                <h3 style="color: #64748b; margin: 0; font-size: 1rem; font-weight: 500;">Search for a vehicle to view estimate</h3>
             </div>
             """, unsafe_allow_html=True)
             
@@ -2513,38 +2516,23 @@ with right_col:
 # --- Footer ---
 st.markdown("---")
 
-# Admin button in bottom left corner with absolute positioning
-st.markdown("""
-<style>
-    .admin-button-container {
-        position: fixed;
-        bottom: 1rem;
-        left: 1rem;
-        z-index: 999;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Use a container for admin button that will be positioned
-admin_container = st.container()
-with admin_container:
-    if st.button("⚙️ Admin" if not st.session_state['admin_mode'] else "✕ Close Admin", 
-                 key="admin_toggle_btn",
-                 help="Access admin settings to configure default values"):
-        st.session_state['admin_mode'] = not st.session_state['admin_mode']
+# --- Sidebar ---
+with st.sidebar:
+    st.markdown("### ⚙️ Settings")
+    if st.button("Admin Mode" if not st.session_state.get('admin_mode', False) else "Exit Admin Mode", 
+                 key="admin_toggle_sidebar_btn",
+                 help="Access admin settings"):
+        st.session_state['admin_mode'] = not st.session_state.get('admin_mode', False)
         st.rerun()
 
-# Add title at bottom in smaller format
-st.markdown("""
-<div style="text-align: center; margin-top: 2rem;">
-    <p style="margin: 0; font-size: 0.85rem; color: #990C41; font-weight: 600;">
-        🚗 Ruby G.E.M. <span style="font-weight: 400; color: #6b7280;">· General Estimation Model</span>
-    </p>
-    <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: #9ca3af;">
-        Built with Streamlit | v1.0
-    </p>
-</div>
-""", unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("""
+    <div style="font-size: 0.8rem; color: #6b7280;">
+        <strong>Ruby G.E.M.</strong><br>
+        v1.0<br>
+        Built with Streamlit
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- Initial Setup ---
 if 'db_created' not in st.session_state:

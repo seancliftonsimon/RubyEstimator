@@ -66,9 +66,9 @@ class Colors:
     ADMIN_BUTTON = "#14b8a6"  # Teal for admin button (only teal usage)
     ADMIN_BUTTON_HOVER = "#0d9488"
     
-    # Gradient Definitions
-    RUBY_GRADIENT = "linear-gradient(135deg, #990C41 0%, #c00e4f 100%)"
-    RUBY_GRADIENT_HOVER = "linear-gradient(135deg, #7a0a34 0%, #990C41 100%)"
+    # Gradient Definitions - Simplified for professional look
+    RUBY_GRADIENT = "linear-gradient(180deg, #990C41 0%, #7a0a34 100%)"
+    RUBY_GRADIENT_HOVER = "linear-gradient(180deg, #7a0a34 0%, #990C41 100%)"
 
 
 class Spacing:
@@ -335,15 +335,15 @@ def generate_main_app_css() -> str:
         font-family: inherit !important;
     }}
     
-    /* ========== FORCE LIGHT MODE WITH ENHANCED CONTRAST GRADIENT ========== */
-    .stApp {{
-        background: linear-gradient(135deg, {Colors.GRAY_100} 0%, {Colors.GRAY_200} 50%, rgba(153, 12, 65, 0.08) 100%) !important;
+    /* ========== FORCE LIGHT MODE WITH PROFESSIONAL BACKGROUND ========== */
+    .stApp {
+        background-color: #f8fafc !important; /* Slate 50 */
         color: {Colors.GRAY_800} !important;
-    }}
+    }
     
-    [data-testid="stAppViewContainer"] {{
-        background: linear-gradient(135deg, {Colors.GRAY_100} 0%, {Colors.GRAY_200} 50%, rgba(153, 12, 65, 0.08) 100%) !important;
-    }}
+    [data-testid="stAppViewContainer"] {
+        background-color: #f8fafc !important;
+    }
     
     [data-testid="stHeader"] {{
         background: {Colors.WHITE} !important;
@@ -455,24 +455,26 @@ def generate_main_app_css() -> str:
     
     .section-header {{
         font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
-        font-size: 1.25rem !important;
+        font-size: 1.1rem !important;
         font-weight: 700 !important;
         color: {Colors.WHITE} !important;
-        background: {Colors.RUBY_GRADIENT} !important;
+        background-color: {Colors.RUBY_PRIMARY} !important;
+        background: {Colors.RUBY_PRIMARY} !important;
         margin-top: 0 !important;
         margin-bottom: 0.5rem !important;
-        padding: 0.5rem 1rem !important;
-        border-radius: {BorderRadius.LG} !important;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
-        box-shadow: 0 4px 12px {Colors.RUBY_SHADOW_STRONG}, 0 2px 4px rgba(0, 0, 0, 0.15) !important;
-        border: 2px solid {Colors.RUBY_DARK} !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: {BorderRadius.MD} !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        border: none !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }}
     
     .section-header,
     .section-header * {{
         font-family: 'Montserrat', 'Segoe UI', sans-serif !important;
         color: {Colors.WHITE} !important;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+        text-shadow: none !important;
     }}
     
     div.section-header {{
@@ -493,69 +495,64 @@ def generate_main_app_css() -> str:
     }}
     
     /* ========== CARDS & CONTAINERS ========== */
-    .main-section-card {{
+    .main-section-card {
         background: {Colors.WHITE};
-        backdrop-filter: blur(10px);
-        border-radius: {BorderRadius.XL};
-        border: 3px solid {Colors.RUBY_BORDER_STRONG};
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+        border-radius: {BorderRadius.LG};
+        border: 1px solid {Colors.GRAY_200};
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
         padding: 1.5rem;
         margin-bottom: 1.5rem;
-        transition: all 0.3s ease;
-    }}
+        transition: all 0.2s ease;
+    }
     
-    .main-section-card:hover {{
-        border-color: {Colors.RUBY_PRIMARY};
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(153, 12, 65, 0.2) !important;
-        transform: translateY(-3px);
-    }}
+    .main-section-card:hover {
+        border-color: {Colors.RUBY_BORDER_MEDIUM};
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+        transform: translateY(-1px);
+    }
     
     /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
     /* Only target buttons within the main content area, not Streamlit's UI chrome */
-    /* Lighter blue color, smaller size, no borders */
+    /* Professional blue button */
     .stButton button,
     .stButton > button,
     button[kind="primary"],
     button[kind="secondary"],
     .stFormSubmitButton button,
-    .stFormSubmitButton > button {{
-        background: linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%) !important;
-        background-color: #60a5fa !important;
+    .stFormSubmitButton > button {
+        background: #2563eb !important; /* Blue 600 */
         color: {Colors.WHITE} !important;
         border: none !important;
         outline: none !important;
-        border-radius: {BorderRadius.LG} !important;
-        padding: 0.75rem 1.5rem !important;
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
-        letter-spacing: 0.5px !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+        border-radius: {BorderRadius.MD} !important;
+        padding: 0.625rem 1.25rem !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        letter-spacing: 0.3px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+        text-shadow: none !important;
         cursor: pointer !important;
-        text-transform: uppercase !important;
-        min-height: 48px !important;
-    }}
+        text-transform: none !important; /* Removed uppercase */
+        min-height: 42px !important;
+    }
     
     .stButton button:hover,
     .stButton > button:hover,
-    .stFormSubmitButton button:hover {{
-        background: linear-gradient(135deg, #93c5fd 0%, #bfdbfe 100%) !important;
-        background-color: #93c5fd !important;
-        border: none !important;
-        outline: none !important;
-        transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 8px 20px rgba(96, 165, 250, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+    .stFormSubmitButton button:hover {
+        background: #1d4ed8 !important; /* Blue 700 */
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
         color: {Colors.WHITE} !important;
-    }}
+    }
     
     .stButton button:focus,
     .stButton > button:focus,
-    .stFormSubmitButton button:focus {{
+    .stFormSubmitButton button:focus {
         outline: none !important;
         border: none !important;
-        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2), 0 4px 12px rgba(96, 165, 250, 0.3) !important;
-    }}
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3) !important;
+    }
     
     /* Ensure all button text and children are white */
     .stButton button *,
