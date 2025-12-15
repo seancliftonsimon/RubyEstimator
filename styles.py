@@ -369,7 +369,12 @@ def generate_main_app_css() -> str:
         padding-top: 0 !important;
         padding-bottom: 0.5rem !important;
         max-width: 95% !important;
-        margin-top: -5rem !important;
+        margin-top: -8rem !important; /* Reduce top spacing significantly */
+    }}
+    
+    /* Hide the sidebar collapsed control to "get rid of the side on the left entirely" */
+    [data-testid="stSidebarCollapsedControl"] {{
+        display: none !important;
     }}
     
     .main {{

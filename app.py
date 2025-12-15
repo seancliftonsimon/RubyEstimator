@@ -22,9 +22,9 @@ logger.info("🚀 Ruby GEM Application Starting...")
 # Configure page with light mode styling (must be first Streamlit command)
 st.set_page_config(
     page_title="Ruby GEM - Vehicle Weight & Cost Calculator",
-    page_icon="🚗",
+    page_icon=None,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
     menu_items={
         'Get Help': None,
         'Report a bug': None,
@@ -301,7 +301,7 @@ def render_admin_ui():
         st.session_state['admin_mode'] = False
         st.rerun()
     
-    st.markdown('<div class="main-title">⚙️ Admin Configuration</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">Admin Configuration</div>', unsafe_allow_html=True)
 
     # --- Password Protection ---
     if 'admin_authenticated' not in st.session_state:
@@ -359,7 +359,7 @@ def render_admin_ui():
     )
 
     # Main tabs: General Settings and Cat Prices
-    tab_general, tab_cat_prices = st.tabs(["⚙️ General Settings", "🚗 Cat Prices"])
+    tab_general, tab_cat_prices = st.tabs(["General Settings", "Cat Prices"])
     
     with tab_general:
         with st.form("admin_settings_form"):
@@ -367,7 +367,7 @@ def render_admin_ui():
             st.markdown("Adjust values below and click **Save All Changes** at the bottom. Use **Restore to Default** buttons to reset individual sections.")
 
             tab_prices, tab_costs, tab_weights, tab_assumptions = st.tabs(
-                ["💰 Prices", "💵 Costs", "⚖️ Weights", "📊 Assumptions"]
+                ["Prices", "Costs", "Weights", "Assumptions"]
             )
 
             with tab_prices:
@@ -558,7 +558,7 @@ def render_admin_ui():
             st.markdown("### 💾 Save Changes")
             
             # Confirmation checkbox
-            confirm_save = st.checkbox("⚠️ I confirm that I want to update the database with these changes.", key="confirm_save_checkbox")
+            confirm_save = st.checkbox("I confirm that I want to update the database with these changes.", key="confirm_save_checkbox")
             
             col1, col2, col3 = st.columns([2, 1, 2])
             with col2:
@@ -589,7 +589,7 @@ def render_admin_ui():
                     st.error("❌ Failed to save one or more configuration groups. Please try again.")
     
     with tab_cat_prices:
-        st.markdown("### 🚗 Catalytic Converter Prices")
+        st.markdown("### Catalytic Converter Prices")
         st.markdown("Manage the internal price list of catalytic converters from especially valuable cars.")
         
         cat_manager = CatPriceManager.get_instance()
@@ -1201,7 +1201,7 @@ left_col, right_col = st.columns([1.5, 1])
 
 # --- Left Column: Vehicle Search & Recent Entries ---
 with left_col:
-    st.markdown('<div class="section-header">🚗 Vehicle Search</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Vehicle Search</div>', unsafe_allow_html=True)
 
     # Create a container for vehicle details that can be cleared
     vehicle_details_container = st.empty()
@@ -1307,7 +1307,7 @@ with left_col:
             
             if validation_warnings:
                 from confidence_ui import render_warning_banner
-                st.markdown("### ⚠️ Data Quality Alerts")
+                st.markdown("### Data Quality Alerts")
                 for warning in validation_warnings:
                     render_warning_banner([warning])
         
@@ -2050,7 +2050,7 @@ with left_col:
                 """, unsafe_allow_html=True)
 
     # --- Display Recent Entries (Minimized) ---
-    with st.expander("Recently Searched Vehicles (Last 20)", expanded=False, icon="📋"):
+    with st.expander("Recently Searched Vehicles (Last 20)", expanded=False):
         try:
             recent_entries_df = get_last_ten_entries()
             if not recent_entries_df.empty:
@@ -2089,7 +2089,7 @@ with left_col:
 
 # --- Right Column: Cost Estimator Results ---
 with right_col:
-    st.markdown('<div class="section-header">💰 Cost Estimate</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Cost Estimate</div>', unsafe_allow_html=True)
     
     # Create a container for cost estimate results that can be cleared
     cost_estimate_container = st.empty()
@@ -2225,11 +2225,10 @@ with right_col:
                     profit_bg = "#ecfdf5" if totals["net"] >= 0 else "#fef2f2" # Emerald 50 / Red 50
                     profit_border = "#10b981" if totals["net"] >= 0 else "#ef4444" # Emerald 500 / Red 500
                     profit_text = "#047857" if totals["net"] >= 0 else "#b91c1c" # Emerald 700 / Red 700
-                    profit_icon = "✅" if totals["net"] >= 0 else "⚠️"
                     st.markdown(f"""
                 <div style="background: {profit_bg}; padding: 1.5rem; border-radius: 8px; border: 1px solid {profit_border}; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; color: {profit_text}; font-weight: 600; margin-bottom: 0.25rem;">{profit_icon} NET PROFIT</div>
+                        <div style="font-size: 0.875rem; color: {profit_text}; font-weight: 600; margin-bottom: 0.25rem;">NET PROFIT</div>
                         <div style="font-size: 2rem; color: {profit_text}; font-weight: 700; white-space: nowrap;">{format_currency(totals["net"])}</div>
                     </div>
                 </div>
@@ -2406,7 +2405,7 @@ with right_col:
             
             # Show manual entry option when no vehicle is selected
             st.markdown('<div style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0;">Enter curb weight manually</div>', unsafe_allow_html=True)
-            with st.expander("Enter curb weight manually", expanded=False, icon="⚖️"):
+            with st.expander("Enter curb weight manually", expanded=False):
                 with st.form(key="manual_calc_form_no_vehicle"):
                     col1, col2 = st.columns(2)
                     with col1:
@@ -2516,23 +2515,38 @@ with right_col:
 # --- Footer ---
 st.markdown("---")
 
-# --- Sidebar ---
-with st.sidebar:
-    st.markdown("### ⚙️ Settings")
-    if st.button("Admin Mode" if not st.session_state.get('admin_mode', False) else "Exit Admin Mode", 
-                 key="admin_toggle_sidebar_btn",
+# Admin button in bottom left corner with absolute positioning
+st.markdown("""
+<style>
+    .admin-button-container {
+        position: fixed;
+        bottom: 1rem;
+        left: 1rem;
+        z-index: 999;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Use a container for admin button that will be positioned
+admin_container = st.container()
+with admin_container:
+    if st.button("Admin" if not st.session_state.get('admin_mode', False) else "Close Admin", 
+                 key="admin_toggle_btn",
                  help="Access admin settings"):
         st.session_state['admin_mode'] = not st.session_state.get('admin_mode', False)
         st.rerun()
 
-    st.markdown("---")
-    st.markdown("""
-    <div style="font-size: 0.8rem; color: #6b7280;">
-        <strong>Ruby G.E.M.</strong><br>
-        v1.0<br>
-        Built with Streamlit
-    </div>
-    """, unsafe_allow_html=True)
+# Add title at bottom in smaller format
+st.markdown("""
+<div style="text-align: center; margin-top: 5rem; padding-bottom: 2rem;">
+    <p style="margin: 0; font-size: 0.85rem; color: #990C41; font-weight: 600;">
+        Ruby G.E.M. <span style="font-weight: 400; color: #6b7280;">· General Estimation Model</span>
+    </p>
+    <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: #9ca3af;">
+        Built with Streamlit | v1.0
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # --- Initial Setup ---
 if 'db_created' not in st.session_state:
