@@ -460,6 +460,7 @@ def generate_main_app_css() -> str:
         height: var(--topbar-height) !important;
         padding: 0 !important;
         margin: 0 !important;
+        vertical-align: middle !important;
     }}
 
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(1),
@@ -475,14 +476,14 @@ def generate_main_app_css() -> str:
         justify-content: flex-end !important;
     }}
 
-    /* Topbar buttons (Admin and Logout) - smaller + gray */
+    /* Topbar buttons (Admin and Logout) - smaller + light gray */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button,
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type button {{
-        background: {Colors.GRAY_200} !important;
+        background: {Colors.GRAY_300} !important;
         color: {Colors.GRAY_700} !important;
-        border: 1px solid {Colors.GRAY_300} !important;
+        border: 1px solid {Colors.GRAY_400} !important;
         box-shadow: none !important;
         font-size: 0.875rem !important;
         font-weight: 600 !important;
@@ -493,13 +494,16 @@ def generate_main_app_css() -> str:
         margin: 0 !important;
         transform: none !important;
         white-space: nowrap !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }}
 
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button:hover,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button:hover,
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button:hover,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type button:hover {{
-        background: {Colors.GRAY_300} !important;
+        background: {Colors.GRAY_400} !important;
         color: {Colors.GRAY_800} !important;
         box-shadow: none !important;
         transform: none !important;
@@ -533,16 +537,20 @@ def generate_main_app_css() -> str:
         white-space: nowrap !important;
     }}
 
-    /* Username: right-aligned, snug to Logout */
+    /* Username: right-aligned, snug to Logout, vertically aligned with buttons */
     .topbar-user {{
         color: {Colors.GRAY_700} !important;
-        font-size: 0.9rem !important;
+        font-size: 1rem !important;
         font-weight: 600 !important;
         white-space: nowrap !important;
-        margin: 0 0.35rem 0 0 !important;
+        margin: 0 0.5rem 0 0 !important;
         padding: 0 !important;
         text-align: right !important;
-        line-height: 1 !important;
+        line-height: 30px !important;
+        height: 30px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
     }}
 
     /* Tighten spacing inside nested right-side columns (username + logout) */
@@ -551,6 +559,16 @@ def generate_main_app_css() -> str:
         gap: 6px !important;
         align-items: center !important;
         justify-content: flex-end !important;
+        height: var(--topbar-height) !important;
+        display: flex !important;
+    }}
+    
+    /* Ensure nested columns in topbar are vertically centered */
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"] > [data-testid="column"],
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
+        display: flex !important;
+        align-items: center !important;
+        height: 100% !important;
     }}
 
     
@@ -748,9 +766,9 @@ def generate_main_app_css() -> str:
     .stButton button[key="top_admin_toggle_btn"],
     button[key="buyer_logout_btn"],
     .stButton button[key="buyer_logout_btn"] {{
-        background: {Colors.GRAY_200} !important;
+        background: {Colors.GRAY_300} !important;
         color: {Colors.GRAY_700} !important;
-        border: 1px solid {Colors.GRAY_300} !important;
+        border: 1px solid {Colors.GRAY_400} !important;
         box-shadow: none !important;
         font-size: 0.875rem !important;
         font-weight: 600 !important;
@@ -761,13 +779,16 @@ def generate_main_app_css() -> str:
         margin: 0 !important;
         transform: none !important;
         white-space: nowrap !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }}
 
     button[key="top_admin_toggle_btn"]:hover,
     .stButton button[key="top_admin_toggle_btn"]:hover,
     button[key="buyer_logout_btn"]:hover,
     .stButton button[key="buyer_logout_btn"]:hover {{
-        background: {Colors.GRAY_300} !important;
+        background: {Colors.GRAY_400} !important;
         color: {Colors.GRAY_800} !important;
         box-shadow: none !important;
         transform: none !important;
@@ -778,9 +799,9 @@ def generate_main_app_css() -> str:
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type button {{
-        background: {Colors.GRAY_200} !important;
+        background: {Colors.GRAY_300} !important;
         color: {Colors.GRAY_700} !important;
-        border: 1px solid {Colors.GRAY_300} !important;
+        border: 1px solid {Colors.GRAY_400} !important;
         box-shadow: none !important;
         font-size: 0.875rem !important;
         font-weight: 600 !important;
@@ -791,13 +812,16 @@ def generate_main_app_css() -> str:
         margin: 0 !important;
         transform: none !important;
         white-space: nowrap !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }}
 
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button:hover,
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button:hover,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button:hover,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type button:hover {{
-        background: {Colors.GRAY_300} !important;
+        background: {Colors.GRAY_400} !important;
         color: {Colors.GRAY_800} !important;
         box-shadow: none !important;
         transform: none !important;
