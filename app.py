@@ -48,7 +48,8 @@ from auth import (
     clear_admin_auth, 
     render_login_ui, 
     create_user, 
-    list_users
+    list_users,
+    ensure_admin_user
 )
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config, create_database_engine
 from confidence_ui import (
@@ -333,6 +334,13 @@ def validate_make_year_compatibility(make: str, year: int) -> tuple[bool, str]:
 
 def render_admin_ui():
     """Render the admin configuration UI with restore to default functionality."""
+    # SECURITY: Verify current user is actually an admin
+    current_buyer = st.session_state.get("buyer_user")
+    if not (current_buyer and current_buyer.get("is_admin", False)):
+        st.error("🔒 Access denied. You must be an administrator to view this page.")
+        st.session_state["admin_mode"] = False
+        st.stop()
+    
     st.markdown('<div class="main-title">Admin Configuration</div>', unsafe_allow_html=True)
     
     # Info banner
@@ -700,6 +708,12 @@ def render_admin_ui():
     with tab_history:
         st.subheader("Activity History & Stats")
         
+        # SECURITY: Verify current user is admin
+        current_buyer = st.session_state.get("buyer_user")
+        if not (current_buyer and current_buyer.get("is_admin", False)):
+            st.error("🔒 Access denied. History and statistics are only available to administrators.")
+            st.stop()
+        
         # Filters
         col_f1, col_f2, col_f3 = st.columns(3)
         with col_f1:
@@ -974,6 +988,18 @@ def format_currency(amount):
     """Format amount as currency with proper rounding."""
     return f"${round(amount, 2):,.2f}"
 
+
+def is_valid_dispatch_number(dispatch_number: str) -> bool:
+    """
+    Validate dispatch number format (admin requirement).
+
+    Dispatch numbers are numeric and currently 6 digits, with eventual growth to 7 digits.
+    Leading zeros are allowed.
+    """
+    cleaned = (dispatch_number or "").strip()
+    return cleaned.isdigit() and 6 <= len(cleaned) <= 7
+
+
 def sanitize_input(text):
     """
     Clean and standardize user input text.
@@ -1037,15 +1063,20 @@ if current_buyer and (current_buyer.get("display_name") or "").strip():
 
 admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
 
+# Check if current user is admin
+is_current_user_admin = current_buyer and current_buyer.get("is_admin", False)
+
 # Create top bar with three equal-width columns for proper alignment
 topbar_left, topbar_center, topbar_right = st.columns([1, 1, 1], gap="small")
 
 with topbar_left:
-    if st.button(admin_label, key="top_admin_toggle_btn"):
-        st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
-        if not st.session_state["admin_mode"]:
-            clear_admin_auth()
-        st.rerun()
+    # Only show admin button if current user is admin
+    if is_current_user_admin:
+        if st.button(admin_label, key="top_admin_toggle_btn"):
+            st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
+            if not st.session_state["admin_mode"]:
+                clear_admin_auth()
+            st.rerun()
 
 with topbar_center:
     st.markdown('<div class="topbar-title">Ruby G-E-M</div>', unsafe_allow_html=True)
@@ -2477,6 +2508,8 @@ with right_col:
                                 if st.form_submit_button("Confirm Purchase", type="primary", use_container_width=True):
                                     if not b_dispatch:
                                         st.error("Please enter a dispatch number.")
+                                    elif not is_valid_dispatch_number(b_dispatch):
+                                        st.error("Dispatch number must be 6-7 digits (e.g., 123456 or 1234567).")
                                     else:
                                         success = mark_run_bought(current_run_id, b_price, b_dispatch)
                                         if success:
@@ -2713,6 +2746,16 @@ if 'db_created' not in st.session_state:
         if success:
             print("✅ Database connection successful")
             st.session_state['db_created'] = True
+
+            # Ensure admin user exists
+            try:
+                ok, msg = ensure_admin_user(username="admin", passcode="2026")
+                if ok:
+                    print(f"✅ {msg}")
+                else:
+                    print(f"⚠️ Could not ensure admin user: {msg}")
+            except Exception as e:
+                print(f"⚠️ Error ensuring admin user: {e}")
 
             # Ensure catalog cache is loaded (static, no database rebuild)
             try:

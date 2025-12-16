@@ -550,15 +550,14 @@ def generate_main_app_css() -> str:
         vertical-align: top !important;
     }}
 
-    /* Username: right-aligned, larger font, hugs logout button, aligned to TOP */
+    /* Username: right-aligned, larger font, right next to logout button, aligned to TOP */
     .topbar-user {{
         color: {Colors.GRAY_700} !important;
         font-size: 1.1rem !important;
         font-weight: 600 !important;
         white-space: nowrap !important;
-        margin: 0 1px 0 0 !important;
+        margin: 0 !important;
         padding: 0 !important;
-        padding-top: 0 !important;
         line-height: 28px !important;
         height: 28px !important;
         display: inline-flex !important;
@@ -566,10 +565,12 @@ def generate_main_app_css() -> str:
         vertical-align: top !important;
     }}
 
-    /* Nested columns in right side (username + logout) - aligned to TOP, minimal spacing */
+    /* Nested columns in right side (username + logout) - aligned to TOP, no spacing */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"],
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {{
         gap: 0 !important;
+        column-gap: 0 !important;
+        row-gap: 0 !important;
         align-items: flex-start !important;
         justify-content: flex-end !important;
         height: var(--topbar-height) !important;
@@ -582,8 +583,21 @@ def generate_main_app_css() -> str:
         display: flex !important;
         align-items: flex-start !important;
         height: 100% !important;
-        padding: 0 2px !important;
+        padding: 0 !important;
         padding-top: 0 !important;
+    }}
+    
+    /* Override Streamlit column gap for username/logout columns */
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child,
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child {{
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }}
+    
+    section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"] > [data-testid="column"]:last-child,
+    section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] > [data-testid="column"]:last-child {{
+        padding-left: 0 !important;
+        margin-left: 0 !important;
     }}
 
     

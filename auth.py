@@ -107,6 +107,51 @@ def create_user(
             return False, f"Could not create user: {exc}"
 
 
+def ensure_admin_user(username: str = "admin", passcode: str = "2026") -> Tuple[bool, str]:
+    """
+    Ensure the admin user exists in the database.
+    Creates the user if it doesn't exist, or updates it to be admin if it exists but isn't admin.
+    
+    Args:
+        username: Admin username (default: "admin")
+        passcode: Admin passcode (default: "2026")
+    
+    Returns:
+        Tuple[bool, str]: (success, message)
+    """
+    ensure_schema()
+    username_norm = normalize_username(username)
+    
+    # Check if user already exists
+    existing_user = get_user_by_username(username_norm)
+    
+    if existing_user:
+        # User exists - check if they're already admin
+        if existing_user.get("is_admin"):
+            return True, f"Admin user '{username_norm}' already exists"
+        
+        # User exists but isn't admin - update to make them admin
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            try:
+                conn.execute(
+                    text("UPDATE users SET is_admin = TRUE WHERE username = :username"),
+                    {"username": username_norm},
+                )
+                conn.commit()
+                return True, f"Updated user '{username_norm}' to admin"
+            except Exception as exc:
+                return False, f"Could not update user to admin: {exc}"
+    else:
+        # User doesn't exist - create as admin
+        return create_user(
+            username=username_norm,
+            display_name=None,
+            password=passcode,
+            is_admin=True,
+        )
+
+
 def list_users(limit: int = 200) -> list[Dict[str, Any]]:
     ensure_schema()
     engine = create_database_engine()
