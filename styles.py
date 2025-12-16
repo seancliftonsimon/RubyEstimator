@@ -550,26 +550,26 @@ def generate_main_app_css() -> str:
         vertical-align: top !important;
     }}
 
-    /* Username: right-aligned, matches button font size, hugs logout button, aligned to TOP */
+    /* Username: right-aligned, larger font, hugs logout button, aligned to TOP */
     .topbar-user {{
         color: {Colors.GRAY_700} !important;
-        font-size: 0.8rem !important;
+        font-size: 0.95rem !important;
         font-weight: 600 !important;
         white-space: nowrap !important;
-        margin: 0 6px 0 0 !important;
+        margin: 0 4px 0 0 !important;
         padding: 0 !important;
         padding-top: 0 !important;
         line-height: 28px !important;
         height: 28px !important;
         display: inline-flex !important;
-        align-items: flex-start !important;
+        align-items: center !important;
         vertical-align: top !important;
     }}
 
-    /* Nested columns in right side (username + logout) - aligned to TOP */
+    /* Nested columns in right side (username + logout) - aligned to TOP, tight spacing */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"],
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {{
-        gap: 4px !important;
+        gap: 2px !important;
         align-items: flex-start !important;
         justify-content: flex-end !important;
         height: var(--topbar-height) !important;
