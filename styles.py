@@ -435,7 +435,7 @@ def generate_main_app_css() -> str:
     }}
 
     /* ========== TOP BAR ========== */
-    /* Clean, cohesive banner with fixed positioning */
+    /* Clean, cohesive banner with fixed positioning - flush to top of page */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title),
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type {{
         position: fixed !important;
@@ -525,7 +525,7 @@ def generate_main_app_css() -> str:
         font-weight: 600 !important;
     }}
 
-    /* Center the title across the entire bar */
+    /* Center the title across the entire bar - bigger font */
     .topbar-title {{
         position: absolute !important;
         left: 50% !important;
@@ -535,25 +535,27 @@ def generate_main_app_css() -> str:
         margin: 0 !important;
         padding: 0 !important;
         color: {Colors.GRAY_900} !important;
-        font-size: 1.1rem !important;
+        font-size: 1.3rem !important;
         font-weight: 700 !important;
         letter-spacing: 0.05em !important;
         text-align: center !important;
         pointer-events: none !important;
         z-index: 1001 !important;
         white-space: nowrap !important;
+        display: flex !important;
+        align-items: center !important;
     }}
 
-    /* Username: right-aligned, vertically aligned with buttons */
+    /* Username: right-aligned, matches button font size, hugs logout button */
     .topbar-user {{
         color: {Colors.GRAY_700} !important;
-        font-size: 0.9rem !important;
+        font-size: 0.8rem !important;
         font-weight: 600 !important;
         white-space: nowrap !important;
-        margin: 0 8px 0 0 !important;
+        margin: 0 6px 0 0 !important;
         padding: 0 !important;
-        line-height: var(--topbar-height) !important;
-        height: var(--topbar-height) !important;
+        line-height: 28px !important;
+        height: 28px !important;
         display: inline-flex !important;
         align-items: center !important;
     }}
