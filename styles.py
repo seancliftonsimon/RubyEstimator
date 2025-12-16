@@ -690,13 +690,13 @@ def generate_main_app_css() -> str:
     
     /* ========== BUTTONS - TARGETED FOR APP CONTENT ONLY ========== */
     /* Only target buttons within the main content area, not Streamlit's UI chrome */
-    /* Professional blue button */
-    .stButton button,
-    .stButton > button,
-    button[kind="primary"],
-    button[kind="secondary"],
-    .stFormSubmitButton button,
-    .stFormSubmitButton > button {{
+    /* Professional blue button - EXCLUDE topbar/admin toggles by key */
+    section.main .block-container .stButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]),
+    section.main .block-container .stButton > button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]),
+    section.main .block-container button[kind="primary"]:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]),
+    section.main .block-container button[kind="secondary"]:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]),
+    section.main .block-container .stFormSubmitButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]),
+    section.main .block-container .stFormSubmitButton > button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]) {{
         background: #2563eb !important; /* Blue 600 */
         color: {Colors.WHITE} !important;
         border: none !important;
@@ -714,30 +714,30 @@ def generate_main_app_css() -> str:
         min-height: 42px !important;
     }}
     
-    .stButton button:hover,
-    .stButton > button:hover,
-    .stFormSubmitButton button:hover {{
+    section.main .block-container .stButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]):hover,
+    section.main .block-container .stButton > button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]):hover,
+    section.main .block-container .stFormSubmitButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]):hover {{
         background: #1d4ed8 !important; /* Blue 700 */
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
         color: {Colors.WHITE} !important;
     }}
     
-    .stButton button:focus,
-    .stButton > button:focus,
-    .stFormSubmitButton button:focus {{
+    section.main .block-container .stButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]):focus,
+    section.main .block-container .stButton > button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]):focus,
+    section.main .block-container .stFormSubmitButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]):focus {{
         outline: none !important;
         border: none !important;
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3) !important;
     }}
     
     /* Ensure all button text and children are white */
-    .stButton button *,
-    .stButton > button *,
-    .stFormSubmitButton button *,
-    .stButton button span,
-    .stButton button p,
-    .stButton button div {{
+    section.main .block-container .stButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]) *,
+    section.main .block-container .stButton > button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]) *,
+    section.main .block-container .stFormSubmitButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]) *,
+    section.main .block-container .stButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]) span,
+    section.main .block-container .stButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]) p,
+    section.main .block-container .stButton button:not([key="top_admin_toggle_btn"]):not([key="buyer_logout_btn"]):not([key="admin_toggle_btn"]) div {{
         color: {Colors.WHITE} !important;
         background: transparent !important;
         font-weight: 700 !important;
