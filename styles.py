@@ -435,7 +435,7 @@ def generate_main_app_css() -> str:
     }}
 
     /* ========== TOP BAR ========== */
-    /* Clean, cohesive banner with fixed positioning - flush to top of page */
+    /* Clean, cohesive banner with fixed positioning - aligned to TOP */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title),
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type {{
         position: fixed !important;
@@ -447,21 +447,23 @@ def generate_main_app_css() -> str:
         background: {Colors.WHITE} !important;
         border-bottom: 2px solid {Colors.GRAY_300} !important;
         display: flex !important;
-        align-items: center !important;
+        align-items: flex-start !important;
         padding: 0 16px !important;
+        padding-top: 0 !important;
         margin: 0 !important;
         gap: 0 !important;
         box-sizing: border-box !important;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
     }}
 
-    /* Top bar columns - equal width for proper alignment */
+    /* Top bar columns - equal width for proper alignment, aligned to TOP */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"],
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"] {{
         display: flex !important;
-        align-items: center !important;
+        align-items: flex-start !important;
         height: var(--topbar-height) !important;
         padding: 0 8px !important;
+        padding-top: 0 !important;
         margin: 0 !important;
     }}
 
@@ -483,7 +485,7 @@ def generate_main_app_css() -> str:
         justify-content: flex-end !important;
     }}
 
-    /* Topbar buttons (Admin and Logout) - smaller, gray, cohesive */
+    /* Topbar buttons (Admin and Logout) - smaller, gray, cohesive, aligned to TOP */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button,
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button,
@@ -499,12 +501,14 @@ def generate_main_app_css() -> str:
         height: 28px !important;
         border-radius: {BorderRadius.MD} !important;
         margin: 0 !important;
+        margin-top: 0 !important;
         transform: none !important;
         white-space: nowrap !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
         transition: background-color 0.2s ease !important;
+        vertical-align: top !important;
     }}
 
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button:hover,
@@ -525,11 +529,12 @@ def generate_main_app_css() -> str:
         font-weight: 600 !important;
     }}
 
-    /* Center the title across the entire bar - bigger font */
+    /* Center the title across the entire bar - bigger font, aligned to TOP */
     .topbar-title {{
         position: absolute !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
+        top: 0 !important;
         height: var(--topbar-height) !important;
         line-height: var(--topbar-height) !important;
         margin: 0 !important;
@@ -542,11 +547,10 @@ def generate_main_app_css() -> str:
         pointer-events: none !important;
         z-index: 1001 !important;
         white-space: nowrap !important;
-        display: flex !important;
-        align-items: center !important;
+        vertical-align: top !important;
     }}
 
-    /* Username: right-aligned, matches button font size, hugs logout button */
+    /* Username: right-aligned, matches button font size, hugs logout button, aligned to TOP */
     .topbar-user {{
         color: {Colors.GRAY_700} !important;
         font-size: 0.8rem !important;
@@ -554,28 +558,32 @@ def generate_main_app_css() -> str:
         white-space: nowrap !important;
         margin: 0 6px 0 0 !important;
         padding: 0 !important;
+        padding-top: 0 !important;
         line-height: 28px !important;
         height: 28px !important;
         display: inline-flex !important;
-        align-items: center !important;
+        align-items: flex-start !important;
+        vertical-align: top !important;
     }}
 
-    /* Nested columns in right side (username + logout) */
+    /* Nested columns in right side (username + logout) - aligned to TOP */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"],
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {{
         gap: 4px !important;
-        align-items: center !important;
+        align-items: flex-start !important;
         justify-content: flex-end !important;
         height: var(--topbar-height) !important;
         display: flex !important;
+        padding-top: 0 !important;
     }}
     
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"] > [data-testid="column"],
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
         display: flex !important;
-        align-items: center !important;
+        align-items: flex-start !important;
         height: 100% !important;
         padding: 0 4px !important;
+        padding-top: 0 !important;
     }}
 
     
@@ -784,12 +792,14 @@ def generate_main_app_css() -> str:
         height: 28px !important;
         border-radius: {BorderRadius.MD} !important;
         margin: 0 !important;
+        margin-top: 0 !important;
         transform: none !important;
         white-space: nowrap !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
         transition: background-color 0.2s ease !important;
+        vertical-align: top !important;
     }}
 
     button[key="top_admin_toggle_btn"]:hover,
