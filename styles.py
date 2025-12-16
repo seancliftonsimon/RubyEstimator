@@ -344,7 +344,7 @@ def generate_main_app_css() -> str:
     return f"""
 <style>
     :root {{
-        --topbar-height: 52px;
+        --topbar-height: 48px;
     }}
     /* ========== GOOGLE FONTS IMPORT ========== */
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap');
@@ -403,10 +403,17 @@ def generate_main_app_css() -> str:
     /* Minimize top padding on main content area */
     [data-testid="stAppViewContainer"] > div:first-child {{
         padding-top: 0 !important;
+        margin-top: 0 !important;
+    }}
+    
+    /* Remove any extra spacing at the top of the page */
+    [data-testid="stAppViewContainer"] {{
+        padding-top: 0 !important;
+        margin-top: 0 !important;
     }}
     
     .main .block-container {{
-        padding-top: calc(var(--topbar-height) + 0.25rem) !important; /* make room for fixed topbar */
+        padding-top: calc(var(--topbar-height) + 0.5rem) !important; /* minimal padding below topbar */
         padding-bottom: 0.5rem !important;
         max-width: 95% !important;
         margin-top: 0 !important;
@@ -428,13 +435,7 @@ def generate_main_app_css() -> str:
     }}
 
     /* ========== TOP BAR ========== */
-    /*
-      IMPORTANT: Do not rely on marker div sibling combinators.
-      Streamlit may wrap/insert nodes between a st.markdown block and st.columns.
-      We target the HorizontalBlock that CONTAINS .topbar-title using :has().
-      This is robust as long as .topbar-title only exists in the intended top bar.
-    */
-    /* Fallback: also target the first HorizontalBlock so top bar still styles if :has is unsupported */
+    /* Clean, cohesive banner with fixed positioning */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title),
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type {{
         position: fixed !important;
@@ -444,39 +445,45 @@ def generate_main_app_css() -> str:
         height: var(--topbar-height) !important;
         z-index: 1000 !important;
         background: {Colors.WHITE} !important;
-        border-bottom: 1px solid {Colors.GRAY_200} !important;
+        border-bottom: 2px solid {Colors.GRAY_300} !important;
         display: flex !important;
         align-items: center !important;
-        padding: 0 12px !important;
+        padding: 0 16px !important;
         margin: 0 !important;
-        gap: 12px !important;
+        gap: 0 !important;
         box-sizing: border-box !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
     }}
 
+    /* Top bar columns - equal width for proper alignment */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"],
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"] {{
         display: flex !important;
         align-items: center !important;
         height: var(--topbar-height) !important;
-        padding: 0 !important;
+        padding: 0 8px !important;
         margin: 0 !important;
-        vertical-align: middle !important;
     }}
 
+    /* Left column: Admin button */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(1),
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(1) {{
         justify-content: flex-start !important;
     }}
+
+    /* Center column: Title (centered via CSS) */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(2),
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(2) {{
         justify-content: center !important;
     }}
+
+    /* Right column: Username and Logout */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) > [data-testid="column"]:nth-child(3),
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]:nth-child(3) {{
         justify-content: flex-end !important;
     }}
 
-    /* Topbar buttons (Admin and Logout) - smaller + light gray */
+    /* Topbar buttons (Admin and Logout) - smaller, gray, cohesive */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button,
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type .stButton > button,
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) button,
@@ -485,18 +492,19 @@ def generate_main_app_css() -> str:
         color: {Colors.GRAY_700} !important;
         border: 1px solid {Colors.GRAY_400} !important;
         box-shadow: none !important;
-        font-size: 0.875rem !important;
+        font-size: 0.8rem !important;
         font-weight: 600 !important;
-        padding: 0.30rem 0.75rem !important;
-        min-height: 30px !important;
-        height: 30px !important;
+        padding: 0.25rem 0.65rem !important;
+        min-height: 28px !important;
+        height: 28px !important;
         border-radius: {BorderRadius.MD} !important;
         margin: 0 !important;
         transform: none !important;
         white-space: nowrap !important;
-        display: flex !important;
+        display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        transition: background-color 0.2s ease !important;
     }}
 
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button:hover,
@@ -517,10 +525,9 @@ def generate_main_app_css() -> str:
         font-weight: 600 !important;
     }}
 
-    /* Center the title across the entire bar, independent of side widths */
+    /* Center the title across the entire bar */
     .topbar-title {{
-        position: fixed !important;
-        top: 0 !important;
+        position: absolute !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         height: var(--topbar-height) !important;
@@ -528,47 +535,45 @@ def generate_main_app_css() -> str:
         margin: 0 !important;
         padding: 0 !important;
         color: {Colors.GRAY_900} !important;
-        font-size: 1.05rem !important;
+        font-size: 1.1rem !important;
         font-weight: 700 !important;
-        letter-spacing: 0.06em !important;
+        letter-spacing: 0.05em !important;
         text-align: center !important;
         pointer-events: none !important;
         z-index: 1001 !important;
         white-space: nowrap !important;
     }}
 
-    /* Username: right-aligned, snug to Logout, vertically aligned with buttons */
+    /* Username: right-aligned, vertically aligned with buttons */
     .topbar-user {{
         color: {Colors.GRAY_700} !important;
-        font-size: 1rem !important;
+        font-size: 0.9rem !important;
         font-weight: 600 !important;
         white-space: nowrap !important;
-        margin: 0 0.5rem 0 0 !important;
+        margin: 0 8px 0 0 !important;
         padding: 0 !important;
-        text-align: right !important;
-        line-height: 30px !important;
-        height: 30px !important;
-        display: flex !important;
+        line-height: var(--topbar-height) !important;
+        height: var(--topbar-height) !important;
+        display: inline-flex !important;
         align-items: center !important;
-        justify-content: flex-end !important;
     }}
 
-    /* Tighten spacing inside nested right-side columns (username + logout) */
+    /* Nested columns in right side (username + logout) */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"],
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {{
-        gap: 6px !important;
+        gap: 4px !important;
         align-items: center !important;
         justify-content: flex-end !important;
         height: var(--topbar-height) !important;
         display: flex !important;
     }}
     
-    /* Ensure nested columns in topbar are vertically centered */
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) [data-testid="stHorizontalBlock"] > [data-testid="column"],
     section.main .block-container > [data-testid="stHorizontalBlock"]:first-of-type [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
         display: flex !important;
         align-items: center !important;
         height: 100% !important;
+        padding: 0 4px !important;
     }}
 
     
@@ -770,18 +775,19 @@ def generate_main_app_css() -> str:
         color: {Colors.GRAY_700} !important;
         border: 1px solid {Colors.GRAY_400} !important;
         box-shadow: none !important;
-        font-size: 0.875rem !important;
+        font-size: 0.8rem !important;
         font-weight: 600 !important;
-        padding: 0.30rem 0.75rem !important;
-        min-height: 30px !important;
-        height: 30px !important;
+        padding: 0.25rem 0.65rem !important;
+        min-height: 28px !important;
+        height: 28px !important;
         border-radius: {BorderRadius.MD} !important;
         margin: 0 !important;
         transform: none !important;
         white-space: nowrap !important;
-        display: flex !important;
+        display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        transition: background-color 0.2s ease !important;
     }}
 
     button[key="top_admin_toggle_btn"]:hover,
@@ -803,18 +809,19 @@ def generate_main_app_css() -> str:
         color: {Colors.GRAY_700} !important;
         border: 1px solid {Colors.GRAY_400} !important;
         box-shadow: none !important;
-        font-size: 0.875rem !important;
+        font-size: 0.8rem !important;
         font-weight: 600 !important;
-        padding: 0.30rem 0.75rem !important;
-        min-height: 30px !important;
-        height: 30px !important;
+        padding: 0.25rem 0.65rem !important;
+        min-height: 28px !important;
+        height: 28px !important;
         border-radius: {BorderRadius.MD} !important;
         margin: 0 !important;
         transform: none !important;
         white-space: nowrap !important;
-        display: flex !important;
+        display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        transition: background-color 0.2s ease !important;
     }}
 
     section.main .block-container [data-testid="stHorizontalBlock"]:has(.topbar-title) .stButton > button:hover,

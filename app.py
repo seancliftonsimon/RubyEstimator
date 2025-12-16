@@ -1029,36 +1029,41 @@ def exact_match_in_list(user_input: str, options_list: list) -> bool:
     
     return False
 
-# --- Top Title Bar ---
-# Display name only (no username / nickname; no mode label)
+# --- Top Navigation Bar ---
+# Clean, cohesive banner with title centered, admin on left, user info on right
 preferred_display_name = ""
 if current_buyer and (current_buyer.get("display_name") or "").strip():
     preferred_display_name = (current_buyer.get("display_name") or "").strip()
 
 admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
 
-# Topbar structure: keep it Streamlit-native (st.columns) so CSS can reliably target it.
-# IMPORTANT: This should be the FIRST st.columns rendered after login so the CSS
-# can treat the first HorizontalBlock as the fixed topbar.
-topbar_col1, topbar_col2, topbar_col3 = st.columns([1, 3, 2], gap="small")
+# Create top bar with three equal-width columns for proper alignment
+topbar_left, topbar_center, topbar_right = st.columns([1, 1, 1], gap="small")
 
-with topbar_col1:
+with topbar_left:
     if st.button(admin_label, key="top_admin_toggle_btn"):
         st.session_state["admin_mode"] = not st.session_state.get("admin_mode", False)
         if not st.session_state["admin_mode"]:
             clear_admin_auth()
         st.rerun()
 
-with topbar_col2:
+with topbar_center:
     st.markdown('<div class="topbar-title">Ruby G-E-M</div>', unsafe_allow_html=True)
 
-with topbar_col3:
-    # Right side: user name + logout button in a sub-column layout
-    user_col, logout_col = st.columns([6, 2], gap="small")
-    with user_col:
-        if preferred_display_name:
+with topbar_right:
+    # Right side: username and logout button in a horizontal layout
+    if preferred_display_name:
+        user_text_col, logout_btn_col = st.columns([2, 1], gap="small")
+        with user_text_col:
             st.markdown(f'<div class="topbar-user">{preferred_display_name}</div>', unsafe_allow_html=True)
-    with logout_col:
+        with logout_btn_col:
+            if st.button("Logout", key="buyer_logout_btn"):
+                if "buyer_user" in st.session_state:
+                    del st.session_state["buyer_user"]
+                clear_admin_auth()
+                st.session_state["admin_mode"] = False
+                st.rerun()
+    else:
         if st.button("Logout", key="buyer_logout_btn"):
             if "buyer_user" in st.session_state:
                 del st.session_state["buyer_user"]
