@@ -2440,6 +2440,59 @@ with right_col:
                             "is_engine": commodity.get("is_engine", False)
                         })
                 
+                # --- Mark as Bought UI ---
+                current_info = st.session_state.get('detailed_vehicle_info', {})
+                current_run_id = current_info.get('run_id')
+                
+                # Check if we've already marked this specific run as bought in this session
+                is_bought_session = st.session_state.get(f'run_bought_{current_run_id}', False)
+
+                if current_run_id:
+                    if not is_bought_session:
+                        # Toggle key for showing/hiding the buy form
+                        buy_form_key = f'show_buy_form_{current_run_id}'
+                        show_buy_form = st.session_state.get(buy_form_key, False)
+                        
+                        # Button to toggle the form
+                        if st.button("💰 Bought this car", key=f"buy_button_{current_run_id}", use_container_width=True):
+                            st.session_state[buy_form_key] = not show_buy_form
+                            st.rerun()
+                        
+                        # Show form if toggled
+                        if show_buy_form:
+                            with st.form(key=f"buy_form_{current_run_id}"):
+                                st.caption("Record this purchase to your history.")
+                                
+                                # Get purchase price from current calculation (already submitted)
+                                current_calc_price = st.session_state.get('calculation_results', {}).get('purchase_price', 0.0)
+                                
+                                # Display purchase price (read-only)
+                                st.text_input("Purchase Price ($)", value=f"${current_calc_price:,.2f}", disabled=True, key="display_price")
+                                
+                                b_dispatch = st.text_input("Dispatch Number", help="Enter at least 6 digits (e.g., 123456)", key=f"dispatch_{current_run_id}")
+                                
+                                if st.form_submit_button("Confirm Purchase", type="primary", use_container_width=True):
+                                    if not b_dispatch:
+                                        st.error("Please enter a dispatch number.")
+                                    elif not is_valid_dispatch_number(b_dispatch):
+                                        st.error("Dispatch number must be at least 6 digits (e.g., 123456).")
+                                    else:
+                                        success = mark_run_bought(current_run_id, current_calc_price, b_dispatch)
+                                        if success:
+                                            st.session_state[f'run_bought_{current_run_id}'] = True
+                                            st.session_state[buy_form_key] = False
+                                            st.success("Purchase recorded! 🎉")
+                                            time.sleep(1) # Brief pause to show success
+                                            st.rerun()
+                                        else:
+                                            st.error("Failed to record purchase. It may have already been marked or the ID is invalid.")
+                    else:
+                         st.markdown("""
+                         <div style="background: #ecfdf5; color: #065f46; padding: 1rem; border-radius: 8px; border: 1px solid #6ee7b7; margin-top: 1rem; text-align: center;">
+                            <strong>✓ Purchase Recorded</strong>
+                         </div>
+                         """, unsafe_allow_html=True)
+                
                 # --- Purchase Price and Tow Fee Adjustment ---
                 with st.form(key="cost_adjustment_form_right"):
                     col1_r, col2_r = st.columns(2)
@@ -2482,49 +2535,6 @@ with right_col:
                             st.error("Please enter valid numbers for purchase price and tow fee.")
                         except Exception as e:
                             st.error(f"Error during recalculation: {e}")
-
-                # --- Mark as Bought UI ---
-                current_info = st.session_state.get('detailed_vehicle_info', {})
-                current_run_id = current_info.get('run_id')
-                
-                # Check if we've already marked this specific run as bought in this session
-                is_bought_session = st.session_state.get(f'run_bought_{current_run_id}', False)
-
-                if current_run_id:
-                    if not is_bought_session:
-                        # Use a clear container/card for this action
-                        st.markdown("---")
-                        
-                        with st.expander("💰 Bought this car", expanded=False):
-                            with st.form(key=f"buy_form_{current_run_id}"):
-                                st.caption("Record this purchase to your history.")
-                                
-                                # Pre-fill purchase price from current calculation
-                                current_calc_price = st.session_state.get('calculation_results', {}).get('purchase_price', 0.0)
-                                
-                                b_price = st.number_input("Final Purchase Price ($)", value=float(current_calc_price), min_value=0.0, step=10.0)
-                                b_dispatch = st.text_input("Dispatch Number", help="e.g. 123456")
-                                
-                                if st.form_submit_button("Confirm Purchase", type="primary", use_container_width=True):
-                                    if not b_dispatch:
-                                        st.error("Please enter a dispatch number.")
-                                    elif not is_valid_dispatch_number(b_dispatch):
-                                        st.error("Dispatch number must be 6-7 digits (e.g., 123456 or 1234567).")
-                                    else:
-                                        success = mark_run_bought(current_run_id, b_price, b_dispatch)
-                                        if success:
-                                            st.session_state[f'run_bought_{current_run_id}'] = True
-                                            st.success("Purchase recorded! 🎉")
-                                            time.sleep(1) # Brief pause to show success
-                                            st.rerun()
-                                        else:
-                                            st.error("Failed to record purchase. It may have already been marked or the ID is invalid.")
-                    else:
-                         st.markdown("""
-                         <div style="background: #ecfdf5; color: #065f46; padding: 1rem; border-radius: 8px; border: 1px solid #6ee7b7; margin-top: 1rem; text-align: center;">
-                            <strong>✓ Purchase Recorded</strong>
-                         </div>
-                         """, unsafe_allow_html=True)
 
                 # Display weight-based commodities
                 if weight_based:
