@@ -70,7 +70,10 @@ def create_user(
     - username must be unique and match [A-Za-z0-9_-]+ (stored normalized to lowercase)
     - password is required and must be 8-64 chars with letters + numbers
     """
-    ensure_schema()
+    try:
+        ensure_schema()
+    except (ConnectionError, RuntimeError) as e:
+        return False, f"Database connection error: {str(e)}. Please check your database configuration."
 
     username_norm = normalize_username(username)
     if not is_valid_username(username_norm):
@@ -84,8 +87,9 @@ def create_user(
         return False, "Password must be 8-64 chars and include letters and numbers."
     pw_hash = _bcrypt_hash_password(pw)
 
-    engine = create_database_engine()
-    with engine.connect() as conn:
+    try:
+        engine = create_database_engine()
+        with engine.connect() as conn:
         try:
             conn.execute(
                 text(
@@ -185,37 +189,46 @@ def list_users(limit: int = 200) -> list[Dict[str, Any]]:
 
 
 def get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
-    ensure_schema()
+    try:
+        ensure_schema()
+    except (ConnectionError, RuntimeError) as e:
+        raise ConnectionError(f"Database connection error: {str(e)}. Please check your database configuration.") from e
+    
     username_norm = normalize_username(username)
     if not username_norm:
         return None
 
-    engine = create_database_engine()
-    with engine.connect() as conn:
-        row = conn.execute(
-            text(
-                """
-                SELECT id, username, display_name, password_hash, is_admin, created_at
-                FROM users
-                WHERE username = :username
-                """
-            ),
-            {"username": username_norm},
-        ).fetchone()
+    try:
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            row = conn.execute(
+                text(
+                    """
+                    SELECT id, username, display_name, password_hash, is_admin, created_at
+                    FROM users
+                    WHERE username = :username
+                    """
+                ),
+                {"username": username_norm},
+            ).fetchone()
 
-    if not row:
-        return None
+        if not row:
+            return None
 
-    user_id, uname, display_name, password_hash, is_admin, created_at = row
-    return {
-        "id": user_id,
-        "username": uname,
-        "display_name": display_name,
-        "password_hash": password_hash,
-        "has_password": bool(password_hash),
-        "is_admin": bool(is_admin),
-        "created_at": created_at,
-    }
+        user_id, uname, display_name, password_hash, is_admin, created_at = row
+        return {
+            "id": user_id,
+            "username": uname,
+            "display_name": display_name,
+            "password_hash": password_hash,
+            "has_password": bool(password_hash),
+            "is_admin": bool(is_admin),
+            "created_at": created_at,
+        }
+    except (ConnectionError, RuntimeError) as e:
+        raise ConnectionError(f"Database connection error: {str(e)}. Please check your database configuration.") from e
+    except Exception as e:
+        raise RuntimeError(f"Database error: {str(e)}. Please contact support.") from e
 
 
 def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
@@ -253,7 +266,15 @@ def login_user(username: str, password: Optional[str] = None) -> Tuple[bool, str
     Login rules:
     - Password is always required and verified against bcrypt hash.
     """
-    user = get_user_by_username(username)
+    try:
+        user = get_user_by_username(username)
+    except (ConnectionError, RuntimeError) as e:
+        # Database connection error
+        return False, f"Database connection error: {str(e)}. Please check your database configuration.", None
+    except Exception as e:
+        # Other database errors
+        return False, f"Database error: {str(e)}. Please contact support.", None
+    
     if not user:
         return False, "Unknown username. Ask admin to create it.", None
 

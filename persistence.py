@@ -18,9 +18,18 @@ _schema_validated = False
 
 @contextmanager
 def _connect():
-    engine = create_database_engine()
-    with engine.connect() as conn:
-        yield conn
+    """Context manager for database connections with improved error handling."""
+    try:
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            yield conn
+    except Exception as e:
+        logger.error(f"❌ Database connection failed: {e}", exc_info=True)
+        # Re-raise with more context
+        raise ConnectionError(
+            f"Unable to connect to database. Please check your DATABASE_URL configuration. "
+            f"Original error: {str(e)}"
+        ) from e
 
 
 def ensure_schema() -> None:
@@ -33,7 +42,8 @@ def ensure_schema() -> None:
         return
     
     logger.info("📋 Ensuring database schema exists...")
-    with _connect() as conn:
+    try:
+        with _connect() as conn:
         logger.info("🗄️  Creating schema for PostgreSQL database")
         logger.debug("Creating PostgreSQL tables (if not exist) with JSONB support...")
         # --- Users (buyers) ---
@@ -295,6 +305,15 @@ def ensure_schema() -> None:
         
         # Mark as validated for this session
         _schema_validated = True
+    except ConnectionError:
+        # Re-raise connection errors as-is (they already have good messages)
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to ensure database schema: {e}", exc_info=True)
+        raise RuntimeError(
+            f"Database schema initialization failed. Please check your database connection. "
+            f"Original error: {str(e)}"
+        ) from e
 
 
 # NOTE: The single-call Gemini resolver handles its own persistence.
