@@ -7,7 +7,7 @@ import logging
 import os
 import socket
 from typing import Any, Dict
-from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+from urllib.parse import urlparse
 
 from sqlalchemy import create_engine as _create_engine, text
 
@@ -79,87 +79,57 @@ def _mask_password(url: str) -> str:
 def _resolve_hostname_to_ipv4(hostname: str) -> str:
     """Resolve hostname to IPv4 address to avoid IPv6 connection issues."""
     try:
-        # Get all address info
+        # Get all address info for IPv4 only
         addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET, socket.SOCK_STREAM)
         if addr_info:
             # Return the first IPv4 address
             ipv4 = addr_info[0][4][0]
-            logger.debug(f"🔍 Resolved {hostname} to IPv4: {ipv4}")
+            logger.info(f"🔍 Resolved {hostname} to IPv4: {ipv4}")
             return ipv4
         else:
             logger.warning(f"⚠️  Could not resolve {hostname} to IPv4, using hostname")
-            return hostname
+            return None
     except (socket.gaierror, OSError) as e:
-        logger.warning(f"⚠️  DNS resolution failed for {hostname}: {e}, using hostname")
-        return hostname
+        logger.warning(f"⚠️  DNS resolution failed for {hostname}: {e}")
+        return None
 
 
-def _force_ipv4_connection(url: str) -> str:
-    """Modify database URL to use IPv4 address instead of hostname to avoid IPv6 issues."""
+def _get_ipv4_connect_args(url: str) -> Dict[str, Any]:
+    """
+    Get connection args that force IPv4 connection using psycopg2's hostaddr parameter.
+    This keeps the hostname in the URL for SSL certificate validation but connects via IPv4.
+    """
+    connect_args = {
+        "connect_timeout": 10,  # 10 second connection timeout
+    }
+    
     try:
         parsed = urlparse(url)
         hostname = parsed.hostname
         
         if not hostname:
-            return url
+            return connect_args
         
         # Check if hostname is already an IP address
         try:
             socket.inet_aton(hostname)
-            # Already an IPv4 address
-            return url
-        except socket.error:
-            pass
-        
-        # Check if it's an IPv6 address
-        try:
-            socket.inet_pton(socket.AF_INET6, hostname)
-            # It's an IPv6 address, we need to resolve the original hostname
-            # But we don't have the original hostname here, so we'll need to handle this differently
-            logger.warning(f"⚠️  URL contains IPv6 address {hostname}, cannot resolve to IPv4")
-            return url
+            # Already an IPv4 address, no need to resolve
+            return connect_args
         except socket.error:
             pass
         
         # Resolve hostname to IPv4
         ipv4 = _resolve_hostname_to_ipv4(hostname)
         
-        if ipv4 != hostname:
-            # Replace hostname with IPv4 in the URL
-            # Parse query parameters
-            query_params = parse_qs(parsed.query)
-            query_string = urlencode(query_params, doseq=True) if query_params else ""
-            
-            # Reconstruct netloc with credentials, IPv4 address, and port
-            if parsed.username and parsed.password:
-                auth_part = f"{parsed.username}:{parsed.password}@"
-            elif parsed.username:
-                auth_part = f"{parsed.username}@"
-            else:
-                auth_part = ""
-            
-            if parsed.port:
-                host_part = f"{ipv4}:{parsed.port}"
-            else:
-                host_part = ipv4
-            
-            new_netloc = f"{auth_part}{host_part}"
-            
-            new_url = urlunparse((
-                parsed.scheme,
-                new_netloc,
-                parsed.path,
-                parsed.params,
-                query_string,
-                parsed.fragment
-            ))
-            logger.info(f"🔄 Modified connection URL to use IPv4: {ipv4} (was: {hostname})")
-            return new_url
+        if ipv4:
+            # Use hostaddr to force the IP address while keeping hostname for SSL
+            connect_args["hostaddr"] = ipv4
+            logger.info(f"🔄 Using hostaddr={ipv4} to force IPv4 connection (hostname: {hostname})")
         
-        return url
+        return connect_args
     except Exception as e:
-        logger.warning(f"⚠️  Failed to force IPv4 connection: {e}, using original URL")
-        return url
+        logger.warning(f"⚠️  Failed to resolve IPv4 for connection: {e}")
+        return connect_args
 
 
 def is_sqlite() -> bool:
@@ -189,8 +159,8 @@ def create_database_engine():
         url += f"{separator}sslmode=require"
         logger.info("🔒 Added sslmode=require to database URL (required for cloud PostgreSQL)")
     
-    # Force IPv4 connection to avoid IPv6 issues in deployment environments
-    url = _force_ipv4_connection(url)
+    # Get connection args with IPv4 resolution to avoid IPv6 issues
+    connect_args = _get_ipv4_connect_args(url)
     
     logger.info(f"⚙️  Creating database engine for PostgreSQL (Neon)")
     try:
@@ -198,9 +168,7 @@ def create_database_engine():
             url, 
             echo=False, 
             pool_pre_ping=True,
-            connect_args={
-                "connect_timeout": 10,  # 10 second connection timeout
-            }
+            connect_args=connect_args
         )
         logger.info(f"✓ Database engine created successfully (cached for reuse)")
         return _engine_cache
