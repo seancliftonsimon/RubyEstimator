@@ -206,15 +206,64 @@ def ensure_schema() -> None:
                     value_json JSONB NOT NULL,
                     quote TEXT,
                     source_url TEXT,
-                    source_hash TEXT,
+                    source_hash TEXT NOT NULL,
                     fetched_at TIMESTAMP,
-                    PRIMARY KEY (run_id, field),
+                    PRIMARY KEY (run_id, field, source_hash),
                     FOREIGN KEY (run_id) REFERENCES runs(run_id)
                 )
                 """
             )
         )
         logger.debug("  ✓ evidence table ready")
+        # Migrate legacy evidence primary key (run_id, field) -> (run_id, field, source_hash)
+        conn.execute(
+            text(
+                """
+                DO $$
+                DECLARE
+                    pk_cols text[];
+                BEGIN
+                    SELECT array_agg(a.attname ORDER BY a.attnum)
+                    INTO pk_cols
+                    FROM pg_constraint c
+                    JOIN pg_class t ON c.conrelid = t.oid
+                    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY (c.conkey)
+                    WHERE t.relname = 'evidence' AND c.contype = 'p';
+
+                    IF pk_cols = ARRAY['run_id','field'] THEN
+                        CREATE TABLE IF NOT EXISTS evidence_v2 (
+                            run_id TEXT NOT NULL,
+                            vehicle_key TEXT NOT NULL,
+                            field TEXT NOT NULL,
+                            value_json JSONB NOT NULL,
+                            quote TEXT,
+                            source_url TEXT,
+                            source_hash TEXT NOT NULL,
+                            fetched_at TIMESTAMP,
+                            PRIMARY KEY (run_id, field, source_hash),
+                            FOREIGN KEY (run_id) REFERENCES runs(run_id)
+                        );
+
+                        INSERT INTO evidence_v2 (run_id, vehicle_key, field, value_json, quote, source_url, source_hash, fetched_at)
+                        SELECT
+                            run_id,
+                            vehicle_key,
+                            field,
+                            value_json,
+                            quote,
+                            source_url,
+                            COALESCE(source_hash, md5(COALESCE(source_url, '') || '_' || COALESCE(quote, ''))),
+                            fetched_at
+                        FROM evidence
+                        ON CONFLICT (run_id, field, source_hash) DO NOTHING;
+
+                        DROP TABLE evidence;
+                        ALTER TABLE evidence_v2 RENAME TO evidence;
+                    END IF;
+                END $$;
+                """
+            )
+        )
         conn.execute(
             text(
                 """

@@ -6,10 +6,10 @@ A Streamlit web application that estimates vehicle curb weights and calculates c
 
 This application uses a **minimal single-call vehicle resolution system** powered by:
 
-- ✅ **Gemini 2.5 Flash** with Google Search Grounding
-- ✅ **Strict JSON output** via `responseSchema` + `responseMimeType: "application/json"`
+- ✅ **Gemini 2.0 Flash (experimental)** with Google Search Grounding
+- ✅ **JSON-only output** enforced via prompt instructions
 - ✅ **Direct citations** from grounding metadata (OEM preferred, or 2 agreeing secondaries)
-- ✅ **No caching** - always fresh, always persisted to DB
+- ✅ **Database caching** - prior results reused, always persisted to DB
 - ✅ **Simple validation** - numeric units normalized (lbs), booleans (true/false), per-field status
 
 📖 **See [DOCUMENTATION.md](DOCUMENTATION.md) for complete documentation.**

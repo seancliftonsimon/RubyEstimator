@@ -1,6 +1,6 @@
 # Ruby GEM Vehicle Resolution System - Complete Documentation
 
-**Single-Call Gemini 2.5 Flash + Google Search Grounding**
+**Single-Call Gemini 2.0 Flash (experimental) + Google Search Grounding**
 
 ---
 
@@ -37,13 +37,7 @@ Or use environment variable:
 export GEMINI_API_KEY="your-api-key-here"
 ```
 
-### 2. Test It
-
-```bash
-python test_single_call_gemini.py
-```
-
-### 3. Run Streamlit App
+### 2. Run Streamlit App
 
 ```bash
 streamlit run app.py
@@ -60,9 +54,9 @@ Input (year/make/model)
   ↓
 Prompt with source rules
   ↓
-Gemini 2.5 Flash + Google Search Grounding
+Gemini 2.0 Flash (experimental) + Google Search Grounding
   ↓
-Strict JSON response (responseSchema enforced)
+JSON-only response (prompt enforced)
   ↓
 Validation & normalization
   ↓
@@ -71,12 +65,12 @@ Database persistence (4 tables)
 
 ### Key Features
 
-- ✅ **Single request per vehicle** - One API call using `gemini-2.5-flash`
+- ✅ **Single request per vehicle** - One API call using `gemini-2.0-flash-exp`
 - ✅ **Google Search Grounding** - Real-time web search with automatic citations
-- ✅ **Strict JSON only** - `responseMimeType: "application/json"`, no prose
+- ✅ **JSON-only output** - enforced via prompt instructions (Search Grounding)
 - ✅ **Source rules in prompt** - OEM preferred, 2 agreeing secondaries fallback
 - ✅ **Direct citations** - URLs and quotes from grounding metadata
-- ✅ **No caching** - Always fresh data
+- ✅ **Database caching** - Prior results reused
 - ✅ **Full logging** - Track timing bottlenecks and API calls
 
 ### Design Philosophy
@@ -394,7 +388,7 @@ PGPASSWORD=your-db-password
 ### Deployment Checklist
 
 - [ ] ✅ API key set (`.streamlit/secrets.toml` or env var)
-- [ ] ✅ Run test: `python test_single_call_gemini.py`
+- [ ] ✅ Run a quick vehicle lookup in the app
 - [ ] ✅ Verify 3+ test vehicles resolve with confidence > 0.7
 - [ ] ✅ Check database contains evidence rows
 - [ ] ✅ Test Streamlit app displays results correctly
@@ -410,8 +404,8 @@ python -c "from single_call_gemini_resolver import single_call_resolver; print('
 # Check database
 python -c "from database_config import test_database_connection; print(test_database_connection())"
 
-# Quick vehicle test
-python test_single_call_gemini.py
+# Quick vehicle test (CLI)
+python -c "from vehicle_data import process_vehicle; print(process_vehicle(2020, 'Toyota', 'Camry'))"
 ```
 
 ---
@@ -492,7 +486,7 @@ Run ID: abc123...
 Prompt length: 1245 characters
 
 🌐 Calling Gemini API with Search Grounding...
-Model: gemini-2.5-flash
+Model: gemini-2.0-flash-exp
 ✓ API call completed in 4523.45ms
 
 📦 Parsing JSON response...
@@ -619,8 +613,7 @@ result = process_vehicle(
 ### Documentation
 
 - This file: `DOCUMENTATION.md`
-- Test script: `test_single_call_gemini.py`
-- Examples: `example_usage_single_call.py`
+- Examples: (use the Streamlit app or `process_vehicle` in a Python shell)
 - Code: `single_call_gemini_resolver.py`
 
 ### External Links

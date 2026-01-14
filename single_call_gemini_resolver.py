@@ -899,12 +899,7 @@ RETURN JSON:
                         ) VALUES (
                             :run_id, :vehicle_key, :field, CAST(:value AS JSONB), :quote, :source_url, :source_hash, :fetched_at
                         )
-                        ON CONFLICT (run_id, field) DO UPDATE SET
-                            value_json = EXCLUDED.value_json,
-                            quote = EXCLUDED.quote,
-                            source_url = EXCLUDED.source_url,
-                            source_hash = EXCLUDED.source_hash,
-                            fetched_at = EXCLUDED.fetched_at
+                        ON CONFLICT (run_id, field, source_hash) DO NOTHING
                         """
                     )
                     

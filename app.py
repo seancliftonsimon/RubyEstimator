@@ -4,6 +4,7 @@ import logging
 import sys
 import re
 import time
+import html
 
 # Configure logging FIRST (before any other imports that might use logging)
 logging.basicConfig(
@@ -63,6 +64,10 @@ from styles import generate_main_app_css, generate_admin_mode_css, get_semantic_
 from cat_prices import CatPriceManager
 from sqlalchemy import text
 from datetime import datetime, timedelta
+
+# HTML escape helper for unsafe_allow_html blocks
+def _escape_html(value: object) -> str:
+    return html.escape(str(value), quote=True)
 
 # --- Streamlit App Styling (must apply before any gated UI, including login) ---
 # Add confidence indicator CSS
@@ -321,12 +326,22 @@ def validate_make_year_compatibility(make: str, year: int) -> tuple[bool, str]:
     
     # Check if year is before start_year
     if year < start_year:
-        warning_msg = f"⚠️ Are you sure that date is from before the production time of {make_info['make']}?<br>{make_info['make']} started production in {start_year}, but you entered {year}."
+        make_safe = _escape_html(make_info["make"])
+        year_safe = _escape_html(year)
+        warning_msg = (
+            "⚠️ Are you sure that date is from before the production time of "
+            f"{make_safe}?<br>{make_safe} started production in {start_year}, but you entered {year_safe}."
+        )
         return (False, warning_msg)
     
     # Check if year is after end_year (only if end_year is not None)
     if end_year is not None and year > end_year:
-        warning_msg = f"⚠️ Are you sure that date is from after the production time of {make_info['make']}?<br>{make_info['make']} ended production in {end_year}, but you entered {year}."
+        make_safe = _escape_html(make_info["make"])
+        year_safe = _escape_html(year)
+        warning_msg = (
+            "⚠️ Are you sure that date is from after the production time of "
+            f"{make_safe}?<br>{make_safe} ended production in {end_year}, but you entered {year_safe}."
+        )
         return (False, warning_msg)
     
     # Year is within valid range
@@ -671,9 +686,9 @@ def render_admin_ui():
         # Create User
         with st.expander("Create New Buyer", expanded=False):
             with st.form("create_user_form"):
-                new_username = st.text_input("Username (alphanumeric)")
+                new_username = st.text_input("Username (letters/numbers, ., _, -)")
                 new_display_name = st.text_input("Display Name (optional)")
-                new_password = st.text_input("Password (optional - leave empty for passwordless)", type="password")
+                new_password = st.text_input("Password", type="password")
                 
                 if st.form_submit_button("Create User"):
                     if not new_username:
@@ -1086,7 +1101,8 @@ with topbar_right:
     if preferred_display_name:
         user_text_col, logout_btn_col = st.columns([2, 1], gap="small")
         with user_text_col:
-            st.markdown(f'<div class="topbar-user">{preferred_display_name}</div>', unsafe_allow_html=True)
+            safe_display_name = _escape_html(preferred_display_name)
+            st.markdown(f'<div class="topbar-user">{safe_display_name}</div>', unsafe_allow_html=True)
         with logout_btn_col:
             if st.button("Logout", key="buyer_logout_btn"):
                 if "buyer_user" in st.session_state:
@@ -1377,9 +1393,10 @@ with left_col:
             
             # Display vehicle name with blue styling
             vehicle_name = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']}"
+            safe_vehicle_name = _escape_html(vehicle_name)
             st.markdown(f"""
             <div style="background: #eff6ff; padding: 1rem; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 1rem;">
-                <div style="margin: 0; color: #1e40af; font-weight: 700; text-align: center; font-size: 1.25rem;">{vehicle_name}</div>
+                <div style="margin: 0; color: #1e40af; font-weight: 700; text-align: center; font-size: 1.25rem;">{safe_vehicle_name}</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -2057,9 +2074,12 @@ with left_col:
                             # Clear pending search on error
                             if 'pending_search' in st.session_state:
                                 del st.session_state['pending_search']
+                            safe_make = _escape_html(make_input)
+                            safe_model = _escape_html(model_input)
+                            safe_year = _escape_html(year_int)
                             st.markdown(f"""
                             <div class="error-message">
-                                <strong>Vehicle Not Found:</strong> {year_int} {make_input} {model_input} does not appear to be a real vehicle or was not manufactured in this year. Please check your input.
+                                <strong>Vehicle Not Found:</strong> {safe_year} {safe_make} {safe_model} does not appear to be a real vehicle or was not manufactured in this year. Please check your input.
                             </div>
                             """, unsafe_allow_html=True)
                         elif 'error' in vehicle_data and vehicle_data['error']:
@@ -2077,9 +2097,12 @@ with left_col:
                             st.info("💡 **What to do next:**\n- Try again in a few moments (API might be overloaded)\n- Use the Manual Entry option below if you know the vehicle's curb weight")
                         elif vehicle_data and vehicle_data.get('curb_weight_lbs'):
                             # Display simple success message
+                            safe_make = _escape_html(make_input)
+                            safe_model = _escape_html(model_input)
+                            safe_year = _escape_html(year_int)
                             st.markdown(f"""
                             <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
-                                ✅ <strong>Vehicle Found!</strong> {year_int} {make_input} {model_input}
+                                ✅ <strong>Vehicle Found!</strong> {safe_year} {safe_make} {safe_model}
                             </div>
                             """, unsafe_allow_html=True)
                             
@@ -2184,9 +2207,12 @@ with left_col:
                             
                             if vehicle_likely_doesnt_exist:
                                 # Vehicle doesn't appear to exist
+                                safe_make = _escape_html(make_input)
+                                safe_model = _escape_html(model_input)
+                                safe_year = _escape_html(year_int)
                                 st.markdown(f"""
                                 <div class="warning-message" style="background-color: #fee2e2; border-left: 4px solid #dc2626;">
-                                    <strong>⚠️ Vehicle Not Found:</strong> Unable to find a <strong>{year_int} {make_input} {model_input}</strong> in our search results.
+                                    <strong>⚠️ Vehicle Not Found:</strong> Unable to find a <strong>{safe_year} {safe_make} {safe_model}</strong> in our search results.
                                     <br><br>
                                     <strong>Please verify:</strong>
                                     <ul style="margin: 0.5rem 0 0 1rem; padding-left: 1rem;">
@@ -2757,13 +2783,18 @@ if 'db_created' not in st.session_state:
             print("✅ Database connection successful")
             st.session_state['db_created'] = True
 
-            # Ensure admin user exists
+            # Optionally bootstrap an admin user from environment variables
             try:
-                ok, msg = ensure_admin_user(username="admin", passcode="2026")
-                if ok:
-                    print(f"✅ {msg}")
+                bootstrap_username = os.getenv("ADMIN_BOOTSTRAP_USERNAME", "").strip()
+                bootstrap_password = os.getenv("ADMIN_BOOTSTRAP_PASSWORD", "").strip()
+                if bootstrap_username and bootstrap_password:
+                    ok, msg = ensure_admin_user(username=bootstrap_username, passcode=bootstrap_password)
+                    if ok:
+                        print(f"✅ {msg}")
+                    else:
+                        print(f"⚠️ Could not ensure admin user: {msg}")
                 else:
-                    print(f"⚠️ Could not ensure admin user: {msg}")
+                    print("ℹ️ Admin bootstrap skipped (set ADMIN_BOOTSTRAP_USERNAME and ADMIN_BOOTSTRAP_PASSWORD to enable).")
             except Exception as e:
                 print(f"⚠️ Error ensuring admin user: {e}")
 

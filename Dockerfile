@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 8501
 
 # Start the application
-CMD python railway_startup.py 
+CMD streamlit run app.py --server.port=8501 --server.address=0.0.0.0

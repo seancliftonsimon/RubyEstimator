@@ -23,8 +23,8 @@ def hash_password(password):
 # Buyer/user auth (DB-backed, per-session; no global "current user" in DB)
 # -----------------------------------------------------------------------------
 
-_USERNAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
-_PASSCODE_RE = re.compile(r"^\d{4}$")
+_USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+_PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9@$!%*?&#^_+=\-]{8,64}$")
 
 
 def normalize_username(username: str) -> str:
@@ -36,8 +36,8 @@ def is_valid_username(username: str) -> bool:
     return bool(u) and bool(_USERNAME_RE.match(u))
 
 
-def _is_valid_4_digit_passcode(passcode: str) -> bool:
-    return bool(_PASSCODE_RE.match((passcode or "").strip()))
+def _is_valid_password(password: str) -> bool:
+    return bool(_PASSWORD_RE.match((password or "").strip()))
 
 
 def _bcrypt_hash_password(password: str) -> str:
@@ -68,20 +68,21 @@ def create_user(
 
     Rules:
     - username must be unique and match [A-Za-z0-9_-]+ (stored normalized to lowercase)
-    - password is optional; if provided, store only bcrypt hash
+    - password is required and must be 8-64 chars with letters + numbers
     """
     ensure_schema()
 
     username_norm = normalize_username(username)
     if not is_valid_username(username_norm):
-        return False, "Invalid username. Use only letters, numbers, underscore, or hyphen."
+        return False, "Invalid username. Use only letters, numbers, dot, underscore, or hyphen."
 
-    pw_hash: Optional[str] = None
-    if password and password.strip():
-        pw = password.strip()
-        if not _is_valid_4_digit_passcode(pw):
-            return False, "Passcode must be exactly 4 digits."
-        pw_hash = _bcrypt_hash_password(pw)
+    if not password or not password.strip():
+        return False, "Password is required."
+
+    pw = password.strip()
+    if not _is_valid_password(pw):
+        return False, "Password must be 8-64 chars and include letters and numbers."
+    pw_hash = _bcrypt_hash_password(pw)
 
     engine = create_database_engine()
     with engine.connect() as conn:
@@ -107,14 +108,14 @@ def create_user(
             return False, f"Could not create user: {exc}"
 
 
-def ensure_admin_user(username: str = "admin", passcode: str = "2026") -> Tuple[bool, str]:
+def ensure_admin_user(username: str, passcode: str) -> Tuple[bool, str]:
     """
     Ensure the admin user exists in the database.
     Creates the user if it doesn't exist, or updates it to be admin if it exists but isn't admin.
     
     Args:
-        username: Admin username (default: "admin")
-        passcode: Admin passcode (default: "2026")
+        username: Admin username
+        passcode: Admin password
     
     Returns:
         Tuple[bool, str]: (success, message)
@@ -250,8 +251,7 @@ def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
 def login_user(username: str, password: Optional[str] = None) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
     """
     Login rules:
-    - If user has no password_hash: username alone is sufficient.
-    - If user has password_hash: require password and verify bcrypt hash.
+    - Password is always required and verified against bcrypt hash.
     """
     user = get_user_by_username(username)
     if not user:
@@ -259,12 +259,10 @@ def login_user(username: str, password: Optional[str] = None) -> Tuple[bool, str
 
     pw_hash = user.get("password_hash")
     if not pw_hash:
-        # Passwordless login
-        user.pop("password_hash", None)
-        return True, "Logged in", user
+        return False, "Password is required. Ask admin to reset this account.", None
 
     if not password:
-        return False, "Password required for this user.", None
+        return False, "Password required.", None
 
     ok = _bcrypt_verify_password(password, pw_hash)
     if not ok:
@@ -291,16 +289,15 @@ def render_login_ui(session_key: str = "buyer_user") -> bool:
         with st.form("buyer_login_form", clear_on_submit=False):
             username = st.text_input("Username", key="buyer_login_username")
             passcode = st.text_input(
-                "Four digit passcode",
+                "Password",
                 type="password",
                 key="buyer_login_passcode",
-                max_chars=4,
             )
             submitted = st.form_submit_button("Log in")
 
         if submitted:
-            if passcode and not _is_valid_4_digit_passcode(passcode):
-                st.error("Passcode must be exactly 4 digits.")
+            if passcode and not _is_valid_password(passcode):
+                st.error("Password must be 8-64 chars and include letters and numbers.")
             else:
                 ok, msg, user = login_user(username=username, password=passcode)
                 if ok and user:
@@ -320,26 +317,24 @@ def render_login_ui(session_key: str = "buyer_user") -> bool:
                 new_username = st.text_input("Username", key="buyer_signup_username")
                 new_display_name = st.text_input("Display name (optional)", key="buyer_signup_display_name")
                 new_passcode = st.text_input(
-                    "Create a four digit passcode",
+                    "Create a password",
                     type="password",
                     key="buyer_signup_passcode",
-                    max_chars=4,
                 )
                 new_passcode2 = st.text_input(
-                    "Confirm passcode",
+                    "Confirm password",
                     type="password",
                     key="buyer_signup_passcode_confirm",
-                    max_chars=4,
                 )
                 create_submitted = st.form_submit_button("Create user")
 
             if create_submitted:
                 if not new_username:
                     st.error("Username is required.")
-                elif not _is_valid_4_digit_passcode(new_passcode or ""):
-                    st.error("Passcode must be exactly 4 digits.")
+                elif not _is_valid_password(new_passcode or ""):
+                    st.error("Password must be 8-64 chars and include letters and numbers.")
                 elif new_passcode != new_passcode2:
-                    st.error("Passcodes do not match.")
+                    st.error("Passwords do not match.")
                 else:
                     ok, msg = create_user(
                         username=new_username,
