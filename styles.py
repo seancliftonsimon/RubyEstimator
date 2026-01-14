@@ -344,7 +344,7 @@ def generate_main_app_css() -> str:
     return f"""
 <style>
     :root {{
-        --topbar-height: 48px;
+        --topbar-height: 40px;
     }}
     /* ========== GOOGLE FONTS IMPORT ========== */
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap');
@@ -413,7 +413,7 @@ def generate_main_app_css() -> str:
     }}
     
     .main .block-container {{
-        padding-top: calc(var(--topbar-height) + 0.5rem) !important; /* minimal padding below topbar */
+        padding-top: calc(var(--topbar-height) + 0.25rem) !important; /* tighter space below topbar */
         padding-bottom: 0.5rem !important;
         max-width: 95% !important;
         margin-top: 0 !important;
@@ -553,7 +553,7 @@ def generate_main_app_css() -> str:
     /* Username: right-aligned, larger font, right next to logout button, aligned to TOP */
     .topbar-user {{
         color: {Colors.GRAY_700} !important;
-        font-size: 1.1rem !important;
+        font-size: 1.05rem !important;
         font-weight: 600 !important;
         white-space: nowrap !important;
         margin: 0 !important;
@@ -562,6 +562,9 @@ def generate_main_app_css() -> str:
         height: 28px !important;
         display: inline-flex !important;
         align-items: center !important;
+        justify-content: flex-end !important;
+        width: 100% !important;
+        text-align: right !important;
         vertical-align: top !important;
     }}
 

@@ -281,8 +281,8 @@ def render_login_ui(session_key: str = "buyer_user") -> bool:
     if st.session_state.get(session_key):
         return True
 
-    # Centered, smaller login "card"
-    left, center, right = st.columns([1.6, 1.0, 1.6])
+    # Centered, wider login "card"
+    left, center, right = st.columns([1.0, 1.8, 1.0])
     with center:
         st.subheader("Buyer Login")
 
@@ -293,7 +293,7 @@ def render_login_ui(session_key: str = "buyer_user") -> bool:
                 type="password",
                 key="buyer_login_passcode",
             )
-            submitted = st.form_submit_button("Log in")
+            submitted = st.form_submit_button("Log in", use_container_width=True)
 
         if submitted:
             if passcode and not _is_valid_password(passcode):

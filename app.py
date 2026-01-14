@@ -1099,7 +1099,7 @@ with topbar_center:
 with topbar_right:
     # Right side: username and logout button in a horizontal layout
     if preferred_display_name:
-        user_text_col, logout_btn_col = st.columns([2, 1], gap="small")
+        user_text_col, logout_btn_col = st.columns([3, 1], gap="small")
         with user_text_col:
             safe_display_name = _escape_html(preferred_display_name)
             st.markdown(f'<div class="topbar-user">{safe_display_name}</div>', unsafe_allow_html=True)
