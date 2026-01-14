@@ -90,26 +90,26 @@ def create_user(
     try:
         engine = create_database_engine()
         with engine.connect() as conn:
-        try:
-            conn.execute(
-                text(
-                    """
-                    INSERT INTO users (username, display_name, password_hash, is_admin, created_at)
-                    VALUES (:username, :display_name, :password_hash, :is_admin, CURRENT_TIMESTAMP)
-                    """
-                ),
-                {
-                    "username": username_norm,
-                    "display_name": (display_name or "").strip() or None,
-                    "password_hash": pw_hash,
-                    "is_admin": bool(is_admin),
-                },
-            )
-            conn.commit()
-            return True, f"Created user '{username_norm}'"
-        except Exception as exc:
-            # Likely uniqueness violation; keep message generic.
-            return False, f"Could not create user: {exc}"
+            try:
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO users (username, display_name, password_hash, is_admin, created_at)
+                        VALUES (:username, :display_name, :password_hash, :is_admin, CURRENT_TIMESTAMP)
+                        """
+                    ),
+                    {
+                        "username": username_norm,
+                        "display_name": (display_name or "").strip() or None,
+                        "password_hash": pw_hash,
+                        "is_admin": bool(is_admin),
+                    },
+                )
+                conn.commit()
+                return True, f"Created user '{username_norm}'"
+            except Exception as exc:
+                # Likely uniqueness violation; keep message generic.
+                return False, f"Could not create user: {exc}"
 
 
 def ensure_admin_user(username: str, passcode: str) -> Tuple[bool, str]:
