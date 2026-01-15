@@ -125,6 +125,12 @@ def _get_ipv4_connect_args(url: str) -> Dict[str, Any]:
             # Use hostaddr to force the IP address while keeping hostname for SSL
             connect_args["hostaddr"] = ipv4
             logger.info(f"🔄 Using hostaddr={ipv4} to force IPv4 connection (hostname: {hostname})")
+        else:
+            logger.warning(
+                f"🚨 Hostname {hostname} could not be resolved to an IPv4 address. "
+                "If this is a Supabase project, you likely need to use the Connection Pooler (port 6543) "
+                "because direct connections (port 5432) are often IPv6-only, which Streamlit Cloud doesn't support."
+            )
         
         return connect_args
     except Exception as e:
@@ -155,14 +161,28 @@ def create_database_engine():
     
     # Ensure SSL mode is set for cloud PostgreSQL providers
     if "sslmode=" not in url:
-        separator = "&" if "?" in url else "?"
-        url += f"{separator}sslmode=require"
-        logger.info("🔒 Added sslmode=require to database URL (required for cloud PostgreSQL)")
+        # Check if there are already query parameters
+        if "?" in url:
+            url += "&sslmode=require"
+        else:
+            url += "?sslmode=require"
+        logger.info("🔒 Added sslmode=require to database URL")
+
+    # Clean up the URL: Remove pgbouncer=true which Supabase sometimes includes
+    # but causes psycopg2 to fail with "invalid connection option"
+    if "pgbouncer=true" in url:
+        url = url.replace("pgbouncer=true", "")
+        # Clean up any resulting double symbols
+        while "&&" in url: url = url.replace("&&", "&")
+        while "?&" in url: url = url.replace("?&", "?")
+        while "??" in url: url = url.replace("??", "?")
+        url = url.rstrip("?").rstrip("&")
+        logger.info("🧹 Removed pgbouncer=true parameter (not supported by psycopg2)")
     
     # Get connection args with IPv4 resolution to avoid IPv6 issues
     connect_args = _get_ipv4_connect_args(url)
     
-    logger.info(f"⚙️  Creating database engine for PostgreSQL (Neon)")
+    logger.info(f"⚙️  Creating database engine for PostgreSQL")
     try:
         _engine_cache = _create_engine(
             url, 
