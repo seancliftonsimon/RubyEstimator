@@ -75,6 +75,71 @@ add_confidence_css()
 # Apply main app CSS from centralized styles module
 st.markdown(generate_main_app_css(), unsafe_allow_html=True)
 
+# --- Initial Setup ---
+if 'db_created' not in st.session_state:
+    try:
+        # Test database connection
+        success, message = test_database_connection()
+        if success:
+            print("✅ Database connection successful")
+            st.session_state['db_created'] = True
+
+            # Optionally bootstrap an admin user from environment variables
+            try:
+                bootstrap_username = os.getenv("ADMIN_BOOTSTRAP_USERNAME", "").strip()
+                bootstrap_password = os.getenv("ADMIN_BOOTSTRAP_PASSWORD", "").strip()
+                if bootstrap_username and bootstrap_password:
+                    ok, msg = ensure_admin_user(username=bootstrap_username, passcode=bootstrap_password)
+                    if ok:
+                        print(f"✅ {msg}")
+                    else:
+                        print(f"⚠️ Could not ensure admin user: {msg}")
+                else:
+                    print("ℹ️ Admin bootstrap skipped (set ADMIN_BOOTSTRAP_USERNAME and ADMIN_BOOTSTRAP_PASSWORD to enable).")
+            except Exception as e:
+                print(f"⚠️ Error ensuring admin user: {e}")
+
+            # Ensure catalog cache is loaded (static, no database rebuild)
+            try:
+                from vehicle_data import ensure_catalog_cached
+                print("📚 Loading static catalog from seed_catalog.json...")
+                cache_data = ensure_catalog_cached()
+                if cache_data and cache_data.get("make_index", {}).get("all_makes"):
+                    make_count = len(cache_data["make_index"]["all_makes"])
+                    model_count = sum(len(models.get("all_models", [])) for models in cache_data.get("model_index_by_make", {}).values())
+                    print(f"✅ Static catalog loaded: {make_count} makes, {model_count} models")
+                else:
+                    print("⚠️ Catalog cache is empty or invalid")
+            except Exception as e:
+                print(f"⚠️ Error loading catalog cache: {e}")
+
+        else:
+            print(f"❌ Database connection failed: {message}")
+            st.error(f"Database connection failed: {message}")
+            st.stop()
+    except Exception as e:
+        print(f"Error during database setup: {e}")
+        st.error(f"Database setup error: {e}")
+        st.stop()
+
+# Initialize session state variables if they don't exist
+if 'last_curb_weight' not in st.session_state:
+    st.session_state['last_curb_weight'] = None
+if 'last_aluminum_engine' not in st.session_state:
+    st.session_state['last_aluminum_engine'] = None
+if 'last_aluminum_rims' not in st.session_state:
+    st.session_state['last_aluminum_rims'] = None
+if 'last_catalytic_converters' not in st.session_state:
+    st.session_state['last_catalytic_converters'] = None
+if 'last_cat_value_override' not in st.session_state:
+    st.session_state['last_cat_value_override'] = None
+if 'last_vehicle_info' not in st.session_state:
+    st.session_state['last_vehicle_info'] = None
+if 'auto_calculate' not in st.session_state:
+    st.session_state['auto_calculate'] = False
+if 'detailed_vehicle_info' not in st.session_state:
+    st.session_state['detailed_vehicle_info'] = None
+
 # --- Buyer Login Gate ---
 # If we are not in admin mode, require buyer login.
 if not st.session_state.get("admin_mode", False):
@@ -2773,68 +2838,3 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
-
-# --- Initial Setup ---
-if 'db_created' not in st.session_state:
-    try:
-        # Test database connection
-        success, message = test_database_connection()
-        if success:
-            print("✅ Database connection successful")
-            st.session_state['db_created'] = True
-
-            # Optionally bootstrap an admin user from environment variables
-            try:
-                bootstrap_username = os.getenv("ADMIN_BOOTSTRAP_USERNAME", "").strip()
-                bootstrap_password = os.getenv("ADMIN_BOOTSTRAP_PASSWORD", "").strip()
-                if bootstrap_username and bootstrap_password:
-                    ok, msg = ensure_admin_user(username=bootstrap_username, passcode=bootstrap_password)
-                    if ok:
-                        print(f"✅ {msg}")
-                    else:
-                        print(f"⚠️ Could not ensure admin user: {msg}")
-                else:
-                    print("ℹ️ Admin bootstrap skipped (set ADMIN_BOOTSTRAP_USERNAME and ADMIN_BOOTSTRAP_PASSWORD to enable).")
-            except Exception as e:
-                print(f"⚠️ Error ensuring admin user: {e}")
-
-            # Ensure catalog cache is loaded (static, no database rebuild)
-            try:
-                from vehicle_data import ensure_catalog_cached
-                print("📚 Loading static catalog from seed_catalog.json...")
-                cache_data = ensure_catalog_cached()
-                if cache_data and cache_data.get("make_index", {}).get("all_makes"):
-                    make_count = len(cache_data["make_index"]["all_makes"])
-                    model_count = sum(len(models.get("all_models", [])) for models in cache_data.get("model_index_by_make", {}).values())
-                    print(f"✅ Static catalog loaded: {make_count} makes, {model_count} models")
-                else:
-                    print("⚠️ Catalog cache is empty or invalid")
-            except Exception as e:
-                print(f"⚠️ Error loading catalog cache: {e}")
-
-        else:
-            print(f"❌ Database connection failed: {message}")
-            st.error(f"Database connection failed: {message}")
-            st.stop()
-    except Exception as e:
-        print(f"Error during database setup: {e}")
-        st.error(f"Database setup error: {e}")
-        st.stop()
-
-# Initialize session state variables if they don't exist
-if 'last_curb_weight' not in st.session_state:
-    st.session_state['last_curb_weight'] = None
-if 'last_aluminum_engine' not in st.session_state:
-    st.session_state['last_aluminum_engine'] = None
-if 'last_aluminum_rims' not in st.session_state:
-    st.session_state['last_aluminum_rims'] = None
-if 'last_catalytic_converters' not in st.session_state:
-    st.session_state['last_catalytic_converters'] = None
-if 'last_cat_value_override' not in st.session_state:
-    st.session_state['last_cat_value_override'] = None
-if 'last_vehicle_info' not in st.session_state:
-    st.session_state['last_vehicle_info'] = None
-if 'auto_calculate' not in st.session_state:
-    st.session_state['auto_calculate'] = False
-if 'detailed_vehicle_info' not in st.session_state:
-    st.session_state['detailed_vehicle_info'] = None
