@@ -102,7 +102,7 @@ return genai.GenerativeModel(model_name='gemini-1.5-flash-8b')
 **Alternative Models** (for future consideration):
 - `gemini-1.5-flash`: Standard flash model
 - `gemini-1.5-pro`: Higher capability model for complex queries
-- `gemini-2.0-flash-exp`: Experimental next-generation model
+- `gemini-2.5-flash`: Current generation fast model
 
 #### B. Database Query Updates
 

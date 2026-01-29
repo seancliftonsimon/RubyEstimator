@@ -65,7 +65,7 @@ Database persistence (4 tables)
 
 ### Key Features
 
-- ✅ **Single request per vehicle** - One API call using `gemini-2.0-flash-exp`
+- ✅ **Single request per vehicle** - One API call using `gemini-2.5-flash`
 - ✅ **Google Search Grounding** - Real-time web search with automatic citations
 - ✅ **JSON-only output** - enforced via prompt instructions (Search Grounding)
 - ✅ **Source rules in prompt** - OEM preferred, 2 agreeing secondaries fallback
@@ -486,7 +486,7 @@ Run ID: abc123...
 Prompt length: 1245 characters
 
 🌐 Calling Gemini API with Search Grounding...
-Model: gemini-2.0-flash-exp
+Model: gemini-2.5-flash
 ✓ API call completed in 4523.45ms
 
 📦 Parsing JSON response...

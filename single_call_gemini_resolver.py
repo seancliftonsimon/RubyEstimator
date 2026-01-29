@@ -137,6 +137,7 @@ class SingleCallGeminiResolver:
     """Resolves vehicle specifications using a single Gemini API call with Search Grounding."""
     
     def __init__(self, api_key: Optional[str] = None):
+        self.model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         # Try Streamlit secrets first, then environment variable
         if api_key:
             self.api_key = api_key
@@ -251,7 +252,7 @@ RETURN JSON:
             # - Higher limits allow more aggressive requests
             # - Faster model with experimental features
         }
-        logger.info(f"Model: gemini-2.0-flash-exp")
+        logger.info(f"Model: {self.model}")
         logger.info(f"Config: {json.dumps(config, indent=2)}")
         
         # Retry logic optimized for paid accounts (faster retries, fewer attempts)
@@ -267,7 +268,7 @@ RETURN JSON:
                     retry_delay *= 1.5  # Gentler exponential backoff
                 
                 response = self.client.models.generate_content(
-                    model="gemini-2.0-flash-exp",  # Faster experimental model
+                    model=self.model,
                     contents=prompt,
                     config=config
                 )

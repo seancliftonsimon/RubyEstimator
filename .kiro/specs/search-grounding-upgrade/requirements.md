@@ -24,7 +24,7 @@ The Ruby GEM Estimator application currently uses the legacy `google.generativea
 
 1. THE Ruby_GEM_Estimator SHALL use the `google-genai` SDK version 1.0.0 or higher instead of the legacy `google.generativeai` SDK
 2. THE Ruby_GEM_Estimator SHALL use the client-based API pattern with `genai.Client()` for all API interactions
-3. THE Ruby_GEM_Estimator SHALL use Gemini 2.0+ models (gemini-2.0-flash-exp, gemini-2.5-flash) that support enhanced search grounding
+3. THE Ruby_GEM_Estimator SHALL use Gemini 2.5+ models (gemini-2.5-flash, gemini-2.5-flash-lite) that support enhanced search grounding
 4. THE Ruby_GEM_Estimator SHALL eliminate all "Unknown field for FunctionDeclaration" errors through proper SDK usage
 5. THE Ruby_GEM_Estimator SHALL maintain backward compatibility with existing vehicle data resolution functionality
 
