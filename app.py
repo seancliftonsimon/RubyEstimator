@@ -762,31 +762,31 @@ def render_admin_ui():
                         st.error("❌ Error saving cat prices. Please ensure all numeric fields are valid numbers and try again.")
                         logger.error(f"Error saving cat prices: {e}", exc_info=True)
 
-            # One-time restore from canonical CSV
-            st.markdown("#### Restore from original CSV")
-            st.warning(
-                "This will **overwrite all current catalytic converter prices** with values from the "
-                "`cat prices - Cat Calculator.csv` spreadsheet. Use this as a one-time reset if the "
-                "stored values have drifted from the original price list."
-            )
-            confirm_reset = st.checkbox(
-                "I understand this will overwrite existing cat price entries with the original CSV values.",
-                key="confirm_reset_cat_prices",
-            )
-            if st.button("🔄 Restore from original CSV", use_container_width=True):
-                if not confirm_reset:
-                    st.error("❌ Please confirm the reset checkbox before restoring from the original CSV.")
-                else:
-                    try:
-                        cat_manager.reset_from_csv()
-                        st.success("✅ Cat prices have been reset from the original CSV. Reloading...")
-                        st.rerun()
-                    except FileNotFoundError as e:
-                        st.error(f"❌ Could not find the cat prices CSV file: {e}")
-                        logger.error(f"Cat prices CSV missing during reset: {e}", exc_info=True)
-                    except Exception as e:
-                        st.error("❌ Failed to reset cat prices from CSV. Please check the logs for details.")
-                        logger.error(f"Error resetting cat prices from CSV: {e}", exc_info=True)
+            # One-time restore from canonical CSV (hidden under expander)
+            with st.expander("Restore from original CSV", expanded=False):
+                st.warning(
+                    "This will **overwrite all current catalytic converter prices** with values from the "
+                    "`cat prices - Cat Calculator.csv` spreadsheet. Use this as a one-time reset if the "
+                    "stored values have drifted from the original price list."
+                )
+                confirm_reset = st.checkbox(
+                    "I understand this will overwrite existing cat price entries with the original CSV values.",
+                    key="confirm_reset_cat_prices",
+                )
+                if st.button("🔄 Restore from original CSV", use_container_width=True):
+                    if not confirm_reset:
+                        st.error("❌ Please confirm the reset checkbox before restoring from the original CSV.")
+                    else:
+                        try:
+                            cat_manager.reset_from_csv()
+                            st.success("✅ Cat prices have been reset from the original CSV. Reloading...")
+                            st.rerun()
+                        except FileNotFoundError as e:
+                            st.error(f"❌ Could not find the cat prices CSV file: {e}")
+                            logger.error(f"Cat prices CSV missing during reset: {e}", exc_info=True)
+                        except Exception as e:
+                            st.error("❌ Failed to reset cat prices from CSV. Please check the logs for details.")
+                            logger.error(f"Error resetting cat prices from CSV: {e}", exc_info=True)
 
     with tab_users:
         st.subheader("Manage Buyers")
