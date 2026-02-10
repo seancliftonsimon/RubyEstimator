@@ -655,13 +655,21 @@ def render_admin_ui():
             st.markdown("### 💾 Save Changes")
             
             # Confirmation checkbox
-            confirm_save = st.checkbox("I confirm that I want to update the database with these changes.", key="confirm_save_checkbox")
+            confirm_save = st.checkbox(
+                "I confirm that I want to update the database with these changes.",
+                key="confirm_save_checkbox",
+            )
             
             col1, col2, col3 = st.columns([2, 1, 2])
             with col2:
-                save = st.form_submit_button("💾 Save All Changes", width='stretch', disabled=not confirm_save)
+                # In a form, widgets don't trigger a rerun until submit,
+                # so we can't rely on disabled=not confirm_save here.
+                # Keep the button always enabled and validate confirm_save in code.
+                save = st.form_submit_button("💾 Save All Changes", width='stretch')
             
-            if save and confirm_save:
+            if save and not confirm_save:
+                st.error("Please confirm that you want to update the database before saving.")
+            elif save and confirm_save:
                 try:
                     # Gather updates from DataFrames
                     new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
