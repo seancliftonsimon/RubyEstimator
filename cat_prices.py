@@ -95,6 +95,72 @@ class CatPriceManager:
         except Exception as e:
             logger.error(f"Failed to sync cat prices from CSV: {e}")
 
+    def reset_from_csv(self):
+        """
+        Reset all cat price entries from the canonical CSV.
+        
+        This clears the cat_prices table and reloads it entirely from
+        'cat prices - Cat Calculator.csv', then refreshes the in-memory cache.
+        """
+        try:
+            csv_path = os.path.join(os.path.dirname(__file__), 'cat prices - Cat Calculator.csv')
+            if not os.path.exists(csv_path):
+                raise FileNotFoundError(f"Cat prices CSV not found at {csv_path}")
+
+            # Read CSV, skipping first 2 lines (header is on line 3, so skip 2 rows)
+            df = pd.read_csv(csv_path, header=2)
+            df.columns = [c.strip() for c in df.columns]
+
+            with self._connect() as conn:
+                # Clear existing data
+                conn.execute(text("DELETE FROM cat_prices"))
+
+                inserted_count = 0
+                for _, row in df.iterrows():
+                    car_name = str(row['CAR']).strip().upper()
+                    if not car_name or car_name == 'nan':
+                        continue
+
+                    try:
+                        cats_count = int(row['# OF CATS'])
+                        total_sale_str = str(row['TOTAL SALE']).replace('$', '').strip()
+                        total_sale = float(total_sale_str) if total_sale_str else 0.0
+
+                        # Parse optional columns
+                        current_sale_str = str(row.get('CURRENT SALE', '')).replace('$', '').strip()
+                        current_sale = float(current_sale_str) if current_sale_str and current_sale_str != 'nan' else None
+
+                        extra_cat_str = str(row.get('EXTRA CAT VALUE', '')).replace('$', '').strip()
+                        extra_cat_value = float(extra_cat_str) if extra_cat_str and extra_cat_str != 'nan' else None
+
+                        conn.execute(
+                            text("""
+                                INSERT INTO cat_prices (vehicle_name, cat_count, total_sale, current_sale, extra_cat_value)
+                                VALUES (:vehicle_name, :cat_count, :total_sale, :current_sale, :extra_cat_value)
+                            """),
+                            {
+                                "vehicle_name": car_name,
+                                "cat_count": cats_count,
+                                "total_sale": total_sale,
+                                "current_sale": current_sale,
+                                "extra_cat_value": extra_cat_value
+                            }
+                        )
+                        inserted_count += 1
+                    except (ValueError, KeyError) as e:
+                        logger.warning(f"Error parsing row for {car_name} during reset: {e}")
+                        continue
+
+                conn.commit()
+                logger.info(f"Reset {inserted_count} cat price entries from CSV to database")
+
+            # Refresh in-memory cache after successful reset
+            self.load_data()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to reset cat prices from CSV: {e}", exc_info=True)
+            raise
+
     def load_data(self):
         """Load cat prices from database into memory."""
         try:
@@ -286,7 +352,8 @@ class CatPriceManager:
                 self.load_data()
                 logger.info(f"Cat prices updated successfully. Inserted/updated {len(edited_df)} entries, deleted {len(deleted_ids)} entries.")
                 return True
-                
+
         except Exception as e:
+            # Let the caller surface a clear error message in the UI
             logger.error(f"Failed to update cat prices: {e}", exc_info=True)
-            return False
+            raise

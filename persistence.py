@@ -24,7 +24,7 @@ def _connect():
         with engine.connect() as conn:
             yield conn
     except Exception as e:
-        logger.error(f"❌ Database connection failed: {e}", exc_info=True)
+        logger.error(f"Database connection failed: {e}", exc_info=True)
         # Re-raise with more context
         raise ConnectionError(
             f"Unable to connect to database. Please check your DATABASE_URL configuration. "
@@ -41,7 +41,7 @@ def ensure_schema() -> None:
         logger.debug("♻️  Schema already validated in this session, skipping check")
         return
     
-    logger.info("📋 Ensuring database schema exists...")
+    logger.info("Ensuring database schema exists...")
     try:
         with _connect() as conn:
             logger.info("🗄️  Creating schema for PostgreSQL database")
@@ -62,7 +62,7 @@ def ensure_schema() -> None:
                 )
             )
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)"))
-            logger.debug("  ✓ users table ready")
+            logger.debug("  users table ready")
             conn.execute(
                 text(
                     """
@@ -100,7 +100,7 @@ def ensure_schema() -> None:
                     """
                 )
             )
-            logger.debug("  ✓ ref_makes table ready")
+            logger.debug("  ref_makes table ready")
             conn.execute(
                 text(
                     """
@@ -146,7 +146,7 @@ def ensure_schema() -> None:
                     """
                 )
             )
-            logger.debug("  ✓ ref_aliases table ready")
+            logger.debug("  ref_aliases table ready")
             conn.execute(
                 text(
                     """
@@ -176,7 +176,7 @@ def ensure_schema() -> None:
                     """
                 )
             )
-            logger.debug("  ✓ runs table ready")
+            logger.debug("  runs table ready")
             # Extend runs for multi-user usage + purchases (idempotent migrations)
             conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS user_id INTEGER"))
             conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS vehicle_key TEXT"))
@@ -224,7 +224,7 @@ def ensure_schema() -> None:
                     """
                 )
             )
-            logger.debug("  ✓ evidence table ready")
+            logger.debug("  evidence table ready")
             # Migrate legacy evidence primary key (run_id, field) -> (run_id, field, source_hash)
             conn.execute(
                 text(
@@ -297,8 +297,8 @@ def ensure_schema() -> None:
                     """
                 )
             )
-            logger.debug("  ✓ cat_prices table ready")
-            logger.info("✓ PostgreSQL (Neon) schema validated/created successfully")
+            logger.debug("  cat_prices table ready")
+            logger.info("PostgreSQL (Neon) schema validated/created successfully")
 
             conn.commit()
             logger.info("✓ Schema commit completed")
@@ -309,7 +309,7 @@ def ensure_schema() -> None:
         # Re-raise connection errors as-is (they already have good messages)
         raise
     except Exception as e:
-        logger.error(f"❌ Failed to ensure database schema: {e}", exc_info=True)
+        logger.error(f"Failed to ensure database schema: {e}", exc_info=True)
         raise RuntimeError(
             f"Database schema initialization failed. Please check your database connection. "
             f"Original error: {str(e)}"

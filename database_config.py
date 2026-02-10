@@ -48,7 +48,7 @@ def get_database_url() -> str:
         # Add sslmode=require if not already present (Neon and most cloud providers require SSL)
         if "sslmode=" not in url:
             url += "?sslmode=require"
-        logger.info(f"🔗 Using PostgreSQL connection: {username}@{host}:{port}/{database}")
+        logger.info(f"Using PostgreSQL connection: {username}@{host}:{port}/{database}")
         _database_url_cache = url
         return url
 
@@ -58,7 +58,7 @@ def get_database_url() -> str:
         "Please set DATABASE_URL in your Streamlit Cloud secrets or environment variables. "
         "Example: DATABASE_URL=postgresql://user:pass@host.neon.tech/dbname?sslmode=require"
     )
-    logger.error(f"❌ {error_msg}")
+    logger.error(error_msg)
     raise ValueError(error_msg)
 
 
@@ -87,7 +87,7 @@ def _resolve_hostname_to_ipv4(hostname: str) -> str:
             logger.info(f"🔍 Resolved {hostname} to IPv4: {ipv4}")
             return ipv4
         else:
-            logger.warning(f"⚠️  Could not resolve {hostname} to IPv4, using hostname")
+            logger.warning(f"Could not resolve {hostname} to IPv4, using hostname")
             return None
     except (socket.gaierror, OSError) as e:
         logger.warning(f"⚠️  DNS resolution failed for {hostname}: {e}")
@@ -124,7 +124,7 @@ def _get_ipv4_connect_args(url: str) -> Dict[str, Any]:
         if ipv4:
             # Use hostaddr to force the IP address while keeping hostname for SSL
             connect_args["hostaddr"] = ipv4
-            logger.info(f"🔄 Using hostaddr={ipv4} to force IPv4 connection (hostname: {hostname})")
+            logger.info(f"Using hostaddr={ipv4} to force IPv4 connection (hostname: {hostname})")
         else:
             logger.warning(
                 f"🚨 Hostname {hostname} could not be resolved to an IPv4 address. "
@@ -134,7 +134,7 @@ def _get_ipv4_connect_args(url: str) -> Dict[str, Any]:
         
         return connect_args
     except Exception as e:
-        logger.warning(f"⚠️  Failed to resolve IPv4 for connection: {e}")
+        logger.warning(f"Failed to resolve IPv4 for connection: {e}")
         return connect_args
 
 
@@ -156,7 +156,7 @@ def create_database_engine():
     url = get_database_url()
     if not url.startswith("postgresql://"):
         error_msg = f"Invalid database URL. Only PostgreSQL connections are supported. URL starts with: {url[:10]}"
-        logger.error(f"❌ {error_msg}")
+        logger.error(error_msg)
         raise ValueError(error_msg)
     
     # Ensure SSL mode is set for cloud PostgreSQL providers
@@ -166,7 +166,7 @@ def create_database_engine():
             url += "&sslmode=require"
         else:
             url += "?sslmode=require"
-        logger.info("🔒 Added sslmode=require to database URL")
+        logger.info("Added sslmode=require to database URL")
 
     # Clean up the URL: Remove pgbouncer=true which Supabase sometimes includes
     # but causes psycopg2 to fail with "invalid connection option"
@@ -177,7 +177,7 @@ def create_database_engine():
         while "?&" in url: url = url.replace("?&", "?")
         while "??" in url: url = url.replace("??", "?")
         url = url.rstrip("?").rstrip("&")
-        logger.info("🧹 Removed pgbouncer=true parameter (not supported by psycopg2)")
+        logger.info("Removed pgbouncer=true parameter (not supported by psycopg2)")
     
     # Get connection args with IPv4 resolution to avoid IPv6 issues
     connect_args = _get_ipv4_connect_args(url)
@@ -190,7 +190,7 @@ def create_database_engine():
             pool_pre_ping=True,
             connect_args=connect_args
         )
-        logger.info(f"✓ Database engine created successfully (cached for reuse)")
+        logger.info("Database engine created successfully (cached for reuse)")
         return _engine_cache
     except Exception as e:
         error_msg = (
@@ -209,7 +209,7 @@ def clear_engine_cache():
     """Clear the cached database engine. Useful for testing or reconnection."""
     global _engine_cache, _database_url_cache
     if _engine_cache is not None:
-        logger.info("🔄 Clearing cached database engine")
+        logger.info("Clearing cached database engine")
         _engine_cache.dispose()
         _engine_cache = None
     _database_url_cache = None  # Also clear URL cache
@@ -220,13 +220,13 @@ def test_database_connection():
     logger.info("🔍 Testing database connection...")
     try:
         engine = create_database_engine()
-        logger.info("📡 Attempting to connect to database...")
+        logger.info("Attempting to connect to database...")
         with engine.connect() as conn:
             result = conn.execute(text("SELECT 1"))
             logger.info(f"✓ Database connection test successful! Query returned: {result.fetchone()}")
         return True, "Database connection successful"
     except Exception as exc:  # pragma: no cover
-        logger.error(f"❌ Database connection test failed: {exc}", exc_info=True)
+        logger.error(f"Database connection test failed: {exc}", exc_info=True)
         return False, f"Database connection failed: {exc}"
 
 

@@ -81,7 +81,7 @@ if 'db_created' not in st.session_state:
         # Test database connection
         success, message = test_database_connection()
         if success:
-            print("✅ Database connection successful")
+            print("[OK] Database connection successful")
             st.session_state['db_created'] = True
 
             # Optionally bootstrap an admin user from environment variables
@@ -91,35 +91,36 @@ if 'db_created' not in st.session_state:
                 if bootstrap_username and bootstrap_password:
                     ok, msg = ensure_admin_user(username=bootstrap_username, passcode=bootstrap_password)
                     if ok:
-                        print(f"✅ {msg}")
+                        print(f"[OK] {msg}")
                     else:
-                        print(f"⚠️ Could not ensure admin user: {msg}")
+                        print(f"[WARN] Could not ensure admin user: {msg}")
                 else:
-                    print("ℹ️ Admin bootstrap skipped (set ADMIN_BOOTSTRAP_USERNAME and ADMIN_BOOTSTRAP_PASSWORD to enable).")
+                    print("[INFO] Admin bootstrap skipped (set ADMIN_BOOTSTRAP_USERNAME and ADMIN_BOOTSTRAP_PASSWORD to enable).")
             except Exception as e:
-                print(f"⚠️ Error ensuring admin user: {e}")
+                print(f"[WARN] Error ensuring admin user: {e}")
 
             # Ensure catalog cache is loaded (static, no database rebuild)
             try:
                 from vehicle_data import ensure_catalog_cached
-                print("📚 Loading static catalog from seed_catalog.json...")
+                print("Loading static catalog from seed_catalog.json...")
                 cache_data = ensure_catalog_cached()
                 if cache_data and cache_data.get("make_index", {}).get("all_makes"):
                     make_count = len(cache_data["make_index"]["all_makes"])
                     model_count = sum(len(models.get("all_models", [])) for models in cache_data.get("model_index_by_make", {}).values())
-                    print(f"✅ Static catalog loaded: {make_count} makes, {model_count} models")
+                    print(f"[OK] Static catalog loaded: {make_count} makes, {model_count} models")
                 else:
-                    print("⚠️ Catalog cache is empty or invalid")
+                    print("[WARN] Catalog cache is empty or invalid")
             except Exception as e:
-                print(f"⚠️ Error loading catalog cache: {e}")
+                print(f"[WARN] Error loading catalog cache: {e}")
 
         else:
-            print(f"❌ Database connection failed: {message}")
+            print(f"[ERROR] Database connection failed: {message}")
             st.error(f"Database connection failed: {message}")
             st.stop()
     except Exception as e:
-        print(f"Error during database setup: {e}")
-        st.error(f"Database setup error: {e}")
+        err_msg = str(e).encode("ascii", errors="replace").decode("ascii")
+        print(f"Error during database setup: {err_msg}")
+        st.error(f"Database setup error: {err_msg}")
         st.stop()
 
 # Initialize session state variables if they don't exist
@@ -661,28 +662,32 @@ def render_admin_ui():
                 save = st.form_submit_button("💾 Save All Changes", width='stretch', disabled=not confirm_save)
             
             if save and confirm_save:
-                # Gather updates from DataFrames
-                new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
-                new_flat = {str(row["key"]): float(row["value"]) for _, row in costs_df.iterrows()}
-                new_weights = {str(row["key"]): float(row["value"]) for _, row in weights_df.iterrows()}
-                new_assumptions = {str(row["key"]): float(row["value"]) for _, row in assumptions_df.iterrows()}
+                try:
+                    # Gather updates from DataFrames
+                    new_prices = {str(row["key"]): float(row["value"]) for _, row in price_df.iterrows()}
+                    new_flat = {str(row["key"]): float(row["value"]) for _, row in costs_df.iterrows()}
+                    new_weights = {str(row["key"]): float(row["value"]) for _, row in weights_df.iterrows()}
+                    new_assumptions = {str(row["key"]): float(row["value"]) for _, row in assumptions_df.iterrows()}
 
-                # Persist
-                updated_by = os.getenv("USER") or os.getenv("USERNAME") or "admin"
-                ok = True
-                ok &= upsert_app_config("price_per_lb", new_prices, "$/lb commodity prices", updated_by)
-                ok &= upsert_app_config("flat_costs", new_flat, "Flat costs", updated_by)
-                ok &= upsert_app_config("weights_fixed", new_weights, "Fixed component weights", updated_by)
-                ok &= upsert_app_config("assumptions", new_assumptions, "Estimator assumptions", updated_by)
-                
-                # Note: Heuristics, Grounding, and Consensus are preserved as is (not updated here)
+                    # Persist
+                    updated_by = os.getenv("USER") or os.getenv("USERNAME") or "admin"
+                    ok = True
+                    ok &= upsert_app_config("price_per_lb", new_prices, "$/lb commodity prices", updated_by)
+                    ok &= upsert_app_config("flat_costs", new_flat, "Flat costs", updated_by)
+                    ok &= upsert_app_config("weights_fixed", new_weights, "Fixed component weights", updated_by)
+                    ok &= upsert_app_config("assumptions", new_assumptions, "Estimator assumptions", updated_by)
+                    
+                    # Note: Heuristics, Grounding, and Consensus are preserved as is (not updated here)
 
-                if ok:
-                    refresh_config_cache()
-                    st.success("✅ Settings saved successfully! Reloading configuration...")
-                    st.rerun()
-                else:
-                    st.error("❌ Failed to save one or more configuration groups. Please try again.")
+                    if ok:
+                        refresh_config_cache()
+                        st.success("✅ Settings saved successfully! Reloading configuration...")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to save one or more configuration groups. Please try again.")
+                except Exception as e:
+                    logger.error(f"Error saving admin configuration: {e}", exc_info=True)
+                    st.error("❌ Failed to save configuration settings due to a database or connection error. Please try again or contact support.")
     
     with tab_cat_prices:
         st.markdown("### Catalytic Converter Prices")
@@ -698,6 +703,7 @@ def render_admin_ui():
         else:
             # Display editable table
             st.markdown("**Edit entries below. Add new rows, modify existing ones, or delete rows.**")
+            st.info("Each vehicle name must be unique and non-empty. All price and count fields must be numeric (no currency symbols or text).")
             
             # Use data_editor with num_rows="dynamic" to allow adding rows
             edited_df = st.data_editor(
@@ -715,6 +721,9 @@ def render_admin_ui():
                 },
                 key="cat_prices_editor"
             )
+            
+            st.markdown("---")
+            st.markdown("#### Save & Restore")
             
             col1, col2, col3 = st.columns([2, 1, 2])
             with col2:
@@ -742,8 +751,34 @@ def render_admin_ui():
                         st.error(f"❌ {str(e)}")
                         logger.error(f"Validation error saving cat prices: {e}", exc_info=True)
                     except Exception as e:
-                        st.error(f"❌ Error saving cat prices: {e}")
+                        st.error("❌ Error saving cat prices. Please ensure all numeric fields are valid numbers and try again.")
                         logger.error(f"Error saving cat prices: {e}", exc_info=True)
+
+            # One-time restore from canonical CSV
+            st.markdown("#### Restore from original CSV")
+            st.warning(
+                "This will **overwrite all current catalytic converter prices** with values from the "
+                "`cat prices - Cat Calculator.csv` spreadsheet. Use this as a one-time reset if the "
+                "stored values have drifted from the original price list."
+            )
+            confirm_reset = st.checkbox(
+                "I understand this will overwrite existing cat price entries with the original CSV values.",
+                key="confirm_reset_cat_prices",
+            )
+            if st.button("🔄 Restore from original CSV", use_container_width=True):
+                if not confirm_reset:
+                    st.error("❌ Please confirm the reset checkbox before restoring from the original CSV.")
+                else:
+                    try:
+                        cat_manager.reset_from_csv()
+                        st.success("✅ Cat prices have been reset from the original CSV. Reloading...")
+                        st.rerun()
+                    except FileNotFoundError as e:
+                        st.error(f"❌ Could not find the cat prices CSV file: {e}")
+                        logger.error(f"Cat prices CSV missing during reset: {e}", exc_info=True)
+                    except Exception as e:
+                        st.error("❌ Failed to reset cat prices from CSV. Please check the logs for details.")
+                        logger.error(f"Error resetting cat prices from CSV: {e}", exc_info=True)
 
     with tab_users:
         st.subheader("Manage Buyers")
