@@ -185,6 +185,35 @@ def mark_run_bought(run_id: str, purchase_price: float, dispatch_number: str, no
         return False
 
 
+def update_run_net_profit(run_id: str, net_profit: float) -> bool:
+    """
+    Persist the latest calculated net profit for a run.
+    """
+    if not run_id:
+        return False
+    try:
+        ensure_schema()
+        engine = create_database_engine()
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    """
+                    UPDATE runs
+                    SET net_profit = :net_profit
+                    WHERE run_id = :run_id
+                    """
+                ),
+                {
+                    "run_id": run_id,
+                    "net_profit": float(net_profit),
+                },
+            )
+            conn.commit()
+            return result.rowcount > 0
+    except Exception as e:
+        logger.error(f"❌ Failed to update net profit for run %s: %s", run_id, e, exc_info=True)
+        return False
+
 
 def get_last_ten_entries() -> pd.DataFrame:
     """Return the ten most recently updated vehicles with resolved fields."""
@@ -254,6 +283,54 @@ def get_last_ten_entries() -> pd.DataFrame:
     if "updated_at" in df.columns:
         df = df.sort_values("updated_at", ascending=False)
         df = df.drop(columns=["updated_at"])
+    return df
+
+
+def get_user_recent_search_history(user_id: int, limit: int = 50) -> pd.DataFrame:
+    """
+    Return recent search history for a specific user, including net profit when available.
+    """
+    if not user_id:
+        return pd.DataFrame()
+    ensure_schema()
+    engine = create_database_engine()
+    query = text(
+        """
+        SELECT
+            v.year,
+            v.make,
+            v.model,
+            r.net_profit,
+            r.started_at
+        FROM runs r
+        LEFT JOIN vehicles v ON r.vehicle_key = v.vehicle_key
+        WHERE r.user_id = :user_id
+        ORDER BY r.started_at DESC
+        LIMIT :limit
+        """
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(query, {"user_id": user_id, "limit": int(limit)}).fetchall()
+
+    if not rows:
+        return pd.DataFrame(columns=["Year", "Make", "Model", "Net Profit"])
+
+    data = []
+    for year, make, model, net_profit, started_at in rows:
+        data.append(
+            {
+                "Year": year,
+                "Make": make,
+                "Model": model,
+                "Net Profit": float(net_profit) if net_profit is not None else None,
+                "_started_at": started_at,
+            }
+        )
+
+    df = pd.DataFrame(data)
+    if "_started_at" in df.columns:
+        df = df.sort_values("_started_at", ascending=False)
+        df = df.drop(columns=["_started_at"])
     return df
 
 

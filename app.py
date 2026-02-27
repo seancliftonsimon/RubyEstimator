@@ -40,17 +40,18 @@ from vehicle_data import (
     suggest_make, suggest_model,
     get_all_makes, get_models_for_make, get_catalog_stats,
     import_catalog_from_json, export_catalog_to_json, invalidate_catalog_cache,
-    mark_run_bought,
+    mark_run_bought, update_run_net_profit, get_user_recent_search_history,
     get_admin_history,
     get_admin_profit_stats
 )
 from auth import (
-    require_admin_password, 
-    clear_admin_auth, 
-    render_login_ui, 
-    create_user, 
+    require_admin_password,
+    require_admin_user,
+    clear_admin_auth,
+    render_login_ui,
+    create_user,
     list_users,
-    ensure_admin_user
+    ensure_admin_user,
 )
 from database_config import test_database_connection, get_database_info, get_app_config, upsert_app_config, create_database_engine
 from confidence_ui import (
@@ -415,9 +416,9 @@ def validate_make_year_compatibility(make: str, year: int) -> tuple[bool, str]:
 
 def render_admin_ui():
     """Render the admin configuration UI with restore to default functionality."""
-    # SECURITY: Verify current user is actually an admin
+    # SECURITY: Enforce admin-only access for RLS and role-based security
     current_buyer = st.session_state.get("buyer_user")
-    if not (current_buyer and current_buyer.get("is_admin", False)):
+    if not require_admin_user(current_buyer):
         st.error("🔒 Access denied. You must be an administrator to view this page.")
         st.session_state["admin_mode"] = False
         st.stop()
@@ -831,9 +832,9 @@ def render_admin_ui():
     with tab_history:
         st.subheader("Activity History & Stats")
         
-        # SECURITY: Verify current user is admin
+        # SECURITY: Enforce admin-only for history (RLS/role checks)
         current_buyer = st.session_state.get("buyer_user")
-        if not (current_buyer and current_buyer.get("is_admin", False)):
+        if not require_admin_user(current_buyer):
             st.error("🔒 Access denied. History and statistics are only available to administrators.")
             st.stop()
         
@@ -1186,8 +1187,8 @@ if current_buyer and (current_buyer.get("display_name") or "").strip():
 
 admin_label = "Admin" if not st.session_state.get("admin_mode", False) else "Close Admin"
 
-# Check if current user is admin
-is_current_user_admin = current_buyer and current_buyer.get("is_admin", False)
+# Check if current user is admin (for RLS/role-based UI and operations)
+is_current_user_admin = require_admin_user(current_buyer)
 
 # Create top bar with three equal-width columns for proper alignment
 topbar_left, topbar_center, topbar_right = st.columns([1, 1, 1], gap="small")
@@ -2022,7 +2023,50 @@ with left_col:
         # Rerun to clear the display immediately
         # The containers will be cleared by conditional rendering based on pending_search flag
         st.rerun()
-    
+
+    # --- Recent Searches (per-user, paginated) ---
+    if current_buyer_id:
+        history_df = get_user_recent_search_history(current_buyer_id, limit=50)
+        st.markdown("### Recent Vehicles")
+        if history_df is None or history_df.empty:
+            st.info("Your recent vehicle searches will appear here after you run estimates.")
+        else:
+            # Pagination state
+            page_size = 10
+            total_rows = len(history_df)
+            total_pages = max((total_rows - 1) // page_size + 1, 1)
+            page_key = "search_history_page"
+            current_page = st.session_state.get(page_key, 1)
+            if current_page < 1:
+                current_page = 1
+            if current_page > total_pages:
+                current_page = total_pages
+
+            start_idx = (current_page - 1) * page_size
+            end_idx = start_idx + page_size
+            page_df = history_df.iloc[start_idx:end_idx].copy()
+
+            # Format net profit as currency, keep None as placeholder
+            if "Net Profit" in page_df.columns:
+                page_df["Net Profit"] = page_df["Net Profit"].apply(
+                    lambda v: format_currency(v) if v is not None else "—"
+                )
+
+            st.dataframe(page_df, hide_index=True, use_container_width=True)
+
+            # Pagination controls
+            col_prev, col_page, col_next = st.columns([1, 2, 1])
+            with col_prev:
+                if st.button("Previous", disabled=current_page <= 1, key="history_prev"):
+                    st.session_state[page_key] = current_page - 1
+                    st.rerun()
+            with col_page:
+                st.markdown(f"<div style='text-align:center; color:#64748b;'>Page {current_page} of {total_pages}</div>", unsafe_allow_html=True)
+            with col_next:
+                if st.button("Next", disabled=current_page >= total_pages, key="history_next"):
+                    st.session_state[page_key] = current_page + 1
+                    st.rerun()
+
     # Process pending search after rerun
     if st.session_state.get('pending_search'):
         search_data = st.session_state['pending_search']
@@ -2425,6 +2469,14 @@ with right_col:
                     'purchase_price': purchase_price,
                     'tow_fee': tow_fee
                 }
+                # Persist net profit for this run when available
+                try:
+                    current_info = st.session_state.get('detailed_vehicle_info') or {}
+                    current_run_id = current_info.get('run_id')
+                    if current_run_id and totals is not None:
+                        update_run_net_profit(current_run_id, totals.get('net', 0.0))
+                except Exception as e:
+                    logger.error(f\"Failed to update net profit for auto-calculation run: {e}\", exc_info=True)
                 
             except Exception as e:
                 st.error(f"Error during auto-calculation: {e}")
@@ -2473,6 +2525,14 @@ with right_col:
                             'purchase_price': purchase_price,
                             'tow_fee': tow_fee
                         }
+                        # Persist net profit for this run when available
+                        try:
+                            current_info = st.session_state.get('detailed_vehicle_info') or {}
+                            current_run_id = current_info.get('run_id')
+                            if current_run_id and totals is not None:
+                                update_run_net_profit(current_run_id, totals.get('net', 0.0))
+                        except Exception as e:
+                            logger.error(f\"Failed to update net profit for initial calculation run: {e}\", exc_info=True)
                     except Exception as e:
                         st.error(f"Error during calculation: {e}")
                         st.stop()
@@ -2659,6 +2719,14 @@ with right_col:
                                         'purchase_price': purchase_price_float,
                                         'tow_fee': tow_fee_float
                                     }
+                                    # Persist net profit for this run when available
+                                    try:
+                                        current_info = st.session_state.get('detailed_vehicle_info') or {}
+                                        current_run_id = current_info.get('run_id')
+                                        if current_run_id and totals is not None:
+                                            update_run_net_profit(current_run_id, totals.get('net', 0.0))
+                                    except Exception as e:
+                                        logger.error(f\"Failed to update net profit for recalculation run: {e}\", exc_info=True)
                                     st.markdown("""
                                     <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
                                         ✅ <strong>Costs updated and recalculated!</strong>
@@ -2832,6 +2900,14 @@ with right_col:
                                     'purchase_price': purchase_price_float,
                                     'tow_fee': tow_fee_float
                                 }
+                                # Persist net profit for this run when available
+                                try:
+                                    current_info = st.session_state.get('detailed_vehicle_info') or {}
+                                    current_run_id = current_info.get('run_id')
+                                    if current_run_id and totals is not None:
+                                        update_run_net_profit(current_run_id, totals.get('net', 0.0))
+                                except Exception as e:
+                                    logger.error(f\"Failed to update net profit for manual estimate run: {e}\", exc_info=True)
                                 
                                 # Update session state with new values
                                 st.session_state['last_curb_weight'] = curb_weight_int

@@ -9,7 +9,7 @@ from sqlalchemy import text
 # Import database and auth modules
 try:
     from database_config import create_database_engine, test_database_connection, get_database_url
-    from auth import login_user, get_user_by_username, ensure_admin_user
+    from auth import login_user, get_user_by_username, ensure_admin_user, require_admin_user
 except ImportError as e:
     print(f"[ERROR] Failed to import required modules: {e}")
     print("   Make sure you're running this from the project directory.")
@@ -93,6 +93,30 @@ def test_database_connection_and_data():
         return False
 
 
+def test_admin_role_checks():
+    """Test require_admin_user for RLS/role-based permission behavior (no DB required)."""
+    print("\n" + "=" * 70)
+    print("ADMIN ROLE CHECK TEST (RLS)")
+    print("=" * 70)
+    try:
+        # Non-admin or missing user must be rejected
+        assert require_admin_user(None) is False, "None should not be admin"
+        assert require_admin_user({}) is False, "Empty dict should not be admin"
+        assert require_admin_user({"is_admin": False}) is False, "is_admin=False should not be admin"
+        assert require_admin_user({"is_admin": None}) is False, "is_admin=None should not be admin"
+        # Admin must be allowed
+        assert require_admin_user({"is_admin": True}) is True, "is_admin=True should be admin"
+        assert require_admin_user({"id": 1, "username": "a", "is_admin": True}) is True
+        print("\n   [OK] require_admin_user: admin vs user permission checks passed")
+        return True
+    except AssertionError as e:
+        print(f"\n   [FAIL] {e}")
+        return False
+    except Exception as e:
+        print(f"\n   [FAIL] Error: {e}")
+        return False
+
+
 def test_admin_bootstrap():
     """Test admin bootstrap credentials."""
     print("\n" + "=" * 70)
@@ -170,9 +194,10 @@ def main():
     print("RUBY ESTIMATOR DATABASE & AUTH TEST")
     print("=" * 70)
     print("\nThis script tests:")
-    print("  1. Database connection to Supabase")
-    print("  2. Presence of restored data")
-    print("  3. Admin bootstrap credentials and login")
+    print("  1. Admin role checks (require_admin_user, no DB)")
+    print("  2. Database connection to Supabase")
+    print("  3. Presence of restored data")
+    print("  4. Admin bootstrap credentials and login")
     print("\nUsage:")
     print("  python test_database_connection.py --database-url 'postgresql://...' --admin-username 'user' --admin-password 'pass'")
     print("  OR set environment variables: DATABASE_URL, ADMIN_BOOTSTRAP_USERNAME, ADMIN_BOOTSTRAP_PASSWORD")

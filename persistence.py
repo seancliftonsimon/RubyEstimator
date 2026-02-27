@@ -184,6 +184,8 @@ def ensure_schema() -> None:
             conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS purchase_price NUMERIC"))
             conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS dispatch_number TEXT"))
             conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS bought_at TIMESTAMP"))
+            # Store per-run net profit for user history views
+            conn.execute(text("ALTER TABLE runs ADD COLUMN IF NOT EXISTS net_profit NUMERIC"))
 
             # Add FK constraint safely (PostgreSQL has no ADD CONSTRAINT IF NOT EXISTS)
             conn.execute(

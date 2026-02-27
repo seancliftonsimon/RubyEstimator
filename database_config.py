@@ -1,4 +1,10 @@
-"""Database helpers for deterministic resolver."""
+"""Database helpers for deterministic resolver.
+
+Supabase RLS: If Row-Level Security is enabled on your Supabase project, use the
+service role connection string (or a role with BYPASSRLS) for DATABASE_URL so
+this server-side app can perform all required operations. RLS then protects
+direct client/API access; this app enforces admin vs user permissions in code.
+"""
 
 from __future__ import annotations
 
@@ -20,7 +26,8 @@ _database_url_cache = None  # Cache URL to prevent repeated logging
 
 
 def get_database_url() -> str:
-    """Get database URL from environment variables. Requires DATABASE_URL or PostgreSQL connection settings."""
+    """Get database URL from environment variables. Requires DATABASE_URL or PostgreSQL connection settings.
+    For Supabase with RLS enabled, use the service role (or BYPASSRLS) URL so server-side operations succeed."""
     global _database_url_cache
     
     # Return cached URL if available

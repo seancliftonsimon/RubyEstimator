@@ -260,6 +260,14 @@ def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
     }
 
 
+def require_admin_user(user: Optional[Dict[str, Any]]) -> bool:
+    """
+    Return True if the given user dict is an admin; False otherwise.
+    Use this to enforce admin-only operations (e.g. app_config write, catalog delete, cat_prices edit).
+    """
+    return bool(user and user.get("is_admin") is True)
+
+
 def login_user(username: str, password: Optional[str] = None) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
     """
     Login rules:
