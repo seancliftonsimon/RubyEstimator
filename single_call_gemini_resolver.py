@@ -1,16 +1,20 @@
-"""Minimal single-call vehicle resolver using Gemini 2.5 Flash with Google Search Grounding."""
+"""Minimal single-call vehicle resolver using Gemini 3 Flash Preview with Google Search Grounding."""
 
 from __future__ import annotations
 
 import json
 import logging
 import os
+import re
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types
 from sqlalchemy import text
 
 from database_config import create_database_engine
@@ -18,7 +22,6 @@ from persistence import ensure_schema
 
 
 # Configure logging with forced console output
-import sys
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -137,7 +140,10 @@ class SingleCallGeminiResolver:
     """Resolves vehicle specifications using a single Gemini API call with Search Grounding."""
     
     def __init__(self, api_key: Optional[str] = None):
-        self.model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self.model = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+        # thinking_budget=0 keeps latency within 5-10s; override via GEMINI_THINKING_BUDGET env var
+        # e.g. set to 512 for light reasoning, or -1 for automatic (model decides)
+        self.thinking_budget = int(os.getenv("GEMINI_THINKING_BUDGET", "0"))
         # Try Streamlit secrets first, then environment variable
         if api_key:
             self.api_key = api_key
@@ -240,120 +246,110 @@ RETURN JSON:
         logger.debug(f"Prompt content:\n{prompt[:500]}...\n")
         
         # Call Gemini with Search Grounding
-        # NOTE: Cannot use response_mime_type with tools (Search Grounding)
-        # We rely on prompt instructions for JSON format instead
+        # NOTE: response_mime_type="application/json" cannot be combined with grounding tools -
+        # this is a known API limitation. system_instruction + prompt enforce JSON output instead.
         logger.info("\n🌐 Calling Gemini API with Search Grounding...")
         api_start = time.time()
-        
-        config = {
-            "tools": [{"google_search": {}}],
-            "temperature": 0,
-            # Paid account optimizations:
-            # - Higher limits allow more aggressive requests
-            # - Faster model with experimental features
-        }
+
+        config = types.GenerateContentConfig(
+            tools=[types.Tool(google_search=types.GoogleSearch())],
+            temperature=0.0,
+            thinking_config=types.ThinkingConfig(thinking_budget=self.thinking_budget),
+            system_instruction=(
+                "You are a vehicle specification lookup assistant. "
+                "Always respond with valid JSON only — no markdown fences, no explanation text, "
+                "no comments. Output must be a single JSON object starting with '{' and ending with '}'."
+            ),
+        )
         logger.info(f"Model: {self.model}")
-        logger.info(f"Config: {json.dumps(config, indent=2)}")
-        
-        # Retry logic optimized for paid accounts (faster retries, fewer attempts)
-        max_retries = 2  # Paid accounts have better reliability
-        retry_delay = 0.5  # seconds - much shorter for paid tier
+        logger.info(f"Thinking budget: {self.thinking_budget} tokens")
+
+        # Retry logic: typed exception-based retries (paid tier - faster, fewer attempts)
+        max_retries = 2
+        retry_delay = 0.5
         last_exception = None
-        
+
         for attempt in range(max_retries):
             try:
                 if attempt > 0:
                     logger.info(f"🔄 Retry attempt {attempt + 1}/{max_retries} after {retry_delay}s delay...")
                     time.sleep(retry_delay)
-                    retry_delay *= 1.5  # Gentler exponential backoff
-                
+                    retry_delay *= 1.5
+
                 response = self.client.models.generate_content(
                     model=self.model,
                     contents=prompt,
-                    config=config
+                    config=config,
                 )
                 api_time = (time.time() - api_start) * 1000
                 logger.info(f"✓ API call completed in {api_time:.2f}ms")
-                break  # Success, exit retry loop
-                
-            except Exception as exc:
+                break  # Success
+
+            except genai_errors.ServerError as exc:
+                # 5xx errors: overloaded, unavailable - always retryable
                 last_exception = exc
                 api_time = (time.time() - api_start) * 1000
-                exc_str = str(exc)
-                
-                # Check if this is a retryable error (503, rate limit, etc.)
-                is_retryable = (
-                    "503" in exc_str or 
-                    "overloaded" in exc_str.lower() or 
-                    "rate limit" in exc_str.lower() or
-                    "unavailable" in exc_str.lower()
-                )
-                
-                if is_retryable and attempt < max_retries - 1:
-                    logger.warning(f"⚠️ Retryable error on attempt {attempt + 1}: {exc}")
-                    continue  # Retry
-                else:
-                    # Non-retryable error or last attempt
-                    logger.error(f"❌ API call failed after {api_time:.2f}ms: {exc}")
-                    raise RuntimeError(f"Gemini API call failed: {exc}")
+                if attempt < max_retries - 1:
+                    logger.warning(f"⚠️ Server error on attempt {attempt + 1} (retrying): {exc}")
+                    continue
+                logger.error(f"❌ Server error after {api_time:.2f}ms (all retries exhausted): {exc}")
+                raise RuntimeError(f"Gemini API server error: {exc}") from exc
+
+            except genai_errors.ClientError as exc:
+                # 4xx errors: bad request, quota, auth - generally not retryable
+                api_time = (time.time() - api_start) * 1000
+                logger.error(f"❌ Client error after {api_time:.2f}ms (not retrying): {exc}")
+                raise RuntimeError(f"Gemini API client error: {exc}") from exc
+
+            except Exception as exc:
+                # Unknown error - retry once then raise
+                last_exception = exc
+                api_time = (time.time() - api_start) * 1000
+                if attempt < max_retries - 1:
+                    logger.warning(f"⚠️ Unexpected error on attempt {attempt + 1} (retrying): {exc}")
+                    continue
+                logger.error(f"❌ Unexpected error after {api_time:.2f}ms: {exc}")
+                raise RuntimeError(f"Gemini API call failed: {exc}") from exc
         else:
-            # All retries exhausted
             logger.error(f"❌ All {max_retries} retry attempts failed")
             raise RuntimeError(f"Gemini API call failed after {max_retries} attempts: {last_exception}")
         
-        # Parse JSON response
+        # Parse JSON response - layered extraction for robustness
         logger.info("\n📦 Parsing JSON response...")
         parse_start = time.time()
-        
-        logger.info(f"Response text length: {len(response.text)} characters")
-        logger.debug(f"Raw response (first 1000 chars):\n{response.text[:1000]}")
-        if len(response.text) > 1000:
-            logger.debug(f"Raw response (last 200 chars):\n...{response.text[-200:]}")
-        
-        # Strip markdown code blocks if present
-        response_text = response.text.strip()
-        had_markdown = False
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]  # Remove ```json
-            had_markdown = True
-            logger.debug("Stripped ```json markdown wrapper")
-        elif response_text.startswith("```"):
-            response_text = response_text[3:]  # Remove ```
-            had_markdown = True
-            logger.debug("Stripped ``` markdown wrapper")
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]  # Remove closing ```
-            had_markdown = True
-            logger.debug("Stripped closing ``` markdown")
-        response_text = response_text.strip()
-        
-        if had_markdown:
-            logger.info("✓ Removed markdown code block wrappers")
-        
-        try:
-            result = json.loads(response_text)
-            parse_time = (time.time() - parse_start) * 1000
-            logger.info(f"✓ JSON parsed in {parse_time:.2f}ms")
-            logger.info(f"Fields in response: {list(result.keys())}")
-            
-            # Log field statuses
-            for field_name in ["curb_weight", "aluminum_engine", "aluminum_rims", "catalytic_converters"]:
-                if field_name in result:
-                    field_status = result[field_name].get("status", "missing")
-                    field_value = result[field_name].get("value")
-                    logger.debug(f"  {field_name}: status={field_status}, value={field_value}")
-                else:
-                    logger.warning(f"⚠️ Field '{field_name}' missing from response!")
-                    
-        except json.JSONDecodeError as exc:
-            parse_time = (time.time() - parse_start) * 1000
-            logger.error(f"❌ JSON parsing failed after {parse_time:.2f}ms: {exc}")
-            logger.error(f"JSON error position: line {exc.lineno}, column {exc.colno}")
-            logger.error(f"Response text (cleaned, first 500 chars): {response_text[:500]}")
-            if len(response_text) > 500:
-                logger.error(f"Response text (last 200 chars): ...{response_text[-200:]}")
-            logger.error(f"Full response text length: {len(response_text)} characters")
-            raise RuntimeError(f"Failed to parse Gemini JSON response: {exc}")
+
+        # Extract only non-thought text parts. When thinking_budget > 0 the model
+        # returns thought parts (internal reasoning) alongside the real answer.
+        # response.text concatenates all parts, which can corrupt JSON output.
+        raw_text = self._get_response_text(response)
+        logger.info(f"Response text length: {len(raw_text)} characters")
+        logger.debug(f"Raw response (first 1000 chars):\n{raw_text[:1000]}")
+        if len(raw_text) > 1000:
+            logger.debug(f"Raw response (last 200 chars):\n...{raw_text[-200:]}")
+
+        result = self._extract_json(raw_text)
+        parse_time = (time.time() - parse_start) * 1000
+
+        if result is None:
+            logger.error(f"❌ JSON extraction failed after {parse_time:.2f}ms")
+            logger.error(f"Response text (first 500 chars): {raw_text[:500]}")
+            raise RuntimeError("Failed to extract valid JSON from Gemini response")
+
+        logger.info(f"✓ JSON parsed in {parse_time:.2f}ms")
+        logger.info(f"Fields in response: {list(result.keys())}")
+
+        # Validate required keys are present before normalizing
+        missing = self._check_required_fields(result)
+        if missing:
+            logger.error(f"❌ Response missing required fields: {missing}")
+            logger.error(f"Fields present: {list(result.keys())}")
+            raise RuntimeError(f"Gemini response missing required fields: {missing}")
+
+        # Log field statuses
+        for field_name in ["curb_weight", "aluminum_engine", "aluminum_rims", "catalytic_converters"]:
+            field_status = result[field_name].get("status", "missing")
+            field_value = result[field_name].get("value")
+            logger.debug(f"  {field_name}: status={field_status}, value={field_value}")
         
         # Validate and normalize
         logger.info("\n✅ Validating and normalizing fields...")
@@ -413,6 +409,65 @@ RETURN JSON:
             raw_response=result
         )
     
+    def _get_response_text(self, response: Any) -> str:
+        """Return only the non-thought text from a response.
+
+        When thinking is active (even at budget=0 with thought_signature), the
+        model can emit thought parts alongside the answer. response.text
+        concatenates everything and triggers a warning. We filter to answer-only
+        parts to get clean JSON output.
+        """
+        try:
+            if response.candidates:
+                parts = response.candidates[0].content.parts
+                text_parts = [
+                    p.text for p in parts
+                    if hasattr(p, "text") and p.text and not getattr(p, "thought", False)
+                ]
+                if text_parts:
+                    return "\n".join(text_parts).strip()
+        except Exception as exc:
+            logger.debug(f"Could not extract parts directly, falling back to response.text: {exc}")
+        return response.text or ""
+
+    def _extract_json(self, text: str) -> Optional[Dict[str, Any]]:
+        """Extract a JSON object from model output using a layered fallback strategy.
+
+        1. Direct parse (model obeyed system instruction perfectly)
+        2. Strip markdown code fences then parse
+        3. Regex scan for the first {...} block (catches preamble/postamble prose)
+        """
+        text = text.strip()
+
+        # Layer 1: direct parse
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Layer 2: strip markdown fences
+        stripped = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+        stripped = re.sub(r"\s*```$", "", stripped).strip()
+        try:
+            return json.loads(stripped)
+        except json.JSONDecodeError:
+            pass
+
+        # Layer 3: find the outermost {...} object in the text
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except json.JSONDecodeError as exc:
+                logger.debug(f"Regex-extracted JSON still invalid: {exc}")
+
+        return None
+
+    def _check_required_fields(self, result: Dict[str, Any]) -> List[str]:
+        """Return list of required top-level keys missing from the parsed response."""
+        required = ["curb_weight", "aluminum_engine", "aluminum_rims", "catalytic_converters"]
+        return [f for f in required if f not in result]
+
     def _validate_and_normalize(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and normalize field values."""
         logger.debug("Starting field validation and normalization...")
