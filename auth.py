@@ -393,14 +393,29 @@ def render_login_ui(session_key: str = "buyer_user") -> bool:
     return False
 
 def _get_stored_password_hash() -> str:
-    """Return the configured password hash (env first, then secrets). Empty means disabled."""
+    """Return configured admin password hash; empty means no extra admin password gate."""
     stored_hash = os.getenv("PASSWORD_HASH", "") or ""
     if stored_hash:
         return stored_hash
     try:
-        return st.secrets.get("password_hash", "") or ""
+        secret_hash = st.secrets.get("password_hash", "") or ""
+        if secret_hash:
+            return secret_hash
     except Exception:
-        return ""
+        pass
+
+    # Backward-compatible fallback for older deployments/docs that use ADMIN_PASSWORD
+    # as plaintext in env/secrets.
+    admin_password = os.getenv("ADMIN_PASSWORD", "") or ""
+    if not admin_password:
+        try:
+            admin_password = st.secrets.get("ADMIN_PASSWORD", "") or ""
+        except Exception:
+            admin_password = ""
+    if admin_password:
+        return hash_password(admin_password)
+
+    return ""
 
 def clear_admin_auth():
     """Clear admin authentication state from the session."""

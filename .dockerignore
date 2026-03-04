@@ -54,5 +54,4 @@ RAILWAY_DEPLOYMENT.md
 # Configuration files
 .streamlit/
 *.toml
-*.json
 !requirements.txt 

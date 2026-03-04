@@ -15,7 +15,13 @@ from sqlalchemy import text
 
 from database_config import create_database_engine, get_app_config, upsert_app_config
 from persistence import ensure_schema
-from single_call_gemini_resolver import single_call_resolver
+
+_RESOLVER_IMPORT_ERROR: Optional[str] = None
+try:
+    from single_call_gemini_resolver import single_call_resolver
+except Exception as exc:
+    single_call_resolver = None  # type: ignore[assignment]
+    _RESOLVER_IMPORT_ERROR = str(exc)
 
 # Configure logging with forced console output
 logging.basicConfig(
@@ -27,6 +33,8 @@ logging.basicConfig(
     force=True
 )
 logger = logging.getLogger(__name__)
+if _RESOLVER_IMPORT_ERROR:
+    logger.error("Vehicle resolver unavailable during import: %s", _RESOLVER_IMPORT_ERROR)
 
 
 def process_vehicle(year: int, make: str, model: str, progress_callback=None, user_id: Optional[int] = None) -> Dict[str, Any]:
@@ -35,6 +43,21 @@ def process_vehicle(year: int, make: str, model: str, progress_callback=None, us
     
     if progress_callback:
         progress_callback("searching", None, "Searching with Gemini + Google Search")
+
+    if single_call_resolver is None:
+        message = f"Vehicle resolver unavailable: {_RESOLVER_IMPORT_ERROR or 'resolver is not initialized'}"
+        logger.error(message)
+        return {
+            "vehicle_key": None,
+            "error": message,
+            "curb_weight_lbs": None,
+            "aluminum_engine": None,
+            "aluminum_rims": None,
+            "catalytic_converters": None,
+            "warnings": [message],
+            "missing_fields": {},
+            "timings": {},
+        }
 
     try:
         resolution = single_call_resolver.resolve_vehicle(year, make, model, user_id=user_id)
