@@ -2476,7 +2476,7 @@ with right_col:
                     if current_run_id and totals is not None:
                         update_run_net_profit(current_run_id, totals.get('net', 0.0))
                 except Exception as e:
-                    logger.error(f\"Failed to update net profit for auto-calculation run: {e}\", exc_info=True)
+                    logger.error(f"Failed to update net profit for auto-calculation run: {e}", exc_info=True)
                 
             except Exception as e:
                 st.error(f"Error during auto-calculation: {e}")
@@ -2532,7 +2532,7 @@ with right_col:
                             if current_run_id and totals is not None:
                                 update_run_net_profit(current_run_id, totals.get('net', 0.0))
                         except Exception as e:
-                            logger.error(f\"Failed to update net profit for initial calculation run: {e}\", exc_info=True)
+                            logger.error(f"Failed to update net profit for initial calculation run: {e}", exc_info=True)
                     except Exception as e:
                         st.error(f"Error during calculation: {e}")
                         st.stop()
@@ -2726,7 +2726,7 @@ with right_col:
                                         if current_run_id and totals is not None:
                                             update_run_net_profit(current_run_id, totals.get('net', 0.0))
                                     except Exception as e:
-                                        logger.error(f\"Failed to update net profit for recalculation run: {e}\", exc_info=True)
+                                        logger.error(f"Failed to update net profit for recalculation run: {e}", exc_info=True)
                                     st.markdown("""
                                     <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1rem 1.5rem; border-radius: 8px; border: 3px solid #16a34a; margin: 1rem 0; color: #15803d; font-weight: 600; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">
                                         ✅ <strong>Costs updated and recalculated!</strong>
@@ -2907,7 +2907,7 @@ with right_col:
                                     if current_run_id and totals is not None:
                                         update_run_net_profit(current_run_id, totals.get('net', 0.0))
                                 except Exception as e:
-                                    logger.error(f\"Failed to update net profit for manual estimate run: {e}\", exc_info=True)
+                                    logger.error(f"Failed to update net profit for manual estimate run: {e}", exc_info=True)
                                 
                                 # Update session state with new values
                                 st.session_state['last_curb_weight'] = curb_weight_int
