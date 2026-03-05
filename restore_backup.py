@@ -6,7 +6,6 @@ import os
 import sys
 import re
 import io
-from urllib.parse import quote_plus, unquote
 
 try:
     import psycopg2
@@ -15,15 +14,19 @@ except ImportError:
     print("ERROR: psycopg2 not installed. Run: pip install psycopg2-binary")
     sys.exit(1)
 
-# Database connection string (use this directly - it handles URL encoding)
+# Database connection string (must come from environment variable)
 # Format: postgresql://user:password@host:port/database
-CONNECTION_STRING = "postgresql://postgres:DyWyXAxvHY12dgUG@db.idhqjltjhyidtowdvvew.supabase.co:5432/postgres"
+CONNECTION_STRING = os.getenv("DATABASE_URL", "").strip()
 
 # Backup file path
 BACKUP_FILE = r"C:\Users\Sean\GameDev\RubyEstimator\db_cluster-07-08-2025@14-52-47.backup.gz"
 
 def restore_backup():
     """Restore the backup file to the database."""
+    if not CONNECTION_STRING:
+        print("[ERROR] DATABASE_URL environment variable is required.")
+        return False
+
     print(f"[INFO] Reading backup file: {BACKUP_FILE}")
     
     # Decompress the backup
@@ -123,7 +126,7 @@ def restore_backup():
             
             # Collect COPY data
             if in_copy:
-                if stripped == '\.':
+                if stripped == '\\.':
                     # End of COPY data
                     print(f"   [DEBUG] Finished COPY for {current_copy['table']}: {len(current_copy['data'])} data lines")
                     copy_blocks.append(current_copy)
