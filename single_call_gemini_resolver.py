@@ -1,4 +1,4 @@
-"""Minimal single-call vehicle resolver using Gemini 3 Flash Preview with Google Search Grounding."""
+"""Minimal single-call vehicle resolver using Gemini 3.1 Flash Lite Preview with Google Search Grounding."""
 
 from __future__ import annotations
 
@@ -140,7 +140,7 @@ class SingleCallGeminiResolver:
     """Resolves vehicle specifications using a single Gemini API call with Search Grounding."""
     
     def __init__(self, api_key: Optional[str] = None):
-        self.model = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+        self.model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
         # thinking_budget=0 keeps latency within 5-10s; override via GEMINI_THINKING_BUDGET env var
         # e.g. set to 512 for light reasoning, or -1 for automatic (model decides)
         self.thinking_budget = int(os.getenv("GEMINI_THINKING_BUDGET", "0"))
